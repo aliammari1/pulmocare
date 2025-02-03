@@ -1,0 +1,29 @@
+{
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "version": "2.5.2",
+      "resolved": "ghcr.io/devcontainers/features/common-utils@sha256:5b1c376d30719a4dead8fb2f272ee496cfb506f2f92b7acf9e1c24cb5399ba7d",
+      "integrity": "sha256:5b1c376d30719a4dead8fb2f272ee496cfb506f2f92b7acf9e1c24cb5399ba7d"
+    },
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "version": "1.2.5",
+      "resolved": "ghcr.io/devcontainers/features/desktop-lite@sha256:dc19b193d799be3c7c3533007624f196082b1d59024b537b7a7811d7bcbddb03",
+      "integrity": "sha256:dc19b193d799be3c7c3533007624f196082b1d59024b537b7a7811d7bcbddb03"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "1.3.2",
+      "resolved": "ghcr.io/devcontainers/features/git@sha256:63c96e8ac33f5630300d8883e2ec3123278de70d318589af596ea1954846014d",
+      "integrity": "sha256:63c96e8ac33f5630300d8883e2ec3123278de70d318589af596ea1954846014d"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "1.7.0",
+      "resolved": "ghcr.io/devcontainers/features/python@sha256:8452f39db0852420728c9f7503dd94b3fc71aa558b5e7c8f6f9ce6687e494ae3",
+      "integrity": "sha256:8452f39db0852420728c9f7503dd94b3fc71aa558b5e7c8f6f9ce6687e494ae3"
+    },
+    "ghcr.io/meaningful-ooo/devcontainer-features/homebrew:2": {
+      "version": "2.0.4",
+      "resolved": "ghcr.io/meaningful-ooo/devcontainer-features/homebrew@sha256:7a291ba9b8b4bced1172c22f8afc77c3c7ff3ecef49f15e94e626cae47777a32",
+      "integrity": "sha256:7a291ba9b8b4bced1172c22f8afc77c3c7ff3ecef49f15e94e626cae47777a32"
+    }
+  }
+}
