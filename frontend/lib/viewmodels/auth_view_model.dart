@@ -1,0 +1,271 @@
+import 'package:flutter/material.dart';
+import '../models/doctor.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class AuthViewModel extends ChangeNotifier {
+  Doctor? currentDoctor;
+  bool isAuthenticated = false;
+  String errorMessage = '';
+  String? authToken;
+
+  static const String baseUrl =
+      'http://10.0.2.2:4000/api'; // for Android emulator
+  // or use 'http://127.0.0.1:4000/api' for iOS simulator
+  // or use your machine's actual IP address like 'http://192.168.1.100:4000/api'
+
+  Future<void> login(String email, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        authToken = data['token'];
+        currentDoctor = Doctor(
+          id: data['id'],
+          name: data['name'],
+          email: data['email'],
+          specialty: data['specialty'],
+          phoneNumber: data['phone_number'],
+          address: data['address'],
+        );
+        isAuthenticated = true;
+        errorMessage = '';
+      } else {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Login failed';
+        isAuthenticated = false;
+      }
+    } catch (e) {
+      errorMessage = 'Network error: ${e.toString()}';
+      isAuthenticated = false;
+    }
+    notifyListeners();
+  }
+
+  Future<void> signup(String name, String email, String password,
+      String specialty, String phoneNumber, String address) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'specialty': specialty,
+          'phoneNumber': phoneNumber,
+          'address': address,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        // After successful signup, automatically log in
+        await login(email, password);
+      } else {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Signup failed';
+        isAuthenticated = false;
+      }
+    } catch (e) {
+      errorMessage = 'Network error: ${e.toString()}';
+      isAuthenticated = false;
+    }
+    notifyListeners();
+  }
+
+  Future<void> forgotPassword(String email) async {
+    errorMessage = '';
+    try {
+      final response = await http.post(
+        Uri.parse('http://0.0.0.0:4000/api/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      );
+      if (response.statusCode != 200) {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Failed to send OTP';
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+    }
+    notifyListeners();
+  }
+
+  Future<void> verifyOTP(String email, String otp) async {
+    errorMessage = '';
+    try {
+      final response = await http.post(
+        Uri.parse('http://0.0.0.0:4000/api/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'otp': otp}),
+      );
+      if (response.statusCode != 200) {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Invalid OTP';
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+    }
+    notifyListeners();
+  }
+
+  Future<void> resetPassword(
+      String email, String otp, String newPassword) async {
+    errorMessage = '';
+    try {
+      final response = await http.post(
+        Uri.parse('http://0.0.0.0:4000/api/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
+      if (response.statusCode != 200) {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Failed to reset password';
+      }
+    } catch (e) {
+      errorMessage = e.toString();
+    }
+    notifyListeners();
+  }
+
+  Future<void> fetchProfile() async {
+    if (authToken == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/profile'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        currentDoctor = Doctor(
+          id: data['id'],
+          name: data['name'],
+          email: data['email'],
+          specialty: data['specialty'],
+          phoneNumber: data['phone_number'],
+          address: data['address'],
+          profileImage: data['profile_image'], // Parse it here
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      errorMessage = 'Failed to fetch profile';
+      notifyListeners();
+    }
+  }
+
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/change-password'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Failed to change password';
+      } else {
+        errorMessage = '';
+      }
+    } catch (e) {
+      errorMessage = 'Network error: ${e.toString()}';
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateProfile({
+    required String name,
+    required String specialty,
+    required String phoneNumber,
+    required String address,
+    String? base64Image,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/update-profile'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'name': name,
+          'specialty': specialty,
+          'phone_number': phoneNumber,
+          'address': address,
+          'base64Image': base64Image,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        currentDoctor = Doctor(
+          id: data['id'],
+          name: data['name'],
+          email: data['email'],
+          specialty: data['specialty'],
+          phoneNumber: data['phone_number'],
+          address: data['address'],
+        );
+        errorMessage = '';
+      } else {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Failed to update profile';
+      }
+    } catch (e) {
+      errorMessage = 'Network error: $e';
+    }
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    if (authToken == null) return;
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/logout'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+      );
+      authToken = null;
+      currentDoctor = null;
+      errorMessage = '';
+      isAuthenticated = false;
+      notifyListeners();
+    } catch (e) {
+      errorMessage = 'Network error: $e';
+      notifyListeners();
+    }
+  }
+
+  void signOut() {
+    currentDoctor = null;
+    isAuthenticated = false;
+    authToken = null;
+    notifyListeners();
+  }
+}
