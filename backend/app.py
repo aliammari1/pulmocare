@@ -11,6 +11,11 @@ from email.mime.text import MIMEText
 import jwt
 from functools import wraps
 from datetime import datetime, timedelta
+import re
+import base64
+import io
+from PIL import Image
+import pytesseract
 
 load_dotenv()
 
@@ -225,6 +230,79 @@ def update_profile(user_id):
 def logout(user_id):
     # Optionally blacklist or track tokens here if desired
     return jsonify({'message': 'Logged out successfully'}), 200
+
+@app.route('/api/scan-visit-card', methods=['POST'])
+def scan_visit_card():
+    data = request.get_json()
+    image_data = data.get('image')
+
+    if not image_data:
+        return jsonify({'error': 'No image provided'}), 400
+
+    try:
+        # Decode base64 image
+        image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+
+        # Perform OCR using pytesseract
+        text = pytesseract.image_to_string(image)
+
+        # Extract relevant information (this will need to be refined based on visit card format)
+        name = extract_name(text)
+        specialty = extract_specialty(text)
+        email = extract_email(text)
+        phone_number = extract_phone_number(text)
+        address = extract_address(text)
+
+        return jsonify({
+            'name': name,
+            'specialty': specialty,
+            'email': email,
+            'phone_number': phone_number,
+            'address': address,
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def extract_name(text):
+    # Implement logic to extract name from text
+    # This is a placeholder and needs to be implemented based on the visit card format
+    # Example: Use regular expressions to find a name pattern
+    name_match = re.search(r'([A-Z][a-z]+ [A-Z][a-z]+)', text)
+    if name_match:
+        return name_match.group(1)
+    return "Extracted Name"
+
+def extract_specialty(text):
+    # Implement logic to extract specialty from text
+    # This is a placeholder and needs to be implemented based on the visit card format
+    specialty_match = re.search(r'(Cardiologist|Dentist|Surgeon)', text)
+    if specialty_match:
+        return specialty_match.group(1)
+    return "Extracted Specialty"
+
+def extract_email(text):
+    # Implement logic to extract email from text
+    # This is a placeholder and needs to be implemented based on the visit card format
+    email_match = re.search(r'[\w\.-]+@[\w\.-]+', text)
+    if email_match:
+        return email_match.group(0)
+    return "Extracted Email"
+
+def extract_phone_number(text):
+    # Implement logic to extract phone number from text
+    # This is a placeholder and needs to be implemented based on the visit card format
+    phone_match = re.search(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', text)
+    if phone_match:
+        return phone_match.group(0)
+    return "Extracted Phone Number"
+
+def extract_address(text):
+    # Implement logic to extract address from text
+    # This is a placeholder and needs to be implemented based on the visit card format
+    address_match = re.search(r'\d+ [A-Za-z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd)', text)
+    if address_match:
+        return address_match.group(0)
+    return "Extracted Address"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
+import 'visit_card_scan_view.dart'; // Import the new VisitCardScanView
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -77,6 +78,42 @@ class _SignupViewState extends State<SignupView> {
                     ),
                     child: Column(
                       children: [
+                        ElevatedButton(
+                          onPressed: () async {
+                            // Navigate to VisitCardScanView and await the result
+                            final visitCardData = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => VisitCardScanView()),
+                            );
+
+                            // If data is returned from VisitCardScanView, populate the fields
+                            if (visitCardData != null) {
+                              setState(() {
+                                _nameController.text =
+                                    visitCardData['name'] ?? '';
+                                _specialtyController.text =
+                                    visitCardData['specialty'] ?? '';
+                                _emailController.text =
+                                    visitCardData['email'] ?? '';
+                                _phoneController.text =
+                                    visitCardData['phone_number'] ?? '';
+                                _addressController.text =
+                                    visitCardData['address'] ?? '';
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF35C5CF),
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text('Scan Visit Card',
+                              style: TextStyle(fontSize: 16)),
+                        ),
+                        const SizedBox(height: 16),
                         _buildTextField(
                             _nameController, 'Full Name', Icons.person),
                         const SizedBox(height: 16),
