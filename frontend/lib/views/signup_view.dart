@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:medicare/views/map_selection_dialog.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
 import 'visit_card_scan_view.dart'; // Import the new VisitCardScanView
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import '../services/location_service.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:permission_handler/permission_handler.dart'; // Import permission_handler
 
 class SignupView extends StatefulWidget {
   const SignupView({super.key});
@@ -18,6 +25,46 @@ class _SignupViewState extends State<SignupView> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   bool _isLoading = false;
+  String? _initialCountryCode;
+  bool _isCountryCodeLoading = true;
+  final _locationService = LocationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions(); // Request permissions
+    _loadCountryCode();
+  }
+
+  Future<void> _requestPermissions() async {
+    // Request location permission
+    var locationStatus = await Permission.location.status;
+    if (locationStatus.isDenied) {
+      await Permission.location.request();
+    }
+
+    // Request camera permission
+    var cameraStatus = await Permission.camera.status;
+    if (cameraStatus.isDenied) {
+      await Permission.camera.request();
+    }
+  }
+
+  Future<void> _loadCountryCode() async {
+    try {
+      setState(() => _isCountryCodeLoading = true);
+      final countryCode = await _locationService.getCurrentCountryCode();
+
+      setState(() {
+        _initialCountryCode = countryCode;
+        _isCountryCodeLoading = false;
+      });
+      print('Detected Country Code: $_initialCountryCode');
+    } catch (e) {
+      print('Error detecting country code: $e');
+      setState(() => _isCountryCodeLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,11 +173,29 @@ class _SignupViewState extends State<SignupView> {
                         _buildTextField(_specialtyController, 'Specialty',
                             Icons.medical_services),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                            _phoneController, 'Phone Number', Icons.phone),
+                        _buildPhoneField(),
                         const SizedBox(height: 16),
                         _buildTextField(
-                            _addressController, 'Address', Icons.location_on),
+                          _addressController,
+                          'Address',
+                          Icons.location_on,
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.map),
+                            onPressed: () async {
+                              final selectedAddress = await showDialog<String>(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return MapSelectionDialog(
+                                      initialAddress: _addressController.text);
+                                },
+                              );
+                              if (selectedAddress != null) {
+                                setState(() =>
+                                    _addressController.text = selectedAddress);
+                              }
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _isLoading
@@ -205,15 +270,46 @@ class _SignupViewState extends State<SignupView> {
 
   Widget _buildTextField(
       TextEditingController controller, String label, IconData icon,
-      {bool isPassword = false}) {
+      {bool isPassword = false, Widget? prefix, Widget? suffixIcon}) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Color(0xFF81C9F3)),
+        prefixIcon: prefix == null
+            ? Icon(icon, color: Color(0xFF81C9F3))
+            : null, // Only show the default icon if there's no prefix
+        prefix: prefix, // Use the custom prefix widget
+        suffixIcon: suffixIcon, // Use the custom suffix widget
         border: OutlineInputBorder(),
       ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    if (_isCountryCodeLoading) {
+      return Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
+
+    return IntlPhoneField(
+      decoration: InputDecoration(
+        labelText: 'Phone Number',
+        border: OutlineInputBorder(),
+      ),
+      initialCountryCode: _initialCountryCode ?? 'US', // Fallback to US
+      onChanged: (phone) {
+        _phoneController.text = phone.completeNumber;
+      },
     );
   }
 }

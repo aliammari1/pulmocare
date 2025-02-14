@@ -3,7 +3,6 @@ import 'package:medicare/theme/app_theme.dart';
 import 'package:medicare/views/profile_view.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
-import 'profile_view.dart' as profile_view;
 import 'patients_view.dart';
 
 class HomeView extends StatefulWidget {

@@ -248,17 +248,15 @@ def scan_visit_card():
 
         # Extract relevant information (this will need to be refined based on visit card format)
         name = extract_name(text)
-        specialty = extract_specialty(text)
         email = extract_email(text)
-        phone_number = extract_phone_number(text)
-        address = extract_address(text)
+        specialty = extract_specialty(text)
+        phone = extract_phone_number(text)  # New helper function
 
         return jsonify({
             'name': name,
-            'specialty': specialty,
             'email': email,
-            'phone_number': phone_number,
-            'address': address,
+            'specialty': specialty,
+            'phone_number': phone  # Return extracted phone
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -272,14 +270,6 @@ def extract_name(text):
         return name_match.group(1)
     return "Extracted Name"
 
-def extract_specialty(text):
-    # Implement logic to extract specialty from text
-    # This is a placeholder and needs to be implemented based on the visit card format
-    specialty_match = re.search(r'(Cardiologist|Dentist|Surgeon)', text)
-    if specialty_match:
-        return specialty_match.group(1)
-    return "Extracted Specialty"
-
 def extract_email(text):
     # Implement logic to extract email from text
     # This is a placeholder and needs to be implemented based on the visit card format
@@ -288,21 +278,22 @@ def extract_email(text):
         return email_match.group(0)
     return "Extracted Email"
 
-def extract_phone_number(text):
-    # Implement logic to extract phone number from text
-    # This is a placeholder and needs to be implemented based on the visit card format
-    phone_match = re.search(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', text)
-    if phone_match:
-        return phone_match.group(0)
-    return "Extracted Phone Number"
+def extract_specialty(text):
+    lines = text.split('\n')
+    lines = [l.strip() for l in lines if l.strip()]
+    name_pattern = re.compile(r'([A-Z][a-z]+ [A-Z][a-z]+)')
+    for i, line in enumerate(lines):
+        if name_pattern.search(line):
+            if i + 1 < len(lines):
+                return lines[i + 1]
+    return "Extracted Specialty"
 
-def extract_address(text):
-    # Implement logic to extract address from text
-    # This is a placeholder and needs to be implemented based on the visit card format
-    address_match = re.search(r'\d+ [A-Za-z0-9\s]+(?:Street|St|Avenue|Ave|Road|Rd)', text)
-    if address_match:
-        return address_match.group(0)
-    return "Extracted Address"
+def extract_phone_number(text):
+    # Basic pattern to match phone formats, can be refined
+    phone_match = re.search(r'(\+?\d[\d\s\-]{7,}\d)', text)
+    if phone_match:
+        return phone_match.group(0).strip()
+    return "Extracted Phone"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)

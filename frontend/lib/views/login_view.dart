@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medicare/theme/app_theme.dart';
 import 'package:medicare/views/forgot_password_view.dart';
-import 'package:medicare/views/home_view.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
 import 'signup_view.dart';
