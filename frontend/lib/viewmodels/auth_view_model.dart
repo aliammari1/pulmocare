@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/doctor.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/api_config.dart';
+import 'dart:async';
+import 'dart:io';
 
 class AuthViewModel extends ChangeNotifier {
   Doctor? currentDoctor;
@@ -16,13 +19,20 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
+      final response = await http
+          .post(
+        Uri.parse(ApiConfig.login),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
           'password': password,
         }),
+      )
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Connection timed out. Please try again.');
+        },
       );
 
       if (response.statusCode == 200) {
@@ -35,6 +45,7 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
+          profileImage: data['profile_image'], // Add this line
         );
         isAuthenticated = true;
         errorMessage = '';
@@ -43,6 +54,12 @@ class AuthViewModel extends ChangeNotifier {
         errorMessage = data['error'] ?? 'Login failed';
         isAuthenticated = false;
       }
+    } on TimeoutException catch (_) {
+      errorMessage = 'Connection timed out. Please try again.';
+      isAuthenticated = false;
+    } on SocketException catch (_) {
+      errorMessage = 'Network error. Please check your internet connection.';
+      isAuthenticated = false;
     } catch (e) {
       errorMessage = 'Network error: ${e.toString()}';
       isAuthenticated = false;
@@ -53,8 +70,9 @@ class AuthViewModel extends ChangeNotifier {
   Future<void> signup(String name, String email, String password,
       String specialty, String phoneNumber, String address) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/signup'),
+      final response = await http
+          .post(
+        Uri.parse(ApiConfig.signup),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'name': name,
@@ -64,6 +82,12 @@ class AuthViewModel extends ChangeNotifier {
           'phoneNumber': phoneNumber,
           'address': address,
         }),
+      )
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Connection timed out. Please try again.');
+        },
       );
 
       if (response.statusCode == 201) {
@@ -74,6 +98,12 @@ class AuthViewModel extends ChangeNotifier {
         errorMessage = data['error'] ?? 'Signup failed';
         isAuthenticated = false;
       }
+    } on TimeoutException catch (_) {
+      errorMessage = 'Connection timed out. Please try again.';
+      isAuthenticated = false;
+    } on SocketException catch (_) {
+      errorMessage = 'Network error. Please check your internet connection.';
+      isAuthenticated = false;
     } catch (e) {
       errorMessage = 'Network error: ${e.toString()}';
       isAuthenticated = false;
@@ -85,7 +115,8 @@ class AuthViewModel extends ChangeNotifier {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('http://0.0.0.0:4000/api/forgot-password'),
+        Uri.parse(
+            '$baseUrl/forgot-password'), // Using baseUrl instead of hardcoded IP
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email}),
       );
@@ -94,35 +125,43 @@ class AuthViewModel extends ChangeNotifier {
         errorMessage = data['error'] ?? 'Failed to send OTP';
       }
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage =
+          'Connection failed. Please check your internet connection.';
     }
     notifyListeners();
   }
 
-  Future<void> verifyOTP(String email, String otp) async {
+  Future<bool> verifyOTP(String email, String otp) async {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('http://0.0.0.0:4000/api/verify-otp'),
+        Uri.parse('$baseUrl/verify-otp'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'otp': otp}),
       );
-      if (response.statusCode != 200) {
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
         final data = json.decode(response.body);
         errorMessage = data['error'] ?? 'Invalid OTP';
+        return false;
       }
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage =
+          'Connection failed. Please check your internet connection.';
+      return false;
+    } finally {
+      notifyListeners();
     }
-    notifyListeners();
   }
 
-  Future<void> resetPassword(
+  Future<bool> resetPassword(
       String email, String otp, String newPassword) async {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('http://0.0.0.0:4000/api/reset-password'),
+        Uri.parse('$baseUrl/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
@@ -130,14 +169,21 @@ class AuthViewModel extends ChangeNotifier {
           'newPassword': newPassword,
         }),
       );
-      if (response.statusCode != 200) {
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
         final data = json.decode(response.body);
         errorMessage = data['error'] ?? 'Failed to reset password';
+        return false;
       }
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage =
+          'Connection failed. Please check your internet connection.';
+      return false;
+    } finally {
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> fetchProfile() async {
@@ -161,7 +207,7 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
-          profileImage: data['profile_image'], // Parse it here
+          profileImage: data['profile_image'], // Make sure this is included
         );
         notifyListeners();
       }
@@ -198,6 +244,7 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // In the same file, update updateProfile method
   Future<void> updateProfile({
     required String name,
     required String specialty,
@@ -217,9 +264,10 @@ class AuthViewModel extends ChangeNotifier {
           'specialty': specialty,
           'phone_number': phoneNumber,
           'address': address,
-          'base64Image': base64Image,
+          'profile_image': base64Image, // Make sure to send the image
         }),
       );
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         currentDoctor = Doctor(
@@ -229,6 +277,8 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
+          profileImage:
+              base64Image ?? currentDoctor?.profileImage, // Preserve the image
         );
         errorMessage = '';
       } else {
@@ -260,12 +310,5 @@ class AuthViewModel extends ChangeNotifier {
       errorMessage = 'Network error: $e';
       notifyListeners();
     }
-  }
-
-  void signOut() {
-    currentDoctor = null;
-    isAuthenticated = false;
-    authToken = null;
-    notifyListeners();
   }
 }

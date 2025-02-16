@@ -16,6 +16,7 @@ import base64
 import io
 from PIL import Image
 import pytesseract
+import logging
 
 load_dotenv()
 
@@ -28,6 +29,9 @@ db = client.medicare
 doctors_collection = db.doctors
 
 JWT_SECRET = os.getenv('JWT_SECRET', 'replace-with-strong-secret')
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def token_required(f):
     @wraps(f)
@@ -45,16 +49,63 @@ def token_required(f):
     return decorated
 
 def send_otp_email(to_email, otp):
-    sender_email = os.getenv('EMAIL_ADDRESS', 'aladinhabibii@gmail.com')
-    sender_password = os.getenv('EMAIL_PASSWORD', 'wdgbjclkscvpsjay')
-    msg = MIMEText(f'Your OTP code is: {otp}')
-    msg['Subject'] = 'Password Reset OTP'
-    msg['From'] = sender_email
-    msg['To'] = to_email
+    try:
+        sender_email = os.getenv('EMAIL_ADDRESS')
+        sender_password = os.getenv('EMAIL_PASSWORD')
+        
+        logger.debug(f"Email configuration - Sender: {sender_email}, Password length: {len(sender_password) if sender_password else 0}")
+        
+        if not sender_email or not sender_password:
+            logger.error("Email configuration missing")
+            raise Exception("Email configuration missing")
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(sender_email, sender_password)
-        smtp.send_message(msg)
+        msg = MIMEText(f'''
+        Hello,
+
+        Your OTP code for password reset is: {otp}
+
+        This code will expire in 15 minutes.
+        If you did not request this code, please ignore this email.
+
+        Best regards,
+        Medicare Team
+        ''')
+        
+        msg['Subject'] = 'Medicare - Password Reset OTP'
+        msg['From'] = sender_email
+        msg['To'] = to_email
+
+        try:
+            logger.debug("Attempting SMTP connection to smtp.gmail.com:465")
+            smtp = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
+            logger.debug("SMTP connection successful")
+            
+            logger.debug("Attempting SMTP login")
+            smtp.login(sender_email, sender_password)
+            logger.debug("SMTP login successful")
+            
+            logger.debug("Sending email")
+            smtp.send_message(msg)
+            logger.debug("Email sent successfully")
+            
+            smtp.quit()
+            return True
+            
+        except smtplib.SMTPAuthenticationError as auth_error:
+            logger.error(f"SMTP Authentication failed - Details: {str(auth_error)}")
+            raise Exception(f"Email authentication failed. Please check your credentials.")
+            
+        except smtplib.SMTPException as smtp_error:
+            logger.error(f"SMTP error occurred: {str(smtp_error)}")
+            raise Exception(f"Email sending failed: {str(smtp_error)}")
+            
+        except Exception as e:
+            logger.error(f"Unexpected SMTP error: {str(e)}")
+            raise Exception(f"Unexpected error while sending email: {str(e)}")
+            
+    except Exception as e:
+        logger.error(f"Email sending error: {str(e)}")
+        return False
 
 @app.route('/api/signup', methods=['POST'])
 def signup():
@@ -90,53 +141,85 @@ def signup():
 def login():
     data = request.get_json()
     
-    # Find doctor by email
     doctor_data = doctors_collection.find_one({'email': data['email']})
     if not doctor_data:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-    # Create Doctor instance and verify password
     doctor = Doctor.from_dict(doctor_data)
     doctor.password_hash = doctor_data['password_hash']
 
     if doctor.check_password(data['password']):
         token = jwt.encode({'user_id': str(doctor._id), 'exp': datetime.utcnow() + timedelta(days=1)}, JWT_SECRET)
-        return jsonify({'token': token, **doctor.to_dict()}), 200
+        response_data = {
+            'token': token,
+            'id': str(doctor._id),
+            'name': doctor.name,
+            'email': doctor.email,
+            'specialty': doctor.specialty,
+            'phone_number': doctor.phone_number,
+            'address': doctor.address,
+            'profile_image': doctor_data.get('profile_image')  # Add this line
+        }
+        return jsonify(response_data), 200
     
     return jsonify({'error': 'Invalid credentials'}), 401
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.get_json()
-    email = data.get('email')
-    doctor_data = doctors_collection.find_one({'email': email})
-    if not doctor_data:
-        return jsonify({'error': 'Email not found'}), 404
-
-    otp = str(random.randint(100000, 999999))
-    doctors_collection.update_one(
-        {'email': email},
-        {'$set': {'reset_otp': otp, 'otp_expiry': datetime.utcnow() + timedelta(minutes=15)}}
-    )
     try:
-        send_otp_email(email, otp)
-        return jsonify({'message': 'OTP sent'}), 200
-    except:
-        return jsonify({'error': 'Failed to send OTP'}), 500
+        data = request.get_json()
+        email = data.get('email')
+        
+        logger.debug(f"Forgot password request received for email: {email}")
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+
+        doctor_data = doctors_collection.find_one({'email': email})
+        if not doctor_data:
+            logger.debug(f"Email not found: {email}")
+            return jsonify({'error': 'Email not found'}), 404
+
+        otp = str(random.randint(100000, 999999))
+        logger.debug(f"Generated OTP: {otp}")
+        
+        if send_otp_email(email, otp):
+            doctors_collection.update_one(
+                {'email': email},
+                {'$set': {
+                    'reset_otp': otp,
+                    'otp_expiry': datetime.utcnow() + timedelta(minutes=15)
+                }}
+            )
+            logger.debug("OTP sent and saved successfully")
+            return jsonify({'message': 'OTP sent successfully'}), 200
+        else:
+            logger.error("Failed to send OTP email")
+            return jsonify({'error': 'Failed to send OTP. Please try again later.'}), 500
+    
+    except Exception as e:
+        logger.error(f"Unexpected error in forgot_password: {str(e)}")
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
 @app.route('/api/verify-otp', methods=['POST'])
 def verify_otp():
     data = request.get_json()
     email = data.get('email')
     otp = data.get('otp')
+    
+    if not email or not otp:
+        return jsonify({'error': 'Email and OTP are required'}), 400
+        
     result = doctors_collection.find_one({
         'email': email,
         'reset_otp': otp,
         'otp_expiry': {'$gt': datetime.utcnow()}
     })
+    
     if not result:
         return jsonify({'error': 'Invalid or expired OTP'}), 400
-    return jsonify({'message': 'OTP verified'}), 200
+    
+    return jsonify({'message': 'OTP verified successfully'}), 200
 
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
@@ -144,23 +227,35 @@ def reset_password():
     email = data.get('email')
     otp = data.get('otp')
     new_password = data.get('newPassword')
+    
+    if not all([email, otp, new_password]):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
     doctor_data = doctors_collection.find_one({
         'email': email,
         'reset_otp': otp,
         'otp_expiry': {'$gt': datetime.utcnow()}
     })
+    
     if not doctor_data:
         return jsonify({'error': 'Invalid or expired OTP'}), 400
 
-    doctor_obj = Doctor.from_dict(doctor_data)
-    doctor_obj.set_password(new_password)
-    doctors_collection.update_one(
+    # Create a Doctor instance and set the new password
+    doctor = Doctor.from_dict(doctor_data)
+    doctor.set_password(new_password)
+    
+    # Update the password hash and remove the OTP data
+    result = doctors_collection.update_one(
         {'email': email},
         {
-            '$set': {'password_hash': doctor_obj.password_hash},
+            '$set': {'password_hash': doctor.password_hash},
             '$unset': {'reset_otp': '', 'otp_expiry': ''}
         }
     )
+    
+    if result.modified_count == 0:
+        return jsonify({'error': 'Failed to update password'}), 500
+        
     return jsonify({'message': 'Password reset successful'}), 200
 
 @app.route('/api/profile', methods=['GET'])
@@ -178,6 +273,9 @@ def change_password(user_id):
     current_password = data.get('current_password')
     new_password = data.get('new_password')
 
+    if not all([current_password, new_password]):
+        return jsonify({'error': 'Both current and new password are required'}), 400
+
     doctor_data = doctors_collection.find_one({'_id': ObjectId(user_id)})
     if not doctor_data:
         return jsonify({'error': 'Doctor not found'}), 404
@@ -188,11 +286,17 @@ def change_password(user_id):
     if not doctor.check_password(current_password):
         return jsonify({'error': 'Current password is incorrect'}), 400
 
+    # Set and hash the new password
     doctor.set_password(new_password)
-    doctors_collection.update_one(
+    
+    # Update the password hash in the database
+    result = doctors_collection.update_one(
         {'_id': ObjectId(user_id)},
         {'$set': {'password_hash': doctor.password_hash}}
     )
+
+    if result.modified_count == 0:
+        return jsonify({'error': 'Failed to update password'}), 500
 
     return jsonify({'message': 'Password updated successfully'}), 200
 
@@ -204,11 +308,7 @@ def update_profile(user_id):
     specialty = data.get('specialty')
     phone_number = data.get('phone_number')
     address = data.get('address')
-    base64_image = data.get('base64Image', None)
-
-    doctor_data = doctors_collection.find_one({'_id': ObjectId(user_id)})
-    if not doctor_data:
-        return jsonify({'error': 'Doctor not found'}), 404
+    profile_image = data.get('profile_image')  # Get the profile image
 
     update_fields = {
         'name': name,
@@ -216,14 +316,22 @@ def update_profile(user_id):
         'phone_number': phone_number,
         'address': address,
     }
-    # If you choose to store the image in the database
-    if base64_image:
-        update_fields['profile_image'] = base64_image
+    
+    if profile_image:  # Only update if image is provided
+        update_fields['profile_image'] = profile_image
 
-    doctors_collection.update_one({'_id': ObjectId(user_id)}, {'$set': update_fields})
+    doctors_collection.update_one(
+        {'_id': ObjectId(user_id)}, 
+        {'$set': update_fields}
+    )
+    
     updated_doctor = doctors_collection.find_one({'_id': ObjectId(user_id)})
-
-    return jsonify(Doctor.from_dict(updated_doctor).to_dict()), 200
+    doctor_dict = Doctor.from_dict(updated_doctor).to_dict()
+    # Include profile image in response
+    if updated_doctor.get('profile_image'):
+        doctor_dict['profile_image'] = updated_doctor['profile_image']
+    
+    return jsonify(doctor_dict), 200
 
 @app.route('/api/logout', methods=['POST'])
 @token_required

@@ -10,147 +10,169 @@ class ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthViewModel>(
-      builder: (context, authVM, child) {
-        final doctor = authVM.currentDoctor;
-        if (doctor == null)
-          return const Center(child: CircularProgressIndicator());
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent back navigation
+      child: Consumer<AuthViewModel>(
+        builder: (context, authVM, child) {
+          final doctor = authVM.currentDoctor;
+          if (doctor == null)
+            return const Center(
+              child: CircularProgressIndicator(color: AppTheme.turquoise),
+            );
 
-        final imageBytes = doctor.profileImage != null
-            ? base64Decode(doctor.profileImage!)
-            : null;
+          final imageBytes = doctor.profileImage != null
+              ? base64Decode(doctor.profileImage!)
+              : null;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              // Modern Profile Header
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF81C9F3),
-                      Color(0xFF35C5CF),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(40),
-                    bottomRight: Radius.circular(40),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 30),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 15,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Color(0xFFEDEDF1),
-                            backgroundImage: imageBytes != null
-                                ? MemoryImage(imageBytes)
-                                : null,
-                          ),
-                          if (imageBytes == null)
-                            Text(
-                              doctor.name[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF35C5CF),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      doctor.name,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      doctor.specialty,
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                  ],
-                ),
-              ),
-              // Information Cards
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _buildModernInfoCard(
-                      Icons.email_outlined,
-                      'Email Address',
-                      doctor.email,
-                      Color(0xFF81C9F3),
-                    ),
-                    _buildModernInfoCard(
-                      Icons.phone_outlined,
-                      'Phone Number',
-                      doctor.phoneNumber,
-                      Color(0xFF35C5CF),
-                    ),
-                    _buildModernInfoCard(
-                      Icons.location_on_outlined,
-                      'Office Address',
-                      doctor.address,
-                      Color(0xFF81C9F3),
-                    ),
-                    const SizedBox(height: 24),
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionButton(
-                            'Change Password',
-                            Icons.lock_outline,
-                            Color(0xFF35C5CF),
-                            () => _showChangePasswordDialog(context),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildActionButton(
-                            'Edit Profile',
-                            Icons.edit_outlined,
-                            Color(0xFF81C9F3),
-                            () => _showEditProfileDialog(context),
-                          ),
-                        ),
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                // Modern Profile Header with animated gradient
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.turquoise.withOpacity(0.8),
+                        AppTheme.skyBlue,
+                        AppTheme.turquoise.withOpacity(0.9),
                       ],
                     ),
-                  ],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(50),
+                      bottomRight: Radius.circular(50),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
+                      // Profile Image with animations
+                      Hero(
+                        tag: 'profile-image',
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 20,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 70,
+                            backgroundColor: Colors.white,
+                            child: CircleAvatar(
+                              radius: 65,
+                              backgroundColor: AppTheme.lightGray,
+                              backgroundImage: imageBytes != null
+                                  ? MemoryImage(imageBytes)
+                                  : null,
+                              child: imageBytes == null
+                                  ? Icon(Icons.person,
+                                      size: 65, color: AppTheme.turquoise)
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        doctor.name,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black12,
+                              offset: Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          doctor.specialty,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                // Information Cards with enhanced design
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      _buildModernInfoCard(
+                        Icons.email_outlined,
+                        'Email Address',
+                        doctor.email,
+                        AppTheme.turquoise,
+                      ),
+                      _buildModernInfoCard(
+                        Icons.phone_outlined,
+                        'Phone Number',
+                        doctor.phoneNumber,
+                        AppTheme.skyBlue,
+                      ),
+                      _buildModernInfoCard(
+                        Icons.location_on_outlined,
+                        'Office Address',
+                        doctor.address,
+                        AppTheme.turquoise,
+                      ),
+                      const SizedBox(height: 24),
+                      // Modern Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              'Change\nPassword',
+                              Icons.lock_outline,
+                              AppTheme.turquoise,
+                              () => _showChangePasswordDialog(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildActionButton(
+                              'Edit\nProfile',
+                              Icons.edit_outlined,
+                              AppTheme.skyBlue,
+                              () => _showEditProfileDialog(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -237,6 +259,7 @@ class ProfileView extends StatelessWidget {
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     String errorText = '';
 
     showDialog(
@@ -244,44 +267,74 @@ class ProfileView extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Change Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Current Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: newPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'New Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm New Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-              ),
-              if (errorText.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Text(
-                    errorText,
-                    style: const TextStyle(color: Colors.red),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: currentPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(),
                   ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your current password';
+                    }
+                    return null;
+                  },
                 ),
-            ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: newPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a new password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    if (value == currentPasswordController.text) {
+                      return 'New password must be different from current password';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: confirmPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your new password';
+                    }
+                    if (value != newPasswordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+                if (errorText.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      errorText,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -290,24 +343,28 @@ class ProfileView extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                if (newPasswordController.text !=
-                    confirmPasswordController.text) {
-                  setState(() => errorText = 'New passwords do not match');
-                  return;
-                }
-                await context.read<AuthViewModel>().changePassword(
-                      currentPasswordController.text.trim(),
-                      newPasswordController.text.trim(),
-                    );
-                final error = context.read<AuthViewModel>().errorMessage;
-                if (error.isEmpty) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Password updated successfully')),
-                  );
-                } else {
-                  setState(() => errorText = error);
+                if (formKey.currentState!.validate()) {
+                  try {
+                    await context.read<AuthViewModel>().changePassword(
+                          currentPasswordController.text.trim(),
+                          newPasswordController.text.trim(),
+                        );
+
+                    final error = context.read<AuthViewModel>().errorMessage;
+                    if (error.isEmpty) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Password updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      setState(() => errorText = error);
+                    }
+                  } catch (e) {
+                    setState(() => errorText = 'Failed to change password: $e');
+                  }
                 }
               },
               child: const Text('Change'),
@@ -412,9 +469,8 @@ class ProfileView extends StatelessWidget {
                   icon: const Icon(Icons.image),
                   label: const Text('Select Profile Image'),
                   style: AppTheme.buttonStyle.copyWith(
-                    backgroundColor:
-                        MaterialStateProperty.all(AppTheme.skyBlue),
-                    minimumSize: MaterialStateProperty.all(
+                    backgroundColor: WidgetStateProperty.all(AppTheme.skyBlue),
+                    minimumSize: WidgetStateProperty.all(
                         const Size(double.infinity, 50)),
                   ),
                   onPressed: () async {

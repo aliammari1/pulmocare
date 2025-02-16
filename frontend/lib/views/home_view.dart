@@ -35,71 +35,91 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        automaticallyImplyLeading: false, // Add this line to remove back arrow
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(
+            color: AppTheme.turquoise,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Confirm Logout'),
-                  content: const Text('Are you sure you want to logout?'),
-                  actions: [
-                    TextButton(
-                      child: const Text('Cancel'),
-                      onPressed: () => Navigator.pop(ctx, false),
-                    ),
-                    TextButton(
-                      child: const Text('Yes, Logout'),
-                      onPressed: () => Navigator.pop(ctx, true),
-                    ),
-                  ],
-                ),
-              );
-              if (shouldLogout == true) {
-                await context.read<AuthViewModel>().logout();
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: IconButton(
+              icon: const Icon(Icons.logout, color: AppTheme.turquoise),
+              onPressed: () async {
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Confirm Logout'),
+                    content: const Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancel'),
+                        onPressed: () => Navigator.pop(ctx, false),
+                      ),
+                      TextButton(
+                        child: const Text('Yes, Logout'),
+                        onPressed: () => Navigator.pop(ctx, true),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldLogout == true) {
+                  await context.read<AuthViewModel>().logout();
+                  Navigator.pushReplacementNamed(context, '/login');
+                }
+              },
+            ),
           ),
         ],
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 20,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.withOpacity(0.2),
+              width: 1,
             ),
-          ],
+          ),
         ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: AppTheme.kPrimaryBlue,
-          unselectedItemColor: Colors.grey,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(
-              label: 'Profile',
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-            ),
-            BottomNavigationBarItem(
-              label: 'Patients',
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: BottomNavigationBar(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            selectedItemColor: AppTheme.turquoise,
+            unselectedItemColor: Colors.grey.shade400,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _currentIndex,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            iconSize: 24,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people_outline),
+                activeIcon: Icon(Icons.people),
+                label: 'Patients',
+              ),
+            ],
+          ),
         ),
       ),
     );
