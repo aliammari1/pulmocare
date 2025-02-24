@@ -5,7 +5,9 @@ class Doctor {
   final String specialty;
   final String phoneNumber;
   final String address;
-  final String? profileImage; // Add this
+  final String? profileImage;
+  final bool isVerified; // Changed from bool? to bool
+  final Map<String, dynamic>? verificationDetails; // Add verification details
 
   Doctor({
     required this.id,
@@ -14,6 +16,8 @@ class Doctor {
     required this.specialty,
     required this.phoneNumber,
     required this.address,
-    this.profileImage, // Add this
+    this.profileImage,
+    this.isVerified = false, // Default to false
+    this.verificationDetails,
   });
 }

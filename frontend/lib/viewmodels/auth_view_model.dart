@@ -12,28 +12,22 @@ class AuthViewModel extends ChangeNotifier {
   String errorMessage = '';
   String? authToken;
 
-  static const String baseUrl =
-      'http://10.0.2.2:4000/api'; // for Android emulator
-  // or use 'http://127.0.0.1:4000/api' for iOS simulator
-  // or use your machine's actual IP address like 'http://192.168.1.100:4000/api'
-
+  static const String baseUrl = 'http://10.0.2.2:4000/api';
   Future<void> login(String email, String password) async {
     try {
-      final response = await http
-          .post(
-        Uri.parse(ApiConfig.login),
+      print('Attempting login with: $email'); // Add debug log
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'), // Use baseUrl instead of ApiConfig
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
           'password': password,
         }),
-      )
-          .timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException('Connection timed out. Please try again.');
-        },
       );
+
+      print('Response status: ${response.statusCode}'); // Add debug log
+      print('Response body: ${response.body}'); // Add debug log
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -45,7 +39,9 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
-          profileImage: data['profile_image'], // Add this line
+          profileImage: data['profile_image'],
+          isVerified: data['is_verified'] ?? false,
+          verificationDetails: data['verification_details'],
         );
         isAuthenticated = true;
         errorMessage = '';
@@ -54,13 +50,8 @@ class AuthViewModel extends ChangeNotifier {
         errorMessage = data['error'] ?? 'Login failed';
         isAuthenticated = false;
       }
-    } on TimeoutException catch (_) {
-      errorMessage = 'Connection timed out. Please try again.';
-      isAuthenticated = false;
-    } on SocketException catch (_) {
-      errorMessage = 'Network error. Please check your internet connection.';
-      isAuthenticated = false;
     } catch (e) {
+      print('Login error: $e'); // Add debug log
       errorMessage = 'Network error: ${e.toString()}';
       isAuthenticated = false;
     }
@@ -91,7 +82,6 @@ class AuthViewModel extends ChangeNotifier {
       );
 
       if (response.statusCode == 201) {
-        // After successful signup, automatically log in
         await login(email, password);
       } else {
         final data = json.decode(response.body);
@@ -115,8 +105,7 @@ class AuthViewModel extends ChangeNotifier {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse(
-            '$baseUrl/forgot-password'), // Using baseUrl instead of hardcoded IP
+        Uri.parse('$baseUrl/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email}),
       );
@@ -207,7 +196,7 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
-          profileImage: data['profile_image'], // Make sure this is included
+          profileImage: data['profile_image'],
         );
         notifyListeners();
       }
@@ -244,7 +233,6 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // In the same file, update updateProfile method
   Future<void> updateProfile({
     required String name,
     required String specialty,
@@ -264,7 +252,7 @@ class AuthViewModel extends ChangeNotifier {
           'specialty': specialty,
           'phone_number': phoneNumber,
           'address': address,
-          'profile_image': base64Image, // Make sure to send the image
+          'profile_image': base64Image,
         }),
       );
 
@@ -277,8 +265,7 @@ class AuthViewModel extends ChangeNotifier {
           specialty: data['specialty'],
           phoneNumber: data['phone_number'],
           address: data['address'],
-          profileImage:
-              base64Image ?? currentDoctor?.profileImage, // Preserve the image
+          profileImage: base64Image ?? currentDoctor?.profileImage,
         );
         errorMessage = '';
       } else {
@@ -310,5 +297,41 @@ class AuthViewModel extends ChangeNotifier {
       errorMessage = 'Network error: $e';
       notifyListeners();
     }
+  }
+
+  Future<void> verifyDoctor(String base64Image) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-doctor'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'image': base64Image,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        currentDoctor = Doctor(
+          id: currentDoctor!.id,
+          name: currentDoctor!.name,
+          email: currentDoctor!.email,
+          specialty: currentDoctor!.specialty,
+          phoneNumber: currentDoctor!.phoneNumber,
+          address: currentDoctor!.address,
+          profileImage: currentDoctor!.profileImage,
+          isVerified: data['verified'],
+        );
+        errorMessage = '';
+      } else {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Verification failed';
+      }
+    } catch (e) {
+      errorMessage = 'Network error: $e';
+    }
+    notifyListeners();
   }
 }

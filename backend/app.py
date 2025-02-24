@@ -111,7 +111,6 @@ def send_otp_email(to_email, otp):
 def signup():
     data = request.get_json()
     
-    # Check if email already exists
     if doctors_collection.find_one({'email': data['email']}):
         return jsonify({'error': 'Email already registered'}), 400
 
@@ -124,7 +123,7 @@ def signup():
         password=data['password']
     )
 
-    # Insert the doctor document
+    # Insert the doctor document with is_verified field
     result = doctors_collection.insert_one({
         '_id': doctor._id,
         'name': doctor.name,
@@ -132,37 +131,62 @@ def signup():
         'password_hash': doctor.password_hash,
         'specialty': doctor.specialty,
         'phone_number': doctor.phone_number,
-        'address': doctor.address
+        'address': doctor.address,
+        'is_verified': False  # Add default verification status
     })
 
     return jsonify(doctor.to_dict()), 201
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    
-    doctor_data = doctors_collection.find_one({'email': data['email']})
-    if not doctor_data:
-        return jsonify({'error': 'Invalid credentials'}), 401
+    try:
+        data = request.get_json()
+        logger.debug(f"Login attempt for email: {data.get('email')}")  # Add debug log
+        
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({'error': 'Email and password are required'}), 400
 
-    doctor = Doctor.from_dict(doctor_data)
-    doctor.password_hash = doctor_data['password_hash']
+        doctor_data = doctors_collection.find_one({'email': data['email']})
+        if not doctor_data:
+            logger.debug("Email not found")  # Add debug log
+            return jsonify({'error': 'Invalid credentials'}), 401
 
-    if doctor.check_password(data['password']):
-        token = jwt.encode({'user_id': str(doctor._id), 'exp': datetime.utcnow() + timedelta(days=1)}, JWT_SECRET)
-        response_data = {
-            'token': token,
-            'id': str(doctor._id),
-            'name': doctor.name,
-            'email': doctor.email,
-            'specialty': doctor.specialty,
-            'phone_number': doctor.phone_number,
-            'address': doctor.address,
-            'profile_image': doctor_data.get('profile_image')  # Add this line
-        }
-        return jsonify(response_data), 200
-    
-    return jsonify({'error': 'Invalid credentials'}), 401
+        doctor = Doctor.from_dict(doctor_data)
+        doctor.password_hash = doctor_data['password_hash']
+
+        if doctor.check_password(data['password']):
+            token = jwt.encode(
+                {
+                    'user_id': str(doctor_data['_id']),
+                    'exp': datetime.utcnow() + timedelta(days=1)
+                },
+                JWT_SECRET,
+                algorithm='HS256'
+            )
+            
+            # Include verification status and details in response
+            response_data = {
+                'token': token,
+                'id': str(doctor_data['_id']),
+                'name': doctor_data['name'],
+                'email': doctor_data['email'],
+                'specialty': doctor_data['specialty'],
+                'phone_number': doctor_data.get('phone_number', ''),
+                'address': doctor_data.get('address', ''),
+                'profile_image': doctor_data.get('profile_image'),
+                'is_verified': doctor_data.get('is_verified', False),
+                'verification_details': doctor_data.get('verification_details', None)
+            }
+            
+            logger.debug("Login successful")  # Add debug log
+            return jsonify(response_data), 200
+        else:
+            logger.debug("Invalid password")  # Add debug log
+            return jsonify({'error': 'Invalid credentials'}), 401
+            
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")  # Add debug log
+        return jsonify({'error': 'Server error: ' + str(e)}), 500
 
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
@@ -369,14 +393,95 @@ def scan_visit_card():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/verify-doctor', methods=['POST'])
+@token_required
+def verify_doctor(user_id):
+    try:
+        data = request.get_json()
+        image_data = data.get('image')
+
+        if not image_data:
+            return jsonify({'error': 'No image provided'}), 400
+
+        # Get doctor's data from database
+        doctor_data = doctors_collection.find_one({'_id': ObjectId(user_id)})
+        if not doctor_data:
+            return jsonify({'error': 'Doctor not found'}), 404
+
+        # Get doctor's name from database
+        doctor_name = doctor_data['name'].lower().strip()
+
+        logger.debug(f"Checking for Name='{doctor_name}'")
+
+        # Process the image
+        image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+        
+        # Enhance image quality for better OCR
+        image = image.convert('L')  # Convert to grayscale
+        image = image.point(lambda x: 0 if x < 128 else 255, '1')  # Enhance contrast
+
+        # Extract text from image
+        extracted_text = pytesseract.image_to_string(image)
+        extracted_text = extracted_text.lower().strip()
+        
+        logger.debug(f"Extracted text: {extracted_text}")
+
+        # Simple text matching for name
+        name_found = doctor_name in extracted_text
+
+        # If name has multiple parts, check each part
+        if not name_found:
+            name_parts = doctor_name.split()
+            name_found = all(part in extracted_text for part in name_parts)
+
+        logger.debug(f"Name found: {name_found}")
+
+        if name_found:
+            # Update verification status
+            doctors_collection.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': {
+                    'is_verified': True,
+                    'verification_details': {
+                        'verified_at': datetime.utcnow(),
+                        'matched_text': extracted_text
+                    }
+                }}
+            )
+            return jsonify({
+                'verified': True,
+                'message': 'Name verification successful'
+            }), 200
+        else:
+            return jsonify({
+                'verified': False,
+                'error': 'Verification failed: name not found in document',
+                'debug_info': {
+                    'name_found': name_found,
+                    'doctor_name': doctor_name
+                }
+            }), 400
+
+    except Exception as e:
+        logger.error(f"Verification error: {str(e)}")
+        return jsonify({'error': f'Verification failed: {str(e)}'}), 500
+
+# Improve the extraction functions
 def extract_name(text):
-    # Implement logic to extract name from text
-    # This is a placeholder and needs to be implemented based on the visit card format
-    # Example: Use regular expressions to find a name pattern
-    name_match = re.search(r'([A-Z][a-z]+ [A-Z][a-z]+)', text)
-    if name_match:
-        return name_match.group(1)
-    return "Extracted Name"
+    # Look for patterns that might indicate a name
+    # Usually names appear at the beginning or after "Dr." or similar titles
+    lines = text.split('\n')
+    for line in lines:
+        # Look for "Dr." or similar titles
+        name_match = re.search(r'(?:Dr\.?|Doctor)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', line, re.IGNORECASE)
+        if name_match:
+            return name_match.group(1)
+        
+        # Look for capitalized words that might be names
+        name_match = re.search(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', line)
+        if name_match:
+            return name_match.group(1)
+    return ""
 
 def extract_email(text):
     # Implement logic to extract email from text
@@ -387,14 +492,25 @@ def extract_email(text):
     return "Extracted Email"
 
 def extract_specialty(text):
+    # Common medical specialties
+    specialties = [
+        'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'Oncology',
+        'Orthopedics', 'Gynecology', 'Psychiatry', 'Surgery', 'Internal Medicine',
+        # Add more specialties as needed
+    ]
+    
     lines = text.split('\n')
-    lines = [l.strip() for l in lines if l.strip()]
-    name_pattern = re.compile(r'([A-Z][a-z]+ [A-Z][a-z]+)')
-    for i, line in enumerate(lines):
-        if name_pattern.search(line):
-            if i + 1 < len(lines):
-                return lines[i + 1]
-    return "Extracted Specialty"
+    for line in lines:
+        # Check for known specialties
+        for specialty in specialties:
+            if specialty.lower() in line.lower():
+                return line.strip()
+        
+        # Look for patterns that might indicate a specialty
+        specialty_match = re.search(r'(?:Specialist|Consultant)\s+in\s+([A-Za-z\s]+)', line)
+        if specialty_match:
+            return specialty_match.group(1).strip()
+    return ""
 
 def extract_phone_number(text):
     # Basic pattern to match phone formats, can be refined

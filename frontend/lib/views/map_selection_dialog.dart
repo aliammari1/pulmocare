@@ -160,7 +160,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                       trafficEnabled: _trafficEnabled,
                       myLocationEnabled: true,
                       myLocationButtonEnabled: false,
-                      zoomControlsEnabled: false, // Changed this line to false
+                      zoomControlsEnabled: false, 
                       mapToolbarEnabled: true,
                       buildingsEnabled: true,
                       onTap: (latLng) async {

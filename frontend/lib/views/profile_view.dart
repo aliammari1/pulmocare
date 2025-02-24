@@ -4,6 +4,7 @@ import '../viewmodels/auth_view_model.dart';
 import '../theme/app_theme.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import '../components/verification_alert.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -119,6 +120,10 @@ class ProfileView extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // Verification Alert
+                VerificationAlert(isVerified: doctor.isVerified),
+
                 // Information Cards with enhanced design
                 Padding(
                   padding: const EdgeInsets.all(20),
