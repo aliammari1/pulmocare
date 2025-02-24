@@ -13,16 +13,48 @@ class VerificationAlert extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isVerified) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.green,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: const [
+            Icon(
+              Icons.verified_user,
+              color: Colors.green,
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Verified Medical Professional',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isVerified
-            ? Colors.green.withOpacity(0.1)
-            : Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isVerified ? Colors.green : Colors.orange,
+          color: Colors.orange,
           width: 1,
         ),
       ),
@@ -31,46 +63,41 @@ class VerificationAlert extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isVerified ? Icons.verified_user : Icons.warning_amber_rounded,
-                color: isVerified ? Colors.green : Colors.orange,
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
                 size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  isVerified
-                      ? 'Verified Medical Professional'
-                      : 'Your profile needs verification',
+                  'Your profile needs verification',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isVerified ? Colors.green : Colors.orange,
+                    color: Colors.orange,
                   ),
                 ),
               ),
             ],
           ),
-          if (!isVerified) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Please upload your medical diploma or professional license to verify your account.',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _handleVerification(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.turquoise,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+          const SizedBox(height: 12),
+          Text(
+            'Please upload your medical diploma or professional license to verify your account.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _handleVerification(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.turquoise,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Upload Verification Document'),
             ),
-          ],
+            child: const Text('Upload Verification Document'),
+          ),
         ],
       ),
     );

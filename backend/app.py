@@ -288,7 +288,11 @@ def get_profile(user_id):
     doctor_data = doctors_collection.find_one({'_id': ObjectId(user_id)})
     if not doctor_data:
         return jsonify({'error': 'Doctor not found'}), 404
-    return jsonify(Doctor.from_dict(doctor_data).to_dict()), 200
+    
+    # Make sure to include verification status in response
+    response_data = Doctor.from_dict(doctor_data).to_dict()
+    response_data['is_verified'] = doctor_data.get('is_verified', False)
+    return jsonify(response_data), 200
 
 @app.route('/api/change-password', methods=['POST'])
 @token_required
@@ -328,34 +332,40 @@ def change_password(user_id):
 @token_required
 def update_profile(user_id):
     data = request.get_json()
-    name = data.get('name')
-    specialty = data.get('specialty')
-    phone_number = data.get('phone_number')
-    address = data.get('address')
-    profile_image = data.get('profile_image')  # Get the profile image
+    
+    # Get current doctor data to preserve verification status
+    current_doctor = doctors_collection.find_one({'_id': ObjectId(user_id)})
+    if not current_doctor:
+        return jsonify({'error': 'Doctor not found'}), 404
 
     update_fields = {
-        'name': name,
-        'specialty': specialty,
-        'phone_number': phone_number,
-        'address': address,
+        'name': data.get('name'),
+        'specialty': data.get('specialty'),
+        'phone_number': data.get('phone_number'),
+        'address': data.get('address'),
     }
     
-    if profile_image:  # Only update if image is provided
-        update_fields['profile_image'] = profile_image
+    if data.get('profile_image'):
+        update_fields['profile_image'] = data.get('profile_image')
 
+    # Update while preserving verification status
     doctors_collection.update_one(
         {'_id': ObjectId(user_id)}, 
         {'$set': update_fields}
     )
     
+    # Get updated doctor data
     updated_doctor = doctors_collection.find_one({'_id': ObjectId(user_id)})
-    doctor_dict = Doctor.from_dict(updated_doctor).to_dict()
-    # Include profile image in response
-    if updated_doctor.get('profile_image'):
-        doctor_dict['profile_image'] = updated_doctor['profile_image']
+    response_data = Doctor.from_dict(updated_doctor).to_dict()
     
-    return jsonify(doctor_dict), 200
+    # Include verification status and details in response
+    response_data.update({
+        'is_verified': current_doctor.get('is_verified', False),
+        'verification_details': current_doctor.get('verification_details'),
+        'profile_image': updated_doctor.get('profile_image')
+    })
+    
+    return jsonify(response_data), 200
 
 @app.route('/api/logout', methods=['POST'])
 @token_required
@@ -438,7 +448,7 @@ def verify_doctor(user_id):
 
         if name_found:
             # Update verification status
-            doctors_collection.update_one(
+            result = doctors_collection.update_one(
                 {'_id': ObjectId(user_id)},
                 {'$set': {
                     'is_verified': True,
@@ -448,10 +458,16 @@ def verify_doctor(user_id):
                     }
                 }}
             )
-            return jsonify({
-                'verified': True,
-                'message': 'Name verification successful'
-            }), 200
+            
+            if result.modified_count > 0:
+                return jsonify({
+                    'verified': True,
+                    'message': 'Name verification successful'
+                }), 200
+            else:
+                return jsonify({
+                    'error': 'Failed to update verification status'
+                }), 500
         else:
             return jsonify({
                 'verified': False,

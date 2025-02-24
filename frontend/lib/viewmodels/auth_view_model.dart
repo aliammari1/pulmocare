@@ -197,6 +197,8 @@ class AuthViewModel extends ChangeNotifier {
           phoneNumber: data['phone_number'],
           address: data['address'],
           profileImage: data['profile_image'],
+          isVerified: data['is_verified'] ??
+              false, // Make sure to include verification status
         );
         notifyListeners();
       }
@@ -266,6 +268,11 @@ class AuthViewModel extends ChangeNotifier {
           phoneNumber: data['phone_number'],
           address: data['address'],
           profileImage: base64Image ?? currentDoctor?.profileImage,
+          isVerified: data['is_verified'] ??
+              currentDoctor?.isVerified ??
+              false, // Preserve verification status
+          verificationDetails: data['verification_details'] ??
+              currentDoctor?.verificationDetails,
         );
         errorMessage = '';
       } else {
@@ -314,16 +321,18 @@ class AuthViewModel extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        currentDoctor = Doctor(
-          id: currentDoctor!.id,
-          name: currentDoctor!.name,
-          email: currentDoctor!.email,
-          specialty: currentDoctor!.specialty,
-          phoneNumber: currentDoctor!.phoneNumber,
-          address: currentDoctor!.address,
-          profileImage: currentDoctor!.profileImage,
-          isVerified: data['verified'],
-        );
+        if (currentDoctor != null) {
+          currentDoctor = Doctor(
+            id: currentDoctor!.id,
+            name: currentDoctor!.name,
+            email: currentDoctor!.email,
+            specialty: currentDoctor!.specialty,
+            phoneNumber: currentDoctor!.phoneNumber,
+            address: currentDoctor!.address,
+            profileImage: currentDoctor!.profileImage,
+            isVerified: true,
+          );
+        }
         errorMessage = '';
       } else {
         final data = json.decode(response.body);
