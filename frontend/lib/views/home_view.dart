@@ -4,6 +4,10 @@ import 'package:medicare/views/profile_view.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
 import 'patients_view.dart';
+import '../components/chat_dialog.dart';
+import '../viewmodels/chat_viewmodel.dart';
+import 'news_view.dart';
+import '../components/Drawer.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -16,11 +20,12 @@ class _HomeViewState extends State<HomeView> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    ProfileView(),
+    const NewsView(),
     PatientsView(),
+    ProfileView(),
   ];
 
-  final List<String> _titles = ['Profile', 'Patients'];
+  final List<String> _titles = ['News', 'Patients', 'Profile'];
 
   @override
   void initState() {
@@ -31,13 +36,37 @@ class _HomeViewState extends State<HomeView> {
     });
   }
 
+  void _openAIAssistant() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ChangeNotifierProvider(
+        create: (_) => ChatViewModel(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: const ChatDialog(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(),
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Add this line to remove back arrow
+        automaticallyImplyLeading: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: AppTheme.turquoise),
         title: Text(
           _titles[_currentIndex],
           style: const TextStyle(
@@ -45,37 +74,6 @@ class _HomeViewState extends State<HomeView> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            child: IconButton(
-              icon: const Icon(Icons.logout, color: AppTheme.turquoise),
-              onPressed: () async {
-                final shouldLogout = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Confirm Logout'),
-                    content: const Text('Are you sure you want to logout?'),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancel'),
-                        onPressed: () => Navigator.pop(ctx, false),
-                      ),
-                      TextButton(
-                        child: const Text('Yes, Logout'),
-                        onPressed: () => Navigator.pop(ctx, true),
-                      ),
-                    ],
-                  ),
-                );
-                if (shouldLogout == true) {
-                  await context.read<AuthViewModel>().logout();
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
-              },
-            ),
-          ),
-        ],
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: Container(
@@ -109,19 +107,30 @@ class _HomeViewState extends State<HomeView> {
             },
             items: const [
               BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profile',
+                icon: Icon(Icons.newspaper),
+                activeIcon: Icon(Icons.newspaper),
+                label: 'News',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.people_outline),
                 activeIcon: Icon(Icons.people),
                 label: 'Patients',
               ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                activeIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
             ],
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAIAssistant,
+        backgroundColor: AppTheme.turquoise,
+        child: const Icon(Icons.medical_services_outlined),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

@@ -8,6 +8,7 @@ class Doctor {
   final String? profileImage;
   final bool isVerified; // Changed from bool? to bool
   final Map<String, dynamic>? verificationDetails; // Add verification details
+  final String? signature; // Add this field
 
   Doctor({
     required this.id,
@@ -19,5 +20,6 @@ class Doctor {
     this.profileImage,
     this.isVerified = false, // Default to false
     this.verificationDetails,
+    this.signature,
   });
 }

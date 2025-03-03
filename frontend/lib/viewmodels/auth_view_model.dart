@@ -343,4 +343,42 @@ class AuthViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  Future<void> updateSignature(String signatureBase64) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/update-signature'),
+        headers: {
+          'Authorization': 'Bearer $authToken',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'signature': signatureBase64,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        currentDoctor = Doctor(
+          id: currentDoctor!.id,
+          name: currentDoctor!.name,
+          email: currentDoctor!.email,
+          specialty: currentDoctor!.specialty,
+          phoneNumber: currentDoctor!.phoneNumber,
+          address: currentDoctor!.address,
+          profileImage: currentDoctor!.profileImage,
+          isVerified: currentDoctor!.isVerified,
+          verificationDetails: currentDoctor!.verificationDetails,
+          signature: signatureBase64,
+        );
+        errorMessage = '';
+      } else {
+        final data = json.decode(response.body);
+        errorMessage = data['error'] ?? 'Failed to update signature';
+      }
+    } catch (e) {
+      errorMessage = 'Network error: $e';
+    }
+    notifyListeners();
+  }
 }

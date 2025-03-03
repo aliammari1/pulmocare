@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../components/verification_alert.dart';
+import 'package:flutter_signature_pad/flutter_signature_pad.dart';
+import 'dart:ui' as ui;
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -166,6 +168,15 @@ class ProfileView extends StatelessWidget {
                               Icons.edit_outlined,
                               AppTheme.skyBlue,
                               () => _showEditProfileDialog(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildActionButton(
+                              'Add\nSignature',
+                              Icons.draw,
+                              AppTheme.skyBlue,
+                              () => _showSignatureDialog(context),
                             ),
                           ),
                         ],
@@ -557,6 +568,93 @@ class ProfileView extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSignatureDialog(BuildContext context) {
+    final _sign = GlobalKey<SignatureState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Draw Your Signature',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.turquoise,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppTheme.turquoise),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Signature(
+                  key: _sign,
+                  color: Colors.black,
+                  strokeWidth: 3.0,
+                  backgroundPainter: null,
+                  onSign: () {},
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton.icon(
+                    icon: Icon(Icons.clear),
+                    label: Text('Clear'),
+                    onPressed: () {
+                      _sign.currentState?.clear();
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.save),
+                    label: Text('Save Signature'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.turquoise,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      final sign = _sign.currentState;
+                      if (sign?.hasPoints ?? false) {
+                        final image = await sign?.getData();
+                        final bytes = await image?.toByteData(
+                          format: ui.ImageByteFormat.png,
+                        );
+                        if (bytes != null) {
+                          final base64Signature = base64Encode(
+                            bytes.buffer.asUint8List(),
+                          );
+                          await context.read<AuthViewModel>().updateSignature(
+                                base64Signature,
+                              );
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Signature saved successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

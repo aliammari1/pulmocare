@@ -40,12 +40,18 @@ dependencies:
   shimmer: ^3.0.0
   permission_handler: ^11.1.0
   url_launcher: ^6.1.14
+  google_generative_ai: ^0.3.0
+  signature: ^5.4.0
+  flutter_signature_pad: ^3.0.1
+  http_parser: ^4.0.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   image_picker: ^1.1.2
   animated_notch_bottom_bar: ^1.0.3
+  html: ^0.15.4
+  webview_flutter: ^4.4.2
 
 dev_dependencies:
   flutter_test:
