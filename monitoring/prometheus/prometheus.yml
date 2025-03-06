@@ -1,0 +1,90 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: development
+
+# Rule files
+rule_files:
+  - "alert.rules"
+
+scrape_configs:
+  # OpenTelemetry Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # Service Discovery via Consul
+  - job_name: 'consul-services'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['gateway', 'reports', 'xray-service', 'knowledge-service']
+    relabel_configs:
+      - source_labels: ['__meta_consul_service']
+        target_label: 'service'
+      - source_labels: ['__meta_consul_service_metadata_version']
+        target_label: 'version'
+      - source_labels: ['__meta_consul_service_metadata_environment']
+        target_label: 'environment'
+      - source_labels: ['__meta_consul_health']
+        target_label: 'health_status'
+
+  # Core Infrastructure
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb:27017']
+    metrics_path: '/metrics'
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: '/metrics'
+
+  # API Gateway
+  - job_name: 'gateway'
+    metrics_path: '/metrics'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['gateway']
+
+  # Microservices
+  - job_name: 'reports-service'
+    metrics_path: '/metrics'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['reports']
+
+  - job_name: 'xray-service'
+    metrics_path: '/metrics'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['xray-service']
+
+  - job_name: 'knowledge-service'
+    metrics_path: '/metrics'
+    consul_sd_configs:
+      - server: 'consul:8500'
+        services: ['knowledge-service']
+
+  # System Monitoring
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Container Monitoring
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      scheme: http
+      timeout: 10s
+      api_version: v2
