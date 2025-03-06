@@ -32,6 +32,12 @@ check_service_health() {
     return 1
 }
 
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    echo "Docker is not running. Please start Docker first."
+    exit 1
+fi
+
 # Check prerequisites
 echo "Checking prerequisites..."
 prerequisites=("docker" "docker-compose" "flutter")
@@ -50,6 +56,8 @@ if [ ! -f .env ]; then
 MONGODB_USERNAME=medapp
 MONGODB_PASSWORD=medapppass
 MONGODB_DATABASE=medapp
+MONGODB_HOST=mongodb
+MONGODB_PORT=27017
 
 # RabbitMQ
 RABBITMQ_USER=guest
@@ -66,6 +74,10 @@ fi
 
 # Create necessary directories
 dirs=(
+    "./backend/services/xray/models"
+    "./backend/services/knowledge/models"
+    "./backend/services/knowledge/medical_corpus"
+    "./backend/services/knowledge/chroma_db"
     "./monitoring/grafana/dashboards"
     "./monitoring/grafana/provisioning"
     "./monitoring/prometheus"
@@ -73,6 +85,8 @@ dirs=(
     "./data/mongodb"
     "./data/redis"
     "./config"
+    "./backend/services/xray/logs"
+    "./backend/services/knowledge/logs"
     "./frontend/build"
     "./dist"
 )
@@ -99,21 +113,32 @@ scrape_configs:
 
   - job_name: 'services'
     static_configs:
-      - targets: ['service-registry:8761', 'mobile-gateway:5000']
+      - targets: ['service-registry:8761', 'mobile-gateway:5000', 'xray-service:8081', 'knowledge-service:8082']
 EOF
 fi
 
-# Build Docker images
-echo "Building Docker images..."
+# Function to check if Docker image exists
+image_exists() {
+    docker image inspect "$1" >/dev/null 2>&1
+}
+
+# Build Docker images only if they don't exist
+echo "Checking Docker images..."
 services=(
     "service-registry:backend/registry"
     "mobile-gateway:backend/gateway"
+    "xray-service:backend/services/xray"
+    "knowledge-service:backend/services/knowledge"
 )
 
 for service in "${services[@]}"; do
     IFS=':' read -r name path <<< "$service"
-    echo "Building $name..."
-    docker build -t "$name:latest" -f "$path/Dockerfile" "$path"
+    if ! image_exists "$name:latest"; then
+        echo "Building $name..."
+        docker build -t "$name:latest" -f "$path/Dockerfile" "$path"
+    else
+        echo "Image $name:latest already exists, skipping build..."
+    fi
 done
 
 # Build Flutter mobile app
@@ -129,14 +154,33 @@ mkdir -p ../dist
 mv build/app/outputs/flutter-apk/app-release.apk ../dist/medapp.apk
 popd
 
-# Start development environment
-echo "Starting development environment..."
-docker-compose up -d
+# Check if containers are running
+containers_running() {
+    for service in "$@"; do
+        if ! docker ps --filter "name=$service" --filter "status=running" --format "{{.Names}}" | grep -q "^$service$"; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+if ! containers_running "service-registry" "mobile-gateway" "xray-service" "knowledge-service"; then
+    echo "Starting development environment..."
+    docker-compose up -d
+else
+    echo "All containers are already running..."
+fi
+
+# Wait for services
+echo "Waiting for services to be ready..."
+sleep 30
 
 # Wait for core services
 declare -A services=(
     ["Service Registry"]="http://localhost:8761/health"
     ["Mobile Gateway"]="http://localhost:5000/health"
+    ["X-Ray Service"]="http://localhost:8081/health"
+    ["Knowledge Service"]="http://localhost:8082/health"
 )
 
 for service in "${!services[@]}"; do
