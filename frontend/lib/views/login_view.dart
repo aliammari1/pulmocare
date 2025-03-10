@@ -6,7 +6,9 @@ import '../viewmodels/auth_view_model.dart';
 import 'signup_view.dart';
 
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+  final String userType;
+
+  const LoginView({super.key, required this.userType});
 
   @override
   _LoginViewState createState() => _LoginViewState();
@@ -144,6 +146,14 @@ class _LoginViewState extends State<LoginView> {
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF35C5CF),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Sign in as ${widget.userType.capitalize()}',
+                            style: TextStyle(
+                              fontSize: 24,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -285,5 +295,11 @@ class _LoginViewState extends State<LoginView> {
         ],
       ),
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${this.substring(1)}";
   }
 }

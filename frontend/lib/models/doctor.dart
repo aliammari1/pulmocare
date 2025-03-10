@@ -20,6 +20,6 @@ class Doctor {
     this.profileImage,
     this.isVerified = false, // Default to false
     this.verificationDetails,
-    this.signature,
+    this.signature, // Add this field
   });
 }

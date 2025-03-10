@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/auth_view_model.dart';
-import 'package:provider/provider.dart';
-import '../viewmodels/chat_viewmodel.dart';
+import 'viewmodels/chat_viewmodel.dart';
 import 'views/login_view.dart';
 import 'views/home_view.dart';
+import 'views/entry_view.dart'; // Add this import
 import 'theme/app_theme.dart';
 
 void main() {
@@ -24,16 +24,11 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Medicare',
         theme: AppTheme.lightTheme,
-        initialRoute: '/login',
+        home: const EntryView(),
         routes: {
-          '/login': (context) => const LoginView(),
+          // Remove '/login' route since we're handling it through EntryView
           '/home': (context) => const HomeView(),
         },
-        home: Consumer<AuthViewModel>(
-          builder: (context, authVM, child) {
-            return authVM.isAuthenticated ? HomeView() : LoginView();
-          },
-        ),
       ),
     );
   }

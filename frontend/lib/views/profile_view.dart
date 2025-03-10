@@ -5,8 +5,7 @@ import '../theme/app_theme.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../components/verification_alert.dart';
-import 'package:flutter_signature_pad/flutter_signature_pad.dart';
-import 'dart:ui' as ui;
+import './signature_view.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -150,6 +149,38 @@ class ProfileView extends StatelessWidget {
                         AppTheme.turquoise,
                       ),
                       const SizedBox(height: 24),
+
+                      // Replace old signature button with this new one
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: ElevatedButton.icon(
+                          onPressed: () => doctor.signature != null
+                              ? _showSignatureDialog(context, doctor.signature!)
+                              : _showSignatureCreationDialog(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.paleBlue,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: Icon(
+                              doctor.signature != null ? Icons.draw : Icons.add,
+                              color: Colors.black87),
+                          label: Text(
+                            doctor.signature != null
+                                ? 'View Signature'
+                                : 'Add Signature',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
                       // Modern Action Buttons
                       Row(
                         children: [
@@ -168,15 +199,6 @@ class ProfileView extends StatelessWidget {
                               Icons.edit_outlined,
                               AppTheme.skyBlue,
                               () => _showEditProfileDialog(context),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildActionButton(
-                              'Add\nSignature',
-                              Icons.draw,
-                              AppTheme.skyBlue,
-                              () => _showSignatureDialog(context),
                             ),
                           ),
                         ],
@@ -574,39 +596,44 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  void _showSignatureDialog(BuildContext context) {
-    final _sign = GlobalKey<SignatureState>();
-
+  // Add this method at the bottom of the class
+  void _showSignatureDialog(BuildContext context, String signatureBase64) {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Container(
           padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Draw Your Signature',
+              const Text(
+                'Your Signature',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.turquoise,
                 ),
               ),
               const SizedBox(height: 20),
               Container(
-                height: 300,
+                width: double.infinity,
+                height: 200,
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.turquoise),
-                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: AppTheme.turquoise, width: 2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Signature(
-                  key: _sign,
-                  color: Colors.black,
-                  strokeWidth: 3.0,
-                  backgroundPainter: null,
-                  onSign: () {},
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.memory(
+                    base64Decode(signatureBase64),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -614,49 +641,38 @@ class ProfileView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   TextButton.icon(
-                    icon: Icon(Icons.clear),
-                    label: Text('Clear'),
                     onPressed: () {
-                      _sign.currentState?.clear();
+                      Navigator.pop(context);
+                      _showSignatureCreationDialog(
+                          context); // Show new signature dialog
                     },
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Change'),
                   ),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.save),
-                    label: Text('Save Signature'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.turquoise,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () async {
-                      final sign = _sign.currentState;
-                      if (sign?.hasPoints ?? false) {
-                        final image = await sign?.getData();
-                        final bytes = await image?.toByteData(
-                          format: ui.ImageByteFormat.png,
-                        );
-                        if (bytes != null) {
-                          final base64Signature = base64Encode(
-                            bytes.buffer.asUint8List(),
-                          );
-                          await context.read<AuthViewModel>().updateSignature(
-                                base64Signature,
-                              );
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Signature saved successfully'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      }
-                    },
+                  TextButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Close'),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Add this new method to show signature creation dialog
+  void _showSignatureCreationDialog(BuildContext context) {
+    final doctor = context.read<AuthViewModel>().currentDoctor;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SignatureView(existingSignature: doctor?.signature),
       ),
     );
   }

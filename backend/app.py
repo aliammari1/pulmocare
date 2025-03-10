@@ -175,7 +175,8 @@ def login():
                 'address': doctor_data.get('address', ''),
                 'profile_image': doctor_data.get('profile_image'),
                 'is_verified': doctor_data.get('is_verified', False),
-                'verification_details': doctor_data.get('verification_details', None)
+                'verification_details': doctor_data.get('verification_details', None),
+                'signature': doctor_data.get('signature')  # Add this line
             }
             
             logger.debug("Login successful")  # Add debug log
@@ -289,9 +290,12 @@ def get_profile(user_id):
     if not doctor_data:
         return jsonify({'error': 'Doctor not found'}), 404
     
-    # Make sure to include verification status in response
+    # Make sure to include verification status and signature in response
     response_data = Doctor.from_dict(doctor_data).to_dict()
-    response_data['is_verified'] = doctor_data.get('is_verified', False)
+    response_data.update({
+        'is_verified': doctor_data.get('is_verified', False),
+        'signature': doctor_data.get('signature')  # Add this line
+    })
     return jsonify(response_data), 200
 
 @app.route('/api/change-password', methods=['POST'])
@@ -534,6 +538,35 @@ def extract_phone_number(text):
     if phone_match:
         return phone_match.group(0).strip()
     return "Extracted Phone"
+
+@app.route('/api/update-signature', methods=['POST'])
+@token_required
+def update_signature(user_id):
+    try:
+        data = request.get_json()
+        signature = data.get('signature')
+
+        if not signature:
+            return jsonify({'error': 'No signature provided'}), 400
+
+        result = doctors_collection.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': {'signature': signature}}
+        )
+
+        if result.modified_count > 0:
+            # Get updated doctor data
+            doctor_data = doctors_collection.find_one({'_id': ObjectId(user_id)})
+            return jsonify({
+                'message': 'Signature updated successfully',
+                'signature': doctor_data.get('signature')
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to update signature'}), 500
+
+    except Exception as e:
+        logger.error(f"Signature update error: {str(e)}")
+        return jsonify({'error': f'Signature update failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)

@@ -61,9 +61,25 @@ class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(),
+      endDrawer: const AppDrawer(), // Changed from drawer to endDrawer
       appBar: AppBar(
-        automaticallyImplyLeading: true,
+        automaticallyImplyLeading: false,
+        leading: null, // Remove the leading property
+        actions: [
+          Builder(
+            builder: (BuildContext context) {
+              return IconButton(
+                icon: const Icon(
+                  Icons.menu_rounded,
+                  size: 30,
+                ),
+                onPressed: () => Scaffold.of(context)
+                    .openEndDrawer(), // Changed from openDrawer to openEndDrawer
+                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+              );
+            },
+          ),
+        ],
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: AppTheme.turquoise),

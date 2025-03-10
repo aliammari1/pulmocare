@@ -42,6 +42,7 @@ class AuthViewModel extends ChangeNotifier {
           profileImage: data['profile_image'],
           isVerified: data['is_verified'] ?? false,
           verificationDetails: data['verification_details'],
+          signature: data['signature'], // Add this line
         );
         isAuthenticated = true;
         errorMessage = '';
@@ -197,8 +198,9 @@ class AuthViewModel extends ChangeNotifier {
           phoneNumber: data['phone_number'],
           address: data['address'],
           profileImage: data['profile_image'],
-          isVerified: data['is_verified'] ??
-              false, // Make sure to include verification status
+          isVerified: data['is_verified'] ?? false,
+          verificationDetails: data['verification_details'],
+          signature: data['signature'], // Add this line
         );
         notifyListeners();
       }
@@ -358,19 +360,20 @@ class AuthViewModel extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        currentDoctor = Doctor(
-          id: currentDoctor!.id,
-          name: currentDoctor!.name,
-          email: currentDoctor!.email,
-          specialty: currentDoctor!.specialty,
-          phoneNumber: currentDoctor!.phoneNumber,
-          address: currentDoctor!.address,
-          profileImage: currentDoctor!.profileImage,
-          isVerified: currentDoctor!.isVerified,
-          verificationDetails: currentDoctor!.verificationDetails,
-          signature: signatureBase64,
-        );
+        if (currentDoctor != null) {
+          currentDoctor = Doctor(
+            id: currentDoctor!.id,
+            name: currentDoctor!.name,
+            email: currentDoctor!.email,
+            specialty: currentDoctor!.specialty,
+            phoneNumber: currentDoctor!.phoneNumber,
+            address: currentDoctor!.address,
+            profileImage: currentDoctor!.profileImage,
+            isVerified: currentDoctor!.isVerified,
+            verificationDetails: currentDoctor!.verificationDetails,
+            signature: signatureBase64,
+          );
+        }
         errorMessage = '';
       } else {
         final data = json.decode(response.body);
