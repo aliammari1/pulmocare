@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:medapp/models/medical_report.dart';
 import 'package:provider/provider.dart';
 import 'package:file_saver/file_saver.dart';
 import '../providers/report_provider.dart';
 import '../services/snackbar_service.dart';
-import '../services/navigation_service.dart';
 import '../widgets/loading_overlay.dart';
 import 'report_editor_screen.dart';
+// Import service locator
 
 class ReportListScreen extends StatefulWidget {
   const ReportListScreen({super.key});
@@ -16,31 +17,23 @@ class ReportListScreen extends StatefulWidget {
 }
 
 class _ReportListScreenState extends State<ReportListScreen> {
-
   @override
   void initState() {
     super.initState();
-    _loadReports();
+    // Use addPostFrameCallback to perform the loading after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReports();
+    });
   }
 
   Future<void> _loadReports() async {
-    if (!mounted) return;
-    setState(() {
-    });
-
     try {
       await context.read<ReportProvider>().loadReports();
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
-      });
+      // Handle error if needed
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -131,13 +124,13 @@ class _ReportListScreenState extends State<ReportListScreen> {
         final report = provider.reports[index];
         return Card(
           child: ListTile(
-            title: Text(report['title'] ?? 'Untitled Report'),
+            title: Text(report.title),
             subtitle: Text(
-              report['summary'] ?? 'No summary available',
+              report.content,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: _buildReportStatus(report['status']),
+            trailing: _buildReportStatus(report.content),
             onTap: () {
               Navigator.push(
                 context,
@@ -230,14 +223,14 @@ class _SearchBarState extends State<_SearchBar> {
 }
 
 class ReportListItem extends StatelessWidget {
-  final Map<String, dynamic> report;
+  final MedicalReport report;
 
   const ReportListItem({super.key, required this.report});
 
   @override
   Widget build(BuildContext context) {
     return Dismissible(
-      key: Key(report['id'] ?? ''),
+      key: Key(report.id),
       background: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,
@@ -269,7 +262,7 @@ class ReportListItem extends StatelessWidget {
       onDismissed: (direction) async {
         try {
           final provider = Provider.of<ReportProvider>(context, listen: false);
-          await provider.deleteReport(report['id']);
+          await provider.deleteReport(report.id);
           if (provider.error != null && provider.error!.isNotEmpty) {
             SnackbarService.showError(
                 context, 'Failed to delete report: ${provider.error}');
@@ -281,7 +274,7 @@ class ReportListItem extends StatelessWidget {
         }
       },
       child: Hero(
-        tag: 'report_${report['id']}',
+        tag: 'report_${report.id}',
         child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: InkWell(
@@ -295,7 +288,7 @@ class ReportListItem extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          report['title'] ?? 'Untitled Report',
+                          report.title,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -342,15 +335,15 @@ class ReportListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Last updated: ${report['updatedAt']}',
+                    'Last updated: ${report.updatedAt}', // updated to correctly access updatedAt
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  if (report['content']?.isNotEmpty ?? false) ...[
+                  if (report.content.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      (report['content'] as String).length > 100
-                          ? '${(report['content'] as String).substring(0, 100)}...'
-                          : report['content'] as String,
+                      (report.content).length > 100
+                          ? '${(report.content).substring(0, 100)}...' // updated to directly access content
+                          : report.content,
                       style: Theme.of(context).textTheme.bodyMedium,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -365,15 +358,17 @@ class ReportListItem extends StatelessWidget {
     );
   }
 
-  void _navigateToEditor(BuildContext context, Map<String, dynamic> report) {
-    NavigationService.push(
+  void _navigateToEditor(BuildContext context, MedicalReport report) {
+    // Use Navigator.push instead of locator<NavigationService>().navigateTo(...)
+    Navigator.push(
       context,
-      ReportEditorScreen(report: report),
+      MaterialPageRoute(
+          builder: (context) => ReportEditorScreen(report: report)),
     );
   }
 
   void _handleMenuAction(
-      BuildContext context, String action, Map<String, dynamic> report) async {
+      BuildContext context, String action, MedicalReport report) async {
     switch (action) {
       case 'edit':
         _navigateToEditor(context, report);
@@ -383,12 +378,12 @@ class ReportListItem extends StatelessWidget {
         break;
       case 'export':
         final provider = Provider.of<ReportProvider>(context, listen: false);
-        final bytes = await provider.exportReport(report['id'], format: 'pdf');
+        final bytes = await provider.exportReport(report.id, format: 'pdf');
 
         if (bytes != null) {
           try {
             await FileSaver.instance.saveFile(
-              name: 'report_${report['id']}.pdf',
+              name: 'report_${report.id}.pdf', // updated id access
               bytes: bytes,
               ext: 'pdf',
               mimeType: MimeType.pdf,
@@ -403,6 +398,7 @@ class ReportListItem extends StatelessWidget {
             );
           }
         } else {
+          // Removed mounted check since this is a StatelessWidget.
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Failed to export report')),
           );
@@ -412,7 +408,7 @@ class ReportListItem extends StatelessWidget {
 }
 
 class ReportSearchDelegate extends SearchDelegate {
-  final List<Map<String, dynamic>> reports;
+  final List<MedicalReport> reports;
 
   ReportSearchDelegate(this.reports);
 
@@ -450,10 +446,8 @@ class ReportSearchDelegate extends SearchDelegate {
 
   Widget _buildSearchResults(BuildContext context) {
     final results = reports.where((report) {
-      return (report['title'] ?? '')
-              .toLowerCase()
-              .contains(query.toLowerCase()) ||
-          (report['content'] ?? '').toLowerCase().contains(query.toLowerCase());
+      return (report.title).toLowerCase().contains(query.toLowerCase()) ||
+          (report.content).toLowerCase().contains(query.toLowerCase());
     }).toList();
 
     return ListView.builder(
@@ -462,12 +456,12 @@ class ReportSearchDelegate extends SearchDelegate {
         final report = results[index];
         return ListTile(
           title: Text(
-            report['title'] ?? 'Untitled',
+            report.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            report['content'] ?? '',
+            report.content,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

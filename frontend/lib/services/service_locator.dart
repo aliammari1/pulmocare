@@ -1,12 +1,10 @@
 import 'package:get_it/get_it.dart';
+import 'package:medapp/services/api_service.dart';
+import 'package:medapp/services/cache_service.dart';
+import 'package:medapp/services/monitoring_service.dart';
+import 'package:medapp/services/navigation_service.dart';
+import 'package:medapp/services/report_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'xray_service.dart';
-import 'knowledge_service.dart';
-import 'cache_service.dart';
-import 'navigation_service.dart';
-import 'monitoring_service.dart';
-import '../services/api_config.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -20,9 +18,8 @@ Future<void> setupServiceLocator() async {
   locator.registerSingleton<MonitoringService>(MonitoringService());
 
   // Register API services
-  locator
-      .registerSingleton<XRayService>(XRayService(baseUrl: ApiConfig.baseUrl));
-  locator.registerSingleton<KnowledgeService>(KnowledgeService());
+  locator.registerSingleton<ReportService>(ReportService());
+  locator.registerSingleton<ApiService>(ApiService());
 }
 
 // Service interface for dynamic loading of microfrontends

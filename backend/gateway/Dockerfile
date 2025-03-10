@@ -11,9 +11,7 @@ RUN apt-get update && \
 # Copy requirements and install Python packages
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install  setuptools wheel && \
-    pip install  -r requirements.txt && \
-    pip install  gunicorn
+    pip install  -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -25,12 +23,8 @@ ENV PORT=5000 \
     PYTHONUNBUFFERED=1 \
     PATH="/usr/local/bin:$PATH"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
-
 # Expose port
 EXPOSE ${PORT}
 
 # Start the service
-CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--threads", "2", "--timeout", "120", "app:app"]
+CMD ["python", "app.py"]

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:medapp/config/env_config.dart';
 import 'dart:convert';
 import '../config/environment.dart';
 import '../widgets/trace_viewer.dart';
@@ -41,7 +42,7 @@ class _MonitoringScreenState extends State<MonitoringScreen>
     try {
       // Load services health
       final serviceRegistry = await http.get(
-        Uri.parse('${EnvironmentConfig.apiBaseUrl}/v1/catalog/services'),
+        Uri.parse('${EnvConfig.apiGatewayUrl}/v1/catalog/services'),
       );
 
       if (serviceRegistry.statusCode == 200) {

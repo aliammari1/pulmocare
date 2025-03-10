@@ -5,120 +5,139 @@ import logging
 import random
 from datetime import datetime
 import pydicom  # For DICOM format support
+from skimage.filters import threshold_otsu
+from skimage.measure import shannon_entropy
 
 logger = logging.getLogger(__name__)
 
 class ChestImageProcessor:
-    """Processes chest X-ray images for analysis."""
+    """Class for processing chest X-ray images."""
     
-    @staticmethod
-    def load_image(image_bytes, is_dicom=False):
-        """
-        Load an image from bytes into a numpy array.
-        
-        Args:
-            image_bytes: Raw image bytes
-            is_dicom: Whether the image is in DICOM format
-            
-        Returns:
-            numpy.ndarray: The image as a numpy array
-        """
+    def __init__(self):
+        self.target_size = (512, 512)  # Standard size for processing
+    
+    def load_image(self, image_bytes, is_dicom=False):
+        """Load image from bytes."""
         try:
             if is_dicom:
-                # Load DICOM file
-                dataset = pydicom.dcmread(io.BytesIO(image_bytes))
-                image = dataset.pixel_array
-                
-                # Convert to 8-bit if needed for processing with OpenCV
-                if image.dtype != np.uint8:
-                    image = (image / image.max() * 255).astype(np.uint8)
+                return self._load_dicom(image_bytes)
             else:
-                # Load regular image formats
-                arr = np.frombuffer(image_bytes, np.uint8)
-                image = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
-                
-            if image is None:
-                raise ValueError("Failed to load image")
-                
-            return image
+                return self._load_standard_image(image_bytes)
         except Exception as e:
             logger.error(f"Error loading image: {str(e)}")
             raise
-            
-    @staticmethod
-    def preprocess_image(image, target_size=(512, 512)):
-        """
-        Preprocess an image for model input.
-        
-        Args:
-            image: The input image as numpy array
-            target_size: The target size for the image
-            
-        Returns:
-            numpy.ndarray: The preprocessed image
-        """
+    
+    def _load_dicom(self, image_bytes):
+        """Load and process DICOM image."""
         try:
-            # Resize to target size
-            resized = cv2.resize(image, target_size)
+            dataset = pydicom.dcmread(io.BytesIO(image_bytes))
+            image = dataset.pixel_array.astype(float)
             
-            # Normalize pixel values to [0, 1]
-            normalized = resized / 255.0
-            
-            # Add channel dimension if needed
-            if len(normalized.shape) == 2:
-                normalized = np.expand_dims(normalized, axis=-1)
-            
-            return normalized
+            # Normalize to 8-bit range
+            image = ((image - image.min()) / (image.max() - image.min()) * 255).astype(np.uint8)
+            return cv2.resize(image, self.target_size)
         except Exception as e:
-            logger.error(f"Error preprocessing image: {str(e)}")
+            logger.error(f"Error loading DICOM image: {str(e)}")
             raise
     
-    @staticmethod
-    def extract_image_stats(image):
-        """
-        Calculate basic statistics about the image for quality assessment.
-        
-        Args:
-            image: The loaded X-ray image
-            
-        Returns:
-            dict: Image statistics
-        """
+    def _load_standard_image(self, image_bytes):
+        """Load and process standard image formats (JPEG, PNG)."""
         try:
-            # Ensure grayscale image
-            if len(image.shape) > 2:
-                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            else:
-                gray = image
-                
-            # Calculate histogram
-            hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+            return cv2.resize(image, self.target_size)
+        except Exception as e:
+            logger.error(f"Error loading standard image: {str(e)}")
+            raise
+    
+    def extract_image_stats(self, image):
+        """Extract statistical features from the image."""
+        try:
+            # Basic statistics
+            mean = np.mean(image)
+            std = np.std(image)
+            min_val = np.min(image)
+            max_val = np.max(image)
             
-            # Calculate statistics
-            mean_val = np.mean(gray)
-            std_dev = np.std(gray)
-            min_val = np.min(gray)
-            max_val = np.max(gray)
+            # Calculate contrast
             contrast = max_val - min_val
             
-            # Assess sharpness using Laplacian variance
-            laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+            # Calculate sharpness using Laplacian
+            laplacian = cv2.Laplacian(image, cv2.CV_64F)
             sharpness = np.var(laplacian)
             
+            # Calculate entropy as a measure of image complexity
+            entropy = shannon_entropy(image)
+            
+            # Calculate noise estimate using median filter difference
+            median = cv2.medianBlur(image, 3)
+            noise = np.mean(np.abs(image - median))
+            
+            # Calculate histogram features
+            hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+            hist_norm = hist.ravel() / hist.sum()
+            hist_entropy = -np.sum(hist_norm * np.log2(hist_norm + np.finfo(float).eps))
+            
+            # Otsu's threshold for foreground/background separation
+            thresh = threshold_otsu(image)
+            foreground_ratio = np.mean(image > thresh)
+            
             return {
-                "mean": float(mean_val),
-                "std_dev": float(std_dev),
-                "contrast": float(contrast),
-                "sharpness": float(sharpness),
+                "mean": float(mean),
+                "std": float(std),
                 "min": int(min_val),
                 "max": int(max_val),
-                "resolution": {
-                    "width": image.shape[1],
-                    "height": image.shape[0]
-                }
+                "contrast": float(contrast),
+                "sharpness": float(sharpness),
+                "entropy": float(entropy),
+                "noise_level": float(noise),
+                "histogram_entropy": float(hist_entropy),
+                "foreground_ratio": float(foreground_ratio)
             }
         except Exception as e:
-            logger.error(f"Error extracting image stats: {str(e)}")
+            logger.error(f"Error extracting image statistics: {str(e)}")
+            raise
+    
+    def enhance_image(self, image):
+        """Apply image enhancement techniques."""
+        try:
+            # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            enhanced = clahe.apply(image)
+            
+            # Apply slight Gaussian blur to reduce noise
+            enhanced = cv2.GaussianBlur(enhanced, (3,3), 0)
+            
+            return enhanced
+        except Exception as e:
+            logger.error(f"Error enhancing image: {str(e)}")
+            raise
+
+    def extract_roi(self, image):
+        """Extract region of interest using thresholding and contours."""
+        try:
+            # Apply Otsu's thresholding
+            _, thresh = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Find contours
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            if contours:
+                # Find largest contour (assumed to be the lung area)
+                largest_contour = max(contours, key=cv2.contourArea)
+                
+                # Create mask
+                mask = np.zeros_like(image)
+                cv2.drawContours(mask, [largest_contour], -1, (255,255,255), -1)
+                
+                # Apply mask to original image
+                roi = cv2.bitwise_and(image, mask)
+                return roi
+            else:
+                logger.warning("No contours found in image")
+                return image
+        except Exception as e:
+            logger.error(f"Error extracting ROI: {str(e)}")
             raise
 
 

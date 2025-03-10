@@ -24,30 +24,6 @@ class MedicalReference {
       };
 }
 
-class KnowledgeContext {
-  final String condition;
-  final List<MedicalReference> references;
-
-  KnowledgeContext({
-    required this.condition,
-    required this.references,
-  });
-
-  factory KnowledgeContext.fromJson(Map<String, dynamic> json) {
-    return KnowledgeContext(
-      condition: json['condition'] as String,
-      references: (json['references'] as List)
-          .map((e) => MedicalReference.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'condition': condition,
-        'references': references.map((e) => e.toJson()).toList(),
-      };
-}
-
 class ChatResponse {
   final String response;
   final List<MedicalReference> references;

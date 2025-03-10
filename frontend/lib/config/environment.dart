@@ -6,8 +6,6 @@ class EnvironmentConfig {
   // Base URLs - these are fallbacks for when environment-specific values are not set
   static const String baseUrl = 'http://localhost:8000';
   static const String apiGatewayUrl = '$baseUrl/api';
-  static const String xrayServiceUrl = '$baseUrl/xray';
-  static const String knowledgeServiceUrl = '$baseUrl/knowledge';
 
   // Default timeouts and limits
   static const Duration defaultTimeout = Duration(seconds: 30);
@@ -71,7 +69,7 @@ class EnvironmentConfig {
       'rabbitmqPort': int.parse(
           const String.fromEnvironment('RABBITMQ_PORT', defaultValue: '5672')),
       'otelCollectorUrl': const String.fromEnvironment('OTEL_COLLECTOR_URL',
-          defaultValue: 'http://otel-collector:4318'),
+          defaultValue: 'http://localhost:4318'),
       'enableTracing': true,
       'enableLogging': true,
       'enableServiceDiscovery': true,

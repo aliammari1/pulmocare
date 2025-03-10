@@ -18,7 +18,7 @@ scrape_configs:
   - job_name: 'consul-services'
     consul_sd_configs:
       - server: 'consul:8500'
-        services: ['gateway', 'reports', 'xray-service', 'knowledge-service']
+        services: ['gateway', 'reports']
     relabel_configs:
       - source_labels: ['__meta_consul_service']
         target_label: 'service'
@@ -58,18 +58,6 @@ scrape_configs:
     consul_sd_configs:
       - server: 'consul:8500'
         services: ['reports']
-
-  - job_name: 'xray-service'
-    metrics_path: '/metrics'
-    consul_sd_configs:
-      - server: 'consul:8500'
-        services: ['xray-service']
-
-  - job_name: 'knowledge-service'
-    metrics_path: '/metrics'
-    consul_sd_configs:
-      - server: 'consul:8500'
-        services: ['knowledge-service']
 
   # System Monitoring
   - job_name: 'node-exporter'

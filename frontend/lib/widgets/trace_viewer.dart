@@ -182,8 +182,6 @@ class _TraceViewerState extends State<TraceViewer> {
     if (serviceName.contains('api')) return Colors.blue;
     if (serviceName.contains('db')) return Colors.green;
     if (serviceName.contains('auth')) return Colors.purple;
-    if (serviceName.contains('xray')) return Colors.orange;
-    if (serviceName.contains('knowledge')) return Colors.teal;
 
     return Colors.grey;
   }

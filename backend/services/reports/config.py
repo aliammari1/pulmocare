@@ -1,5 +1,9 @@
 import os
 from dotenv import load_dotenv
+import urllib.parse
+import socket
+from datetime import timedelta
+import logging.config
 
 # Load environment variables from .env file
 load_dotenv()
@@ -7,24 +11,23 @@ load_dotenv()
 class Config:
     """Configuration for the Medical App backend microservice"""
     
-    # Application settings
-    APP_NAME = "MedApp Reports Service"
-    DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "t", "1", "yes")
-    ENV = os.getenv("ENV", "development")
+    # Service info
+    SERVICE_NAME = "reports-service"
     VERSION = "1.0.0"
+    ENV = os.getenv('ENV', 'development')
+    DEBUG = ENV == 'development'
+    PORT = int(os.getenv('PORT', 5000))
     
     # Server settings
     HOST = os.getenv("HOST", "0.0.0.0")
-    PORT = int(os.getenv("PORT", "5000"))
     
     # Service Discovery settings
-    CONSUL_HOST = os.getenv("CONSUL_HOST", "consul")
+    CONSUL_HOST = os.getenv("CONSUL_HOST", "consul")  # Changed from "localhost" to "consul"
     CONSUL_PORT = int(os.getenv("CONSUL_PORT", "8500"))
     CONSUL_TOKEN = os.getenv("CONSUL_HTTP_TOKEN")
-    SERVICE_NAME = "reports"
     
     # MongoDB settings
-    MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb")
+    MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb")  # Changed from "localhost" to "mongodb"
     MONGODB_PORT = int(os.getenv("MONGODB_PORT", "27017"))
     MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "medapp")
     MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "medapppass")
@@ -39,6 +42,8 @@ class Config:
     REDIS_HOST = os.getenv("REDIS_HOST", "redis")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+    REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', 'redispass')
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
     
     # RabbitMQ settings
     RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
@@ -60,7 +65,7 @@ class Config:
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "True").lower() in ("true", "t", "1", "yes")
     
     # Tracing settings
-    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
+    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
     OTEL_SERVICE_NAME = SERVICE_NAME
     
     # Circuit Breaker settings
@@ -72,12 +77,13 @@ class Config:
     HEALTH_CHECK_TIMEOUT = os.getenv("HEALTH_CHECK_TIMEOUT", "5s")
     HEALTH_CHECK_DEREGISTER_TIMEOUT = os.getenv("HEALTH_CHECK_DEREGISTER_TIMEOUT", "30s")
     
-    # Service Dependencies
-    REQUIRED_SERVICES = ['xray-service', 'knowledge-service']
-    
     # Cache settings
     CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))  # 5 minutes
     CACHE_MAX_SIZE = int(os.getenv("CACHE_MAX_SIZE", "1000"))
+    
+    # Rate limiting
+    RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', 'redis://redis:6379/0')
+    RATE_LIMIT_DEFAULT = os.getenv('RATE_LIMIT_DEFAULT', '60 per minute')
     
     @classmethod
     def get_mongodb_uri(cls):
@@ -85,7 +91,80 @@ class Config:
         username = urllib.parse.quote_plus(cls.MONGODB_USERNAME)
         password = urllib.parse.quote_plus(cls.MONGODB_PASSWORD)
         return (f"mongodb://{username}:{password}@"
-                f"{cls.MONGODB_HOST}:{cls.MONGODB_PORT}/{cls.MONGODB_DATABASE}")
+                f"{cls.MONGODB_HOST}:{cls.MONGODB_PORT}/{cls.MONGODB_DATABASE}?authSource=admin")
+
+    @classmethod
+    def get_mongodb_validation_schema(cls):
+        """Get MongoDB validation schema for reports collection"""
+        return {
+            '$jsonSchema': {
+                'bsonType': 'object',
+                'required': ['title', 'content', 'created_at', 'updated_at'],
+                'properties': {
+                    'title': {'bsonType': 'string'},
+                    'content': {'bsonType': 'string'},
+                    'patient_id': {'bsonType': 'string'},
+                    'doctor_id': {'bsonType': 'string'},
+                    'analysis': {
+                        'bsonType': ['object', 'null'],
+                        'properties': {
+                            'findings': {
+                                'bsonType': 'array',
+                                'items': {
+                                    'bsonType': 'object',
+                                    'required': ['condition', 'severity', 'description'],
+                                    'properties': {
+                                        'condition': {'bsonType': 'string'},
+                                        'severity': {'enum': ['mild', 'moderate', 'severe']},
+                                        'description': {'bsonType': 'string'},
+                                        'confidence_score': {'bsonType': 'double'},
+                                        'probability': {'bsonType': 'double'}
+                                    }
+                                }
+                            },
+                            'technical_details': {
+                                'bsonType': 'object',
+                                'properties': {
+                                    'quality_metrics': {'bsonType': 'object'},
+                                    'image_stats': {'bsonType': 'object'}
+                                }
+                            }
+                        }
+                    },
+                    'annotations': {
+                        'bsonType': 'array',
+                        'items': {
+                            'bsonType': 'object',
+                            'required': ['type', 'timestamp'],
+                            'properties': {
+                                'type': {'enum': ['drawing', 'text']},
+                                'points': {
+                                    'bsonType': 'array',
+                                    'items': {
+                                        'bsonType': 'object',
+                                        'required': ['x', 'y', 'color', 'strokeWidth'],
+                                        'properties': {
+                                            'x': {'bsonType': 'double'},
+                                            'y': {'bsonType': 'double'},
+                                            'color': {'bsonType': 'int'},
+                                            'strokeWidth': {'bsonType': 'double'}
+                                        }
+                                    }
+                                },
+                                'text': {'bsonType': 'string'},
+                                'timestamp': {'bsonType': 'string'}
+                            }
+                        }
+                    },
+                    'created_at': {'bsonType': 'date'},
+                    'updated_at': {'bsonType': 'date'},
+                    'tags': {
+                        'bsonType': 'array',
+                        'items': {'bsonType': 'string'}
+                    }
+                }
+            }
+        }
     
     @classmethod
     def get_rabbitmq_uri(cls):
@@ -145,3 +224,60 @@ class Config:
         
         if missing:
             raise ValueError(f"Missing required configuration: {', '.join(missing)}")
+
+# Service configuration
+PORT = int(os.getenv('PORT', 5000))
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+
+# MongoDB configuration
+MONGODB_HOST = os.getenv('MONGODB_HOST', 'mongodb')
+MONGODB_PORT = int(os.getenv('MONGODB_PORT', 27017))
+MONGODB_USERNAME = os.getenv('MONGODB_USERNAME', 'medapp')
+MONGODB_PASSWORD = os.getenv('MONGODB_PASSWORD', 'medapppass')
+MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'medapp')
+
+# Redis configuration
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', 'redispass')
+REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+
+# RabbitMQ configuration
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'guest')
+
+# Consul configuration
+CONSUL_HOST = os.getenv('CONSUL_HOST', 'consul')
+CONSUL_PORT = int(os.getenv('CONSUL_PORT', 8500))
+
+# Rate limiting configuration
+RATE_LIMIT_DEFAULT = "60/minute"
+RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', REDIS_URL)
+
+# OpenTelemetry configuration
+OTEL_SERVICE_NAME = os.getenv('OTEL_SERVICE_NAME', 'reports-service')
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://otel-collector:4317')
+
+# Application specific configuration
+PDF_EXPORT_PATH = os.getenv('PDF_EXPORT_PATH', '/tmp/exports')
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+REQUEST_TIMEOUT = 30  # seconds
+
+# Cache configuration
+CACHE_TYPE = "redis"
+CACHE_REDIS_URL = REDIS_URL
+CACHE_DEFAULT_TIMEOUT = 300
+
+# Session configuration
+SESSION_TYPE = "redis"
+SESSION_REDIS = REDIS_URL
+SESSION_USE_SIGNER = True
+PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+
+# Security configuration
+SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)

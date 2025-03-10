@@ -6,29 +6,37 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python packages
 COPY requirements.txt .
-RUN pip install  -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install setuptools wheel && \
+    pip install -r requirements.txt && \
+    pip install gunicorn
 
 # Copy application code
 COPY . .
 
+# Create directory for exported files
+RUN mkdir -p /tmp/exports && \
+    chmod 777 /tmp/exports
+
 # Environment variables
-ENV PORT=8083
-ENV CONSUL_HOST=medapp-consul
-ENV CONSUL_PORT=8500
-ENV MONGODB_HOST=mongodb
-ENV MONGODB_PORT=27017
-ENV MONGODB_DATABASE=medapp
+ENV PORT=8085 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/usr/local/bin:$PATH" \
+    PYTHONPATH="/app:$PYTHONPATH" \
+    PDF_EXPORT_PATH="/tmp/exports"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
-
-# Expose port
+# Expose ports
 EXPOSE ${PORT}
+EXPOSE 9090
 
-# Start the service
-CMD ["gunicorn", "--bind", "0.0.0.0:8083", "--workers", "4", "--threads", "2", "--timeout", "120", "app:app"]
+# Start both the main service and consumer
+CMD ["sh", "-c", "python consumer.py & python app.py"]

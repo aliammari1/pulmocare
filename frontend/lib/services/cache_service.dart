@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/env_config.dart';
+import '../config/env_config.dart';
 
 class CacheService {
   static const String _prefix = 'cache_';
@@ -12,7 +12,7 @@ class CacheService {
     if (!EnvConfig.enableCaching) return;
 
     final expiryTime = DateTime.now().add(
-      expiry ?? Duration(minutes: EnvConfig.maxCacheAgeMinutes),
+      expiry ?? Duration(minutes: EnvConfig.cacheMaxAge.inMinutes),
     );
 
     final cacheEntry = {
@@ -61,5 +61,11 @@ class CacheService {
     final expiryTime = DateTime.parse(cacheEntry['expiry']);
 
     return DateTime.now().isBefore(expiryTime);
+  }
+
+  Future<bool> isExpired(String key) async {
+    final expiresAt = _prefs.getInt('${_prefix + key}_expires');
+    if (expiresAt == null) return false;
+    return DateTime.now().millisecondsSinceEpoch > expiresAt;
   }
 }

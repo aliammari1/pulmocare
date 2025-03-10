@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
-import '../utils/env_config.dart';
+import '../providers/report_provider.dart'; // Add this import
+import '../config/env_config.dart';
 import '../services/cache_service.dart';
+import 'dart:async'; // Add this import
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -71,11 +73,18 @@ class _ServiceSettings extends StatefulWidget {
 
 class _ServiceSettingsState extends State<_ServiceSettings> {
   late bool _serviceDiscoveryEnabled;
+  Timer? _healthCheckTimer;
 
   @override
   void initState() {
     super.initState();
     _serviceDiscoveryEnabled = EnvConfig.enableServiceDiscovery;
+  }
+
+  @override
+  void dispose() {
+    _healthCheckTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -112,70 +121,88 @@ class _ServiceSettingsState extends State<_ServiceSettings> {
         ),
         ListTile(
           title: Text(
-            'X-Ray Service',
+            'MongoDB',
             style: TextStyle(
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          subtitle: Text(EnvConfig.xrayServiceUrl),
-          trailing: const Icon(Icons.check_circle, color: Colors.green),
-        ),
-        ListTile(
-          title: Text(
-            'Knowledge Service',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+          subtitle: Text('${EnvConfig.apiGatewayUrl}/mongodb'),
+          trailing: Consumer<ReportProvider>(
+            builder: (context, provider, _) => Icon(
+              provider.isMongoDBConnected ? Icons.check_circle : Icons.error,
+              color: provider.isMongoDBConnected ? Colors.green : Colors.red,
             ),
           ),
-          subtitle: Text(EnvConfig.knowledgeServiceUrl),
-          trailing: const Icon(Icons.check_circle, color: Colors.green),
         ),
       ],
     );
   }
 }
 
-class _CacheSettings extends StatelessWidget {
+class _CacheSettings extends StatefulWidget {
   const _CacheSettings();
 
   @override
-  Widget build(BuildContext context) {
-    final cacheService = Provider.of<CacheService>(context, listen: false);
+  State<_CacheSettings> createState() => _CacheSettingsState();
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Cache',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        SwitchListTile(
-          title: const Text('Enable Caching'),
-          subtitle: const Text('Cache responses for faster loading'),
-          value: EnvConfig.enableCaching,
-          onChanged: null, // Controlled by environment
-        ),
-        ListTile(
-          title: const Text('Cache Duration'),
-          subtitle: Text('${EnvConfig.maxCacheAgeMinutes} minutes'),
-        ),
-        ListTile(
-          title: const Text('Clear Cache'),
-          leading: const Icon(Icons.delete_outline),
-          onTap: () async {
-            await cacheService.invalidateAll();
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared')),
-              );
-            }
-          },
-        ),
-      ],
+class _CacheSettingsState extends State<_CacheSettings> {
+  bool _isClearing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CacheService>(
+      builder: (context, cacheService, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cache',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Enable Caching'),
+              subtitle: const Text('Cache responses for faster loading'),
+              value: EnvConfig.enableCaching,
+              onChanged: null, // Controlled by environment
+            ),
+            ListTile(
+              title: const Text('Cache Duration'),
+              subtitle: Text('${EnvConfig.cacheMaxAge.inMinutes} minutes'),
+            ),
+            ListTile(
+              enabled: !_isClearing,
+              title: const Text('Clear Cache'),
+              leading: _isClearing
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.delete_outline),
+              onTap: () async {
+                setState(() => _isClearing = true);
+                try {
+                  await cacheService.invalidateAll();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Cache cleared')),
+                    );
+                  }
+                } finally {
+                  if (mounted) {
+                    setState(() => _isClearing = false);
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

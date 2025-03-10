@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../utils/env_config.dart';
+import '../config/env_config.dart';
 
 class ServiceInfo {
   final String name;
@@ -62,25 +62,32 @@ class ServiceDiscovery extends ChangeNotifier {
 
   Future<void> _discoverServices() async {
     try {
-      final response = await http
-          .get(
-            Uri.parse('${EnvConfig.apiGatewayUrl}/discovery'),
-          )
-          .timeout(Duration(seconds: EnvConfig.networkTimeoutSeconds));
+      final discoveryUrl = '${EnvConfig.serviceRegistryUrl}/v1/agent/services';
+
+      final response = await http.get(
+        Uri.parse(discoveryUrl),
+        headers: {'Accept': 'application/json'},
+      ).timeout(Duration(seconds: EnvConfig.networkTimeout.inSeconds));
 
       if (response.statusCode == 200) {
-        final List<dynamic> servicesData = json.decode(response.body);
+        final Map<String, dynamic> servicesData = json.decode(response.body);
 
         // Clear existing services
         _services.clear();
 
-        // Add discovered services
-        for (var serviceData in servicesData) {
-          final service = ServiceInfo.fromJson(serviceData);
+        // Transform Consul service data format
+        for (var entry in servicesData.entries) {
+          final serviceData = entry.value;
+          final service = ServiceInfo(
+            name: serviceData['Service'] as String,
+            baseUrl: 'http://${serviceData['Address']}:${serviceData['Port']}',
+            isHealthy: true, // Will be updated by health check
+            metadata: serviceData['Meta'] as Map<String, dynamic>? ?? {},
+            healthStatus: {'status': 'UNKNOWN'},
+          );
           _services[service.name] = service;
         }
 
-        // Reset failure counter on success
         _consecutiveFailures = 0;
         notifyListeners();
       } else {
@@ -89,7 +96,27 @@ class ServiceDiscovery extends ChangeNotifier {
       }
     } catch (e) {
       _handleDiscoveryFailure('Error during service discovery: $e');
+      // Fall back to direct service URLs if discovery fails
+      _fallbackToDirectUrls();
     }
+  }
+
+  void _fallbackToDirectUrls() {
+    _services.clear();
+    // Add known services with direct URLs
+    _services['gateway'] = ServiceInfo(
+      name: 'gateway',
+      baseUrl: EnvConfig.apiGatewayUrl,
+      isHealthy: true,
+      metadata: {},
+    );
+    _services['reports'] = ServiceInfo(
+      name: 'reports',
+      baseUrl: EnvConfig.reportsServiceUrl,
+      isHealthy: true,
+      metadata: {},
+    );
+    notifyListeners();
   }
 
   void _handleDiscoveryFailure(String error) {

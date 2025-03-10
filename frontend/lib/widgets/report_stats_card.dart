@@ -90,6 +90,6 @@ class ReportStatsCard extends StatelessWidget {
   int _getReportsInLastDays(int days) {
     final now = DateTime.now();
     final cutoff = now.subtract(Duration(days: days));
-    return reports.where((report) => report.date.isAfter(cutoff)).length;
+    return reports.where((report) => report.createdAt.isAfter(cutoff)).length;
   }
 }

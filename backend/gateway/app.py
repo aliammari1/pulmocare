@@ -11,8 +11,18 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import redis
 from typing import Optional, Dict, Any
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+# Configure CORS
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Request-ID"]
+    }
+})
 
 # Configure logging
 logging.basicConfig(
@@ -25,7 +35,9 @@ logger = logging.getLogger(__name__)
 redis_client = redis.Redis(
     host=os.getenv('REDIS_HOST', 'redis'),
     port=int(os.getenv('REDIS_PORT', 6379)),
-    db=0
+    password=os.getenv('REDIS_PASSWORD', 'redispass'),
+    db=0,
+    decode_responses=True
 )
 
 # Initialize rate limiter
@@ -48,34 +60,42 @@ SERVICE_CACHE_TTL = 30  # seconds
 def get_service_url(service_name: str) -> Optional[str]:
     """Get service URL from Consul with caching and load balancing"""
     current_time = time.time()
+    cache_key = f"service_{service_name}"
     
-    # Check cache first
-    if service_name in service_cache:
-        cache_entry = service_cache[service_name]
-        if current_time - cache_entry['timestamp'] < SERVICE_CACHE_TTL:
-            instances = cache_entry['instances']
-            if instances:
-                # Round-robin load balancing
-                instance = instances[int(current_time) % len(instances)]
-                return f"http://{instance['ServiceAddress']}:{instance['ServicePort']}"
-    
+    # Try to get from Redis cache first
+    cached_url = redis_client.get(cache_key)
+    if cached_url:
+        return cached_url.decode('utf-8')
+        
     try:
-        # Cache miss or expired, fetch from Consul
+        # Fetch from Consul
         _, instances = consul_client.catalog.service(service_name)
         if not instances:
+            logger.warning(f"No instances found for service: {service_name}")
             return None
+            
+        # Get healthy instances
+        healthy_instances = []
+        for instance in instances:
+            checks = consul_client.agent.checks()
+            service_check = checks.get(f"service:{instance['ServiceID']}")
+            if service_check and service_check['Status'] == 'passing':
+                healthy_instances.append(instance)
         
-        # Update cache
-        service_cache[service_name] = {
-            'timestamp': current_time,
-            'instances': instances
-        }
+        if not healthy_instances:
+            logger.warning(f"No healthy instances for service: {service_name}")
+            return None
+            
+        # Simple round-robin load balancing
+        instance = healthy_instances[int(time.time()) % len(healthy_instances)]
+        service_url = f"http://{instance['ServiceAddress']}:{instance['ServicePort']}"
         
-        # Return URL using round-robin
-        instance = instances[int(current_time) % len(instances)]
-        return f"http://{instance['ServiceAddress']}:{instance['ServicePort']}"
+        # Cache the result
+        redis_client.setex(cache_key, 30, service_url)
+        return service_url
+        
     except Exception as e:
-        logger.error(f"Error getting service URL for {service_name}: {str(e)}")
+        logger.error(f"Error discovering service {service_name}: {str(e)}")
         return None
 
 @circuit(
@@ -170,48 +190,12 @@ def proxy_request(service_name: str, path: str, method: str = 'GET') -> tuple:
         logger.error(f"Error proxying request to {service_name}: {str(e)}")
         raise
 
-def register_with_consul():
-    """Register the gateway service with enhanced metadata"""
-    try:
-        service_name = "gateway"
-        service_id = f"{service_name}-{os.getenv('HOSTNAME', 'main')}"
-        service_port = int(os.getenv('PORT', 5000))
-        
-        consul_client.agent.service.register(
-            name=service_name,
-            service_id=service_id,
-            address=os.getenv('HOSTNAME', 'localhost'),
-            port=service_port,
-            tags=['gateway', 'api', 'core'],
-            meta={
-                'version': '1.0.0',
-                'environment': os.getenv('ENV', 'development'),
-                'documentation': '/swagger'
-            },
-            check={
-                'name': 'Gateway Health Check',
-                'http': f"http://localhost:{service_port}/health",
-                'interval': '10s',
-                'timeout': '5s',
-                'deregister_critical_service_after': '30s'
-            }
-        )
-        logger.info("Gateway service registered with Consul")
-    except Exception as e:
-        logger.error(f"Failed to register with Consul: {str(e)}")
-
 # Service route handlers with rate limiting
 @app.route('/api/xray/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("60/minute")
 @handle_service_error
 def xray_service(path):
     return proxy_request('xray-service', f"/{path}", request.method)
-
-@app.route('/api/knowledge/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
-@limiter.limit("120/minute")
-@handle_service_error
-def knowledge_service(path):
-    return proxy_request('knowledge-service', f"/{path}", request.method)
 
 @app.route('/api/reports/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @limiter.limit("60/minute")
@@ -239,32 +223,29 @@ def radiologue_service(path):
 
 @app.route('/health')
 def health():
-    """Enhanced health check endpoint"""
-    services_status = {}
-    critical_services = ['xray-service', 'knowledge-service', 'reports-service']
-    
-    for service in critical_services:
-        service_url = get_service_url(service)
-        services_status[service] = 'UP' if service_url else 'DOWN'
-    
-    status = 'UP' if all(status == 'UP' for status in services_status.values()) else 'DEGRADED'
-    
-    return jsonify({
-        'status': status,
-        'timestamp': datetime.utcnow().isoformat(),
-        'version': '1.0.0',
-        'services': services_status,
-        'cache': {
-            'size': len(service_cache),
-            'ttl': SERVICE_CACHE_TTL
-        }
-    })
+    """Health check endpoint"""
+    try:
+        # Check Redis connection
+        redis_client.ping()
+        # Check Consul connection
+        consul_client.status.leader()
+        
+        return jsonify({
+            'status': 'UP',
+            'timestamp': datetime.utcnow().isoformat(),
+            'cache': {
+                'size': len(service_cache),
+                'ttl': SERVICE_CACHE_TTL
+            }
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            'status': 'DOWN',
+            'error': str(e)
+        }), 503
 
 if __name__ == '__main__':
-    # Register with Consul
-    register_with_consul()
-    
-    # Start the server
     app.run(
         host='0.0.0.0',
         port=int(os.getenv('PORT', 5000)),

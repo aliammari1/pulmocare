@@ -10,3 +10,5 @@ python-consul==1.1.0
 circuitbreaker==1.4.0
 python-dotenv==1.0.0
 prometheus-flask-exporter==0.22.3
+flask_limiter==3.0.0
+flask_cors==5.0.1
