@@ -30,6 +30,19 @@
             "request": "launch",
             "program": "${workspaceFolder}/backend/database.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Flutter Web",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "-d",
+                "chrome",
+                "--web-port",
+                "5000",
+                "--web-renderer",
+                "html"
+            ]
         }
     ]
 }
