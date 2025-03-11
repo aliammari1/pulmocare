@@ -8,6 +8,7 @@ import 'viewmodels/auth_view_model.dart';
 
 late List<CameraDescription> cameras;
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
