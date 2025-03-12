@@ -13,8 +13,7 @@ class AuthViewModel extends ChangeNotifier {
   String _userName = '';
 
   // Base URL for API requests
-  final String _baseUrl =
-      'http://192.168.33.222:5000/api'; // For Android emulator
+  final String _baseUrl = 'http://localhost:5000/api'; // For Android emulator
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;

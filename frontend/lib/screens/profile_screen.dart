@@ -18,7 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? token = prefs.getString('token');
 
     final response = await http.get(
-      Uri.parse('http://192.168.33.222:5000/profile'),
+      Uri.parse('http://localhost:5000/profile'),
       headers: {"Authorization": "Bearer $token"},
     );
 

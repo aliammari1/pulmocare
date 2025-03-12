@@ -13,12 +13,6 @@ from dotenv import load_dotenv
 from bson import ObjectId
 import inspect
 from models.patient import Patient
-import face_recognition
-import numpy as np
-from PIL import Image
-import io
-from bson.binary import Binary
-
 print("Patient class parameters:", inspect.signature(Patient.__init__))
 print("Patient class source:", inspect.getsource(Patient.__init__))
 print("Current directory:", os.getcwd())
@@ -240,69 +234,6 @@ def test_email_config():
         config_info['error'] = str(e)
     
     return jsonify(config_info)
-
-@app.route('/api/patient/register-face', methods=['POST'])
-def register_face():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-    
-    email = request.form.get('email')
-    if not email:
-        return jsonify({'error': 'Email is required'}), 400
-
-    image_file = request.files['image']
-    image = face_recognition.load_image_file(image_file)
-    face_encodings = face_recognition.face_encodings(image)
-    
-    if not face_encodings:
-        return jsonify({'error': 'No face detected in image'}), 400
-    
-    if len(face_encodings) > 1:
-        return jsonify({'error': 'Multiple faces detected'}), 400
-        
-    face_encoding = face_encodings[0]
-    
-    try:
-        patients_collection.update_one(
-            {'email': email},
-            {'$set': {'face_encoding': Binary(face_encoding.tobytes())}}
-        )
-        return jsonify({'message': 'Face registered successfully'}), 200
-    except Exception as e:
-        logger.error(f"Error registering face: {str(e)}")
-        return jsonify({'error': 'Failed to register face'}), 500
-
-@app.route('/api/patient/verify-face', methods=['POST'])
-def verify_face():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
-    
-    email = request.form.get('email')
-    if not email:
-        return jsonify({'error': 'Email is required'}), 400
-
-    image_file = request.files['image']
-    image = face_recognition.load_image_file(image_file)
-    face_encodings = face_recognition.face_encodings(image)
-    
-    if not face_encodings:
-        return jsonify({'error': 'No face detected in image'}), 400
-        
-    if len(face_encodings) > 1:
-        return jsonify({'error': 'Multiple faces detected'}), 400
-        
-    try:
-        patient = patients_collection.find_one({'email': email})
-        if not patient or 'face_encoding' not in patient:
-            return jsonify({'error': 'No registered face found'}), 404
-            
-        stored_encoding = np.frombuffer(patient['face_encoding'], dtype=np.float64)
-        matches = face_recognition.compare_faces([stored_encoding], face_encodings[0])
-        
-        return jsonify({'match': bool(matches[0])}), 200
-    except Exception as e:
-        logger.error(f"Error verifying face: {str(e)}")
-        return jsonify({'error': 'Face verification failed'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=5000)
