@@ -12,11 +12,11 @@ services:
     networks:
       - medapp-network
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=medapp
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -28,19 +28,17 @@ services:
     ports:
       - "8090:8081"
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongodb
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGODB_USERNAME:-medapp}
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USER:-admin}
-      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD:-pass}
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       - medapp-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -59,7 +57,7 @@ services:
       - CONSUL_BIND_INTERFACE=eth0
       - CONSUL_CLIENT_INTERFACE=eth0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8500/v1/status/leader"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8500/v1/status/leader" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -82,7 +80,7 @@ services:
       consul:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -103,7 +101,7 @@ services:
     networks:
       - medapp-network
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      test: [ "CMD", "rabbitmq-diagnostics", "check_port_connectivity" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -120,7 +118,7 @@ services:
     networks:
       - medapp-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -142,7 +140,7 @@ services:
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -166,8 +164,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -176,7 +173,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector
     container_name: medapp-otel-collector
-    command: ["--config=/etc/otel/config.yaml"]
+    command: [ "--config=/etc/otel/config.yaml" ]
     volumes:
       - ./monitoring/otel/otel-collector-config.yaml:/etc/otel/config.yaml
     ports:
@@ -190,8 +187,7 @@ services:
     depends_on:
       - jaeger
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "--tries=1", "http://localhost:13133/-/healthy"]
+      test: [ "CMD", "wget", "-q", "--tries=1", "http://localhost:13133/-/healthy" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -210,7 +206,7 @@ services:
     networks:
       - medapp-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:16686"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:16686" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -219,7 +215,7 @@ services:
   tempo:
     image: grafana/tempo
     container_name: medapp-tempo
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    command: [ "-config.file=/etc/tempo/tempo.yaml" ]
     volumes:
       - ./monitoring/tempo:/etc/tempo
       - tempo_data:/tmp/tempo
@@ -229,7 +225,7 @@ services:
     networks:
       - medapp-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3200/ready"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3200/ready" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -255,9 +251,9 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     depends_on:
       service-registry:
@@ -275,7 +271,7 @@ services:
     volumes:
       - ./backend/gateway:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -299,9 +295,9 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - RATE_LIMIT_STORAGE_URL=redis://redis:6379/0
     depends_on:
@@ -320,13 +316,12 @@ services:
     volumes:
       - ./backend/services/medecins:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-
-# ordonnances Service
+  # ordonnances Service
   ordonnances-service:
     build:
       context: ./backend/services/ordonnances
@@ -345,9 +340,9 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - RATE_LIMIT_STORAGE_URL=redis://redis:6379/0
     depends_on:
@@ -366,12 +361,12 @@ services:
     volumes:
       - ./backend/services/ordonnances:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Patients Service
+  # Patients Service
   patients-service:
     build:
       context: ./backend/services/patients
@@ -390,9 +385,9 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - RATE_LIMIT_STORAGE_URL=redis://redis:6379/0
     depends_on:
@@ -411,13 +406,12 @@ services:
     volumes:
       - ./backend/services/patients:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-
-# radiologues Service
+  # radiologues Service
   radiologues-service:
     build:
       context: ./backend/services/radiologues
@@ -436,9 +430,9 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - RATE_LIMIT_STORAGE_URL=redis://redis:6379/0
     depends_on:
@@ -457,12 +451,12 @@ services:
     volumes:
       - ./backend/services/radiologues:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8084/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Reports Service
+  # Reports Service
   reports-service:
     build:
       context: ./backend/services/reports
@@ -482,9 +476,9 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - MONGODB_HOST=mongodb
       - MONGODB_PORT=27017
-      - MONGODB_USERNAME=${MONGODB_USERNAME:-medapp}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD:-medapppass}
-      - MONGODB_DATABASE=${MONGODB_DATABASE:-medapp}
+      - MONGODB_USERNAME=admin
+      - MONGODB_PASSWORD=admin
+      - MONGODB_DATABASE=medapp
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - RATE_LIMIT_STORAGE_URL=redis://redis:6379/0
     depends_on:
@@ -503,12 +497,10 @@ services:
     volumes:
       - ./backend/services/reports:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8085/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
-
-
   # Flutter Development Server
   # flutter-dev:
   #   build:

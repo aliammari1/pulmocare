@@ -1,86 +1,119 @@
+import functools
 import time
 import logging
-import functools
-from enum import Enum
-from metrics import track_circuit_breaker_state, track_circuit_breaker_failure
+from enum import Enum, auto
+from typing import Type, Callable, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 class CircuitState(Enum):
-    CLOSED = 'closed'  # Normal operation
-    OPEN = 'open'      # Service calls blocked
-    HALF_OPEN = 'half_open'  # Testing if service is restored
+    CLOSED = auto()      # Normal operation, requests are allowed
+    OPEN = auto()        # Circuit is open, requests will fail fast
+    HALF_OPEN = auto()   # Testing if service is healthy again
 
 class CircuitBreaker:
-    """Circuit breaker implementation for handling external service failures"""
+    """Circuit breaker pattern implementation"""
     
-    def __init__(self, name, failure_threshold=5, recovery_timeout=60, expected_exception=Exception):
+    _instances = {}  # Class variable to store instances
+    
+    def __init__(
+        self, 
+        name: str = "default",
+        failure_threshold: int = 5, 
+        recovery_timeout: int = 60,
+        expected_exception: Type[Exception] = Exception
+    ):
         self.name = name
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.expected_exception = expected_exception
-        self._state = CircuitState.CLOSED
-        self.failure_count = 0
-        self.last_failure_time = None
-        
-        # Initialize metrics with closed state
-        track_circuit_breaker_state(self.name, self._state.value)
-        
-    @property
-    def state(self):
-        return self._state
-        
-    @state.setter
-    def state(self, new_state):
-        self._state = new_state
-        track_circuit_breaker_state(self.name, new_state.value)
-        
-    def can_execute(self):
-        """Check if the protected function can be executed"""
-        if self.state == CircuitState.CLOSED:
-            return True
-            
-        if self.state == CircuitState.OPEN:
-            if time.time() - self.last_failure_time >= self.recovery_timeout:
-                self.state = CircuitState.HALF_OPEN
-                logger.info(f"Circuit breaker {self.name} entering half-open state")
-                return True
-            return False
-            
-        return True  # HALF_OPEN
-        
-    def record_success(self):
-        """Record a successful execution"""
         self.state = CircuitState.CLOSED
         self.failure_count = 0
-        self.last_failure_time = None
-        logger.debug(f"Circuit breaker {self.name} recorded success")
+        self.last_failure_time = 0
         
-    def record_failure(self):
-        """Record a failed execution"""
-        self.failure_count += 1
-        self.last_failure_time = time.time()
-        track_circuit_breaker_failure(self.name)
+        # Store the instance in class variable for tracking
+        CircuitBreaker._instances[name] = self
         
-        if self.state == CircuitState.HALF_OPEN or self.failure_count >= self.failure_threshold:
-            self.state = CircuitState.OPEN
-            logger.warning(f"Circuit breaker {self.name} opened due to failures")
-            
+        logger.info(f"Circuit breaker '{name}' initialized (threshold={failure_threshold}, timeout={recovery_timeout}s)")
+    
     def __call__(self, func):
         """Decorator implementation"""
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if not self.can_execute():
-                msg = f"Circuit breaker {self.name} is {self.state.value}, requests blocked"
-                logger.warning(msg)
-                raise RuntimeError(msg)
-                
-            try:
-                result = func(*args, **kwargs)
-                self.record_success()
-                return result
-            except self.expected_exception as e:
-                self.record_failure()
-                raise
-                
+            return self.call(func, *args, **kwargs)
         return wrapper
+    
+    def call(self, func: Callable, *args, **kwargs) -> Any:
+        """Execute the function with circuit breaker logic"""
+        if self.state == CircuitState.OPEN:
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                logger.info(f"Circuit '{self.name}' attempting reset (half-open)")
+                self.state = CircuitState.HALF_OPEN
+            else:
+                logger.warning(f"Circuit '{self.name}' is OPEN - failing fast")
+                raise CircuitBreakerError(
+                    f"Circuit '{self.name}' is open"
+                )
+        
+        try:
+            result = func(*args, **kwargs)
+            
+            # On success in half-open state, reset the circuit
+            if self.state == CircuitState.HALF_OPEN:
+                logger.info(f"Circuit '{self.name}' reset successful - closing circuit")
+                self.reset()
+                
+            return result
+            
+        except self.expected_exception as e:
+            # Record the failure
+            self.record_failure()
+            raise
+            
+        except Exception as e:
+            # Unexpected exception - don't count towards circuit breaker
+            logger.error(f"Unexpected error in circuit '{self.name}': {str(e)}")
+            raise
+    
+    def record_failure(self):
+        """Record a failure and check if circuit should open"""
+        self.last_failure_time = time.time()
+        
+        # In half-open state, a single failure opens the circuit again
+        if self.state == CircuitState.HALF_OPEN:
+            logger.warning(f"Circuit '{self.name}' failed in half-open state - opening circuit")
+            self.state = CircuitState.OPEN
+            self.failure_count = self.failure_threshold
+            return
+            
+        # In closed state, count failures until threshold
+        self.failure_count += 1
+        logger.debug(f"Circuit '{self.name}' failure count: {self.failure_count}/{self.failure_threshold}")
+        
+        if self.failure_count >= self.failure_threshold:
+            logger.warning(f"Circuit '{self.name}' exceeded failure threshold - opening circuit")
+            self.state = CircuitState.OPEN
+    
+    def reset(self):
+        """Reset the circuit breaker to closed state"""
+        logger.info(f"Resetting circuit '{self.name}'")
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+        
+    @classmethod
+    def get_status(cls) -> dict:
+        """Get status of all circuit breakers for monitoring"""
+        return {
+            name: {
+                'state': cb.state.name,
+                'failure_count': cb.failure_count,
+                'failure_threshold': cb.failure_threshold,
+                'recovery_timeout': cb.recovery_timeout,
+                'last_failure_time': cb.last_failure_time
+            }
+            for name, cb in cls._instances.items()
+        }
+
+class CircuitBreakerError(Exception):
+    """Exception raised when circuit is open"""
+    pass

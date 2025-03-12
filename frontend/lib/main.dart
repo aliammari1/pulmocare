@@ -1,122 +1,677 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:medapp/viewmodels/auth_radio_view_model.dart';
+import 'package:medapp/widgets/app_drawer.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
+import 'screens/create_report_screen.dart';
+import 'screens/handwriting_screen.dart';
+import 'models/medical_report.dart';
+import 'services/service_locator.dart';
+import 'services/logging_service.dart';
+import 'services/report_service.dart';
+import 'providers/report_provider.dart';
+import 'screens/reports/reports_list_screen.dart';
+import 'screens/report_editor_screen.dart';
+import 'viewmodels/auth_view_model.dart';
+import 'viewmodels/chat_viewmodel.dart';
+import 'views/login_view.dart';
+import 'views/home_view copy.dart'; // Use the correct HomeView path
+import 'views/entry_view.dart';
+import 'views/login_radio.dart';
+import 'screens/login_screen.dart';
+import 'theme/app_theme.dart';
+import 'package:medapp/views/AppointmentsScreen.dart';
+import 'package:medapp/views/ArchiveScreen.dart';
+import 'package:medapp/views/RapportScreen.dart';
+import 'package:medapp/views/homeScreen.dart';
+import 'package:medapp/views/profile_radio.dart';
+import 'package:medapp/views/signup_view.dart';
+import 'package:medapp/views/signup_radio.dart';
+import 'package:medapp/viewmodels/notification_provider.dart';
+import 'package:medapp/views/signup_radio.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize Hive
+    await Hive.initFlutter();
+    Hive.registerAdapter(MedicalReportAdapter());
+
+    // Setup service locator
+    await setupServiceLocator();
+
+    // Initialize error handling
+    FlutterError.onError = (FlutterErrorDetails details) {
+      getIt<LoggingService>().log(
+        details.exception.toString(),
+        LogLevel.error,
+        error: details.exception,
+        stackTrace: details.stack,
+      );
+    };
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthViewModel()),
+          ChangeNotifierProvider(create: (_) => ChatViewModel()),
+          ChangeNotifierProvider(
+            create: (_) => ReportProvider(getIt<ReportService>()),
+          ),
+          ChangeNotifierProvider(create: (_) => AuthRadioViewModel()),
+          ChangeNotifierProvider(create: (_) => NotificationProvider())
+        ],
+        child: const MedicalApp(),
+      ),
+    );
+  }, (error, stackTrace) {
+    // Handle errors outside of Flutter's error zone
+    getIt<LoggingService>().log(
+      'Uncaught error',
+      LogLevel.error,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  });
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MedicalApp extends StatelessWidget {
+  const MedicalApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      title: 'Medicare',
+      theme: AppTheme.lightTheme,
+      darkTheme: ThemeData(
+        primarySwatch: Colors.blue,
+        brightness: Brightness.dark,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      themeMode: ThemeMode.system,
+      home: const EntryView(),
+      routes: {
+        '/home': (context) => const HomeView(),
+        '/dashboard': (context) => const HomeScreen(),
+        '/login': (context) => const LoginView(userType: 'default'),
+        '/loginRadio': (context) => const LoginRadioView(),
+        '/loginScreen': (context) => const LoginScreen(),
+        '/signupView': (context) => const SignupView(),
+        '/signupRadio': (context) => const SignupRadioView(),
+        '/archiveScreen': (context) => ArchiveScreen(),
+        '/rapportScreen': (context) => RapportScreen(),
+        '/appointmentsScreen': (context) => const AppointmentsScreen(),
+        '/profileRadio': (context) => const ProfileRadioView(),
+        '/createReport': (context) => const CreateReportScreen(),
+        '/reportsList': (context) => const ReportsListScreen(),
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  final List<Widget> _screens = [
+    const DashboardTab(),
+    const ReportsListScreen(),
+    const ProfileTab(),
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    return Scaffold(
+      drawer: const AppDrawer(),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          children: _screens,
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          });
+        },
+        backgroundColor: Colors.white,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_outlined),
+            activeIcon: Icon(Icons.folder),
+            label: 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+      floatingActionButton: _currentIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => _navigateToCreateReport(context),
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('New Report'),
+            )
+          : null,
+    );
+  }
+
+  void _navigateToCreateReport(BuildContext context) {
+    final reportService = Provider.of<ReportService>(context, listen: false);
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            Provider<ReportService>.value(
+          value: reportService,
+          child: const CreateReportScreen(),
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+          var tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class DashboardTab extends StatelessWidget {
+  const DashboardTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
+        title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
+          children: [
+            Icon(Icons.medical_services, color: Colors.white.withAlpha(230)),
+            const SizedBox(width: 8),
+            const Text('MediScribe',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              // TODO: Implement notifications
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              // TODO: Implement settings
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildHeaderStats(),
+          Expanded(
+            child: _buildFeatureGrid(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderStats() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1A5F7A),
+            Color(0xFF2E8BC0),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1A5F7A).withAlpha(30),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildStatItem('Reports', '28', Icons.description_outlined),
+          _buildVerticalDivider(),
+          _buildStatItem('Pending', '5', Icons.pending_actions_outlined),
+          _buildVerticalDivider(),
+          _buildStatItem('Complete', '23', Icons.task_alt_outlined),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      height: 40,
+      width: 1,
+      color: Colors.white.withAlpha(128),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 4),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureGrid(BuildContext context) {
+    return GridView(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: 1.1,
+      ),
+      children: [
+        _buildFeatureCard(
+          context,
+          'Create Report',
+          'Start a new medical report',
+          Icons.note_add,
+          const Color(0xFFF0F7FA),
+          () {
+            final navigator = Navigator.of(context);
+            navigator.push(
+              MaterialPageRoute(
+                builder: (context) => const CreateReportScreen(),
+              ),
+            );
+          },
+        ),
+        _buildFeatureCard(
+          context,
+          'Smart Editor', // Updated name
+          'AI-powered report editor', // Updated description
+          Icons.edit_note, // Updated icon
+          const Color(0xFFF0FAF0),
+          () {
+            final navigatorContext = context;
+            final navigator = Navigator.of(context);
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (context) => const ReportEditorScreen(
+                  reportId: 'new',
+                  patientName: 'New Patient',
+                ),
+              ),
+            )
+                .then((value) {
+              if (value != null && navigatorContext.mounted) {
+                ScaffoldMessenger.of(navigatorContext).showSnackBar(
+                  SnackBar(
+                    content: const Text('Report saved as draft'),
+                    backgroundColor:
+                        Theme.of(navigatorContext).colorScheme.secondary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        _buildFeatureCard(
+          context,
+          'Handwriting',
+          'Convert handwriting to text',
+          Icons.draw,
+          const Color(0xFFFFF8F0),
+          () {
+            final navigatorContext = context;
+            final navigator = Navigator.of(context);
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (context) => const HandwritingScreen(),
+              ),
+            )
+                .then((value) {
+              if (value != null && navigatorContext.mounted) {
+                ScaffoldMessenger.of(navigatorContext).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                        'Handwriting captured. Open Create Report to use it.'),
+                    backgroundColor:
+                        Theme.of(navigatorContext).colorScheme.secondary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        _buildFeatureCard(
+          context,
+          'My Reports',
+          'View and manage reports',
+          Icons.folder_special,
+          const Color(0xFFF5F0FA),
+          () {
+            // Navigate to reports tab
+            final HomeScreen? homeScreen =
+                context.findAncestorWidgetOfExactType<HomeScreen>();
+            if (homeScreen != null) {
+              final _HomeScreenState? state =
+                  context.findAncestorStateOfType<_HomeScreenState>();
+              state?._pageController.animateToPage(
+                1,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color backgroundColor,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 2,
+      color: backgroundColor,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withAlpha(26),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileTab extends StatelessWidget {
+  const ProfileTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Doctor Profile'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            CircleAvatar(
+              radius: 60,
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary.withAlpha(51),
+              child: Icon(
+                Icons.person,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Dr. Sarah Johnson',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'Cardiologist',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 32),
+            _buildProfileSection(
+              context,
+              'Personal Information',
+              [
+                _buildInfoRow('Email', 'sarah.johnson@mediscribe.com'),
+                _buildInfoRow('Phone', '+1 (555) 123-4567'),
+                _buildInfoRow('License No.', 'MD-12345-678'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildProfileSection(
+              context,
+              'Hospital Information',
+              [
+                _buildInfoRow('Hospital', 'City General Hospital'),
+                _buildInfoRow('Department', 'Cardiology'),
+                _buildInfoRow('Office', 'Room 305, Building B'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildProfileSection(
+              context,
+              'App Settings',
+              [
+                _buildSettingsRow('Dark Mode', false, (value) {}),
+                _buildSettingsRow('Notifications', true, (value) {}),
+                _buildSettingsRow('Auto-save Reports', true, (value) {}),
+              ],
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: () {
+                // TODO: Implement sign out
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sign out functionality not implemented.'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[400],
+                minimumSize: const Size(200, 50),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Widget _buildProfileSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const Divider(height: 24),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsRow(
+      String label, bool initialValue, Function(bool) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          Switch(
+            value: initialValue,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }

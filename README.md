@@ -44,8 +44,8 @@ The platform consists of several microservices:
 
    ```env
    # MongoDB
-   MONGODB_USERNAME=medapp
-   MONGODB_PASSWORD=medapppass
+   MONGODB_USERNAME=admin
+   MONGODB_PASSWORD=admin
    MONGODB_DATABASE=medapp
 
    # RabbitMQ

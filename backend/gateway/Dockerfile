@@ -18,7 +18,7 @@ COPY . .
 
 # Environment variables
 ENV PORT=5000 \
-    CONSUL_HOST=medapp-consul \
+    CONSUL_HOST=consul \
     CONSUL_PORT=8500 \
     PYTHONUNBUFFERED=1 \
     PATH="/usr/local/bin:$PATH"

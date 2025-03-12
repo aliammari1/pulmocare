@@ -12,25 +12,25 @@ class Config:
     """Configuration for the Medical App backend microservice"""
     
     # Service info
-    SERVICE_NAME = "reports-service"
+    SERVICE_NAME = "reports-service"  # Updated to correct service name
     VERSION = "1.0.0"
     ENV = os.getenv('ENV', 'development')
     DEBUG = ENV == 'development'
-    PORT = int(os.getenv('PORT', 5000))
+    PORT = int(os.getenv('PORT', 8081))
     
     # Server settings
     HOST = os.getenv("HOST", "0.0.0.0")
     
     # Service Discovery settings
-    CONSUL_HOST = os.getenv("CONSUL_HOST", "consul")  # Changed from "localhost" to "consul"
+    CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
     CONSUL_PORT = int(os.getenv("CONSUL_PORT", "8500"))
     CONSUL_TOKEN = os.getenv("CONSUL_HTTP_TOKEN")
     
     # MongoDB settings
-    MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb")  # Changed from "localhost" to "mongodb"
+    MONGODB_HOST = os.getenv("MONGODB_HOST", "localhost")
     MONGODB_PORT = int(os.getenv("MONGODB_PORT", "27017"))
-    MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "medapp")
-    MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "medapppass")
+    MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "admin")
+    MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "admin")
     MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "medapp")
     MONGODB_POOL_SIZE = int(os.getenv("MONGODB_POOL_SIZE", "50"))
     MONGODB_MIN_POOL_SIZE = int(os.getenv("MONGODB_MIN_POOL_SIZE", "10"))
@@ -39,11 +39,11 @@ class Config:
     MONGODB_SERVER_SELECTION_TIMEOUT_MS = int(os.getenv("MONGODB_SERVER_SELECTION_TIMEOUT_MS", "5000"))
     
     # Redis settings
-    REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', 'redispass')
-    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
     
     # RabbitMQ settings
     RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
@@ -65,7 +65,7 @@ class Config:
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "True").lower() in ("true", "t", "1", "yes")
     
     # Tracing settings
-    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
     OTEL_SERVICE_NAME = SERVICE_NAME
     
     # Circuit Breaker settings
@@ -80,18 +80,44 @@ class Config:
     # Cache settings
     CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))  # 5 minutes
     CACHE_MAX_SIZE = int(os.getenv("CACHE_MAX_SIZE", "1000"))
+    CACHE_TYPE = "redis"
+    CACHE_REDIS_URL = REDIS_URL
+    CACHE_DEFAULT_TIMEOUT = CACHE_TTL
     
     # Rate limiting
-    RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', 'redis://redis:6379/0')
+    RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0')
     RATE_LIMIT_DEFAULT = os.getenv('RATE_LIMIT_DEFAULT', '60 per minute')
+    
+    # Application specific configuration
+    PDF_EXPORT_PATH = os.getenv('PDF_EXPORT_PATH', '/tmp/exports')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    REQUEST_TIMEOUT = 30  # seconds
+    
+    # Session configuration
+    SESSION_TYPE = "redis"
+    SESSION_REDIS = REDIS_URL
+    SESSION_USE_SIGNER = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+    
+    # Security configuration
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
     @classmethod
     def get_mongodb_uri(cls):
         """Get MongoDB connection URI with proper handling of special characters in password"""
-        username = urllib.parse.quote_plus(cls.MONGODB_USERNAME)
-        password = urllib.parse.quote_plus(cls.MONGODB_PASSWORD)
+        username = urllib.parse.quote_plus(os.getenv("MONGODB_USERNAME", cls.MONGODB_USERNAME))
+        password = urllib.parse.quote_plus(os.getenv("MONGODB_PASSWORD", cls.MONGODB_PASSWORD))
+        print(f"mongodb://{username}:{password}@"
+                # f"{os.getenv('MONGODB_HOST', 'localhost')}:"
+                "localhost:"
+                f"{os.getenv('MONGODB_PORT', cls.MONGODB_PORT)}/{os.getenv('MONGODB_DATABASE', cls.MONGODB_DATABASE)}")
         return (f"mongodb://{username}:{password}@"
-                f"{cls.MONGODB_HOST}:{cls.MONGODB_PORT}/{cls.MONGODB_DATABASE}?authSource=admin")
+                # f"{os.getenv('MONGODB_HOST', 'localhost')}:"
+                "localhost:"
+                f"{os.getenv('MONGODB_PORT', cls.MONGODB_PORT)}")
 
     @classmethod
     def get_mongodb_validation_schema(cls):
@@ -224,60 +250,3 @@ class Config:
         
         if missing:
             raise ValueError(f"Missing required configuration: {', '.join(missing)}")
-
-# Service configuration
-PORT = int(os.getenv('PORT', 5000))
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-
-# MongoDB configuration
-MONGODB_HOST = os.getenv('MONGODB_HOST', 'mongodb')
-MONGODB_PORT = int(os.getenv('MONGODB_PORT', 27017))
-MONGODB_USERNAME = os.getenv('MONGODB_USERNAME', 'medapp')
-MONGODB_PASSWORD = os.getenv('MONGODB_PASSWORD', 'medapppass')
-MONGODB_DATABASE = os.getenv('MONGODB_DATABASE', 'medapp')
-
-# Redis configuration
-REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', 'redispass')
-REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
-
-# RabbitMQ configuration
-RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
-RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
-RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'guest')
-
-# Consul configuration
-CONSUL_HOST = os.getenv('CONSUL_HOST', 'consul')
-CONSUL_PORT = int(os.getenv('CONSUL_PORT', 8500))
-
-# Rate limiting configuration
-RATE_LIMIT_DEFAULT = "60/minute"
-RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', REDIS_URL)
-
-# OpenTelemetry configuration
-OTEL_SERVICE_NAME = os.getenv('OTEL_SERVICE_NAME', 'reports-service')
-OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://otel-collector:4317')
-
-# Application specific configuration
-PDF_EXPORT_PATH = os.getenv('PDF_EXPORT_PATH', '/tmp/exports')
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-REQUEST_TIMEOUT = 30  # seconds
-
-# Cache configuration
-CACHE_TYPE = "redis"
-CACHE_REDIS_URL = REDIS_URL
-CACHE_DEFAULT_TIMEOUT = 300
-
-# Session configuration
-SESSION_TYPE = "redis"
-SESSION_REDIS = REDIS_URL
-SESSION_USE_SIGNER = True
-PERMANENT_SESSION_LIFETIME = timedelta(days=1)
-
-# Security configuration
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
-JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
-JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)

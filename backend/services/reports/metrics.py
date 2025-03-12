@@ -59,6 +59,18 @@ CACHE_MISSES = Counter(
     ['cache']
 )
 
+CACHE_HIT = Counter(
+    'report_cache_hit_total',
+    'Total number of cache hits',
+    ['cache_name']
+)
+
+CACHE_MISS = Counter(
+    'report_cache_miss_total',
+    'Total number of cache misses',
+    ['cache_name']
+)
+
 def track_rabbitmq_metrics(func):
     """Decorator to track RabbitMQ operation metrics"""
     @functools.wraps(func)
@@ -125,5 +137,7 @@ def track_cache_metrics(hit: bool, cache_name: str):
     """Track cache hit/miss metrics"""
     if hit:
         CACHE_HITS.labels(cache=cache_name).inc()
+        CACHE_HIT.labels(cache_name=cache_name).inc()
     else:
         CACHE_MISSES.labels(cache=cache_name).inc()
+        CACHE_MISS.labels(cache_name=cache_name).inc()
