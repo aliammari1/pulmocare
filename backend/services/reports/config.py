@@ -27,7 +27,7 @@ class Config:
     CONSUL_TOKEN = os.getenv("CONSUL_HTTP_TOKEN")
     
     # MongoDB settings
-    MONGODB_HOST = os.getenv("MONGODB_HOST", "localhost")
+    MONGODB_HOST = os.getenv("MONGODB_HOST", "mongodb" if ENV != "development" else "localhost")
     MONGODB_PORT = int(os.getenv("MONGODB_PORT", "27017"))
     MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "admin")
     MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "admin")
@@ -46,11 +46,14 @@ class Config:
     REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
     
     # RabbitMQ settings
-    RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+    # Use localhost as fallback for development when running outside container
+    RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost" if ENV == "development" else "rabbitmq")
     RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
     RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
     RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "guest")
     RABBITMQ_VHOST = os.getenv("RABBITMQ_VHOST", "/")
+    # Flag to ignore RabbitMQ connection failures in development
+    RABBITMQ_IGNORE_CONNECTION_ERRORS = os.getenv("RABBITMQ_IGNORE_CONNECTION_ERRORS", "True").lower() in ("true", "t", "1", "yes") and ENV == "development"
     
     # Logging settings
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -65,7 +68,11 @@ class Config:
     ENABLE_METRICS = os.getenv("ENABLE_METRICS", "True").lower() in ("true", "t", "1", "yes")
     
     # Tracing settings
-    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
+    # In development, use localhost for OpenTelemetry endpoint
+    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", 
+                                           "http://localhost:4317" if ENV == "development" else "http://otel-collector:4317")
+    # Disable tracing if endpoint can't be reached in development
+    OTEL_DISABLE_ON_ERROR = os.getenv("OTEL_DISABLE_ON_ERROR", "True").lower() in ("true", "t", "1", "yes") and ENV == "development"
     OTEL_SERVICE_NAME = SERVICE_NAME
     
     # Circuit Breaker settings
@@ -87,6 +94,11 @@ class Config:
     # Rate limiting
     RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0')
     RATE_LIMIT_DEFAULT = os.getenv('RATE_LIMIT_DEFAULT', '60 per minute')
+    
+    # Registry Service (Spring Eureka, etc)
+    REGISTRY_HOST = os.getenv("REGISTRY_HOST", "localhost" if ENV == "development" else "registry")
+    REGISTRY_PORT = int(os.getenv("REGISTRY_PORT", "8761"))
+    REGISTRY_IGNORE_ERRORS = os.getenv("REGISTRY_IGNORE_ERRORS", "True").lower() in ("true", "t", "1", "yes") and ENV == "development"
     
     # Application specific configuration
     PDF_EXPORT_PATH = os.getenv('PDF_EXPORT_PATH', '/tmp/exports')
@@ -110,18 +122,17 @@ class Config:
         """Get MongoDB connection URI with proper handling of special characters in password"""
         username = urllib.parse.quote_plus(os.getenv("MONGODB_USERNAME", cls.MONGODB_USERNAME))
         password = urllib.parse.quote_plus(os.getenv("MONGODB_PASSWORD", cls.MONGODB_PASSWORD))
-        print(f"mongodb://{username}:{password}@"
-                # f"{os.getenv('MONGODB_HOST', 'localhost')}:"
-                "localhost:"
-                f"{os.getenv('MONGODB_PORT', cls.MONGODB_PORT)}/{os.getenv('MONGODB_DATABASE', cls.MONGODB_DATABASE)}")
-        return (f"mongodb://{username}:{password}@"
-                # f"{os.getenv('MONGODB_HOST', 'localhost')}:"
-                "localhost:"
-                f"{os.getenv('MONGODB_PORT', cls.MONGODB_PORT)}")
+        mongodb_host = os.getenv("MONGODB_HOST", cls.MONGODB_HOST)
+            
+        # Don't include database name in connection URI - it will be selected programmatically
+        mongodb_uri = f"mongodb://{username}:{password}@{mongodb_host}:{os.getenv('MONGODB_PORT', cls.MONGODB_PORT)}"
+        print(mongodb_uri)
+        return mongodb_uri
 
     @classmethod
     def get_mongodb_validation_schema(cls):
         """Get MongoDB validation schema for reports collection"""
+        # Schema definition unchanged
         return {
             '$jsonSchema': {
                 'bsonType': 'object',
@@ -240,10 +251,15 @@ class Config:
         required_settings = [
             'MONGODB_USERNAME',
             'MONGODB_PASSWORD',
-            'MONGODB_HOST',
-            'CONSUL_HOST',
-            'RABBITMQ_HOST'
+            'MONGODB_HOST'
         ]
+        
+        # Don't validate these in development mode
+        if cls.ENV != "development":
+            required_settings.extend([
+                'CONSUL_HOST',
+                'RABBITMQ_HOST'
+            ])
         
         missing = [setting for setting in required_settings
                   if not getattr(cls, setting, None)]

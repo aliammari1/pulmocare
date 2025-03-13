@@ -108,7 +108,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Medicare',
+                      'Pulmocare',
                       style: TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -213,7 +213,7 @@ class _LoginViewState extends State<LoginView> {
                                           _showAlert('Success',
                                               'Login successful!', true);
                                           Navigator.pushReplacementNamed(
-                                              context, '/home');
+                                              context, '/dashboard');
                                         }
                                       } catch (e) {
                                         _showAlert(

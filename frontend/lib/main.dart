@@ -16,7 +16,7 @@ import 'screens/report_editor_screen.dart';
 import 'viewmodels/auth_view_model.dart';
 import 'viewmodels/chat_viewmodel.dart';
 import 'views/login_view.dart';
-import 'views/home_view copy.dart'; // Use the correct HomeView path
+import 'views/home_view copy.dart';
 import 'views/entry_view.dart';
 import 'views/login_radio.dart';
 import 'screens/login_screen.dart';
@@ -83,7 +83,7 @@ class MedicalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Medicare',
+      title: 'Pulmocare',
       theme: AppTheme.lightTheme,
       darkTheme: ThemeData(
         primarySwatch: Colors.blue,

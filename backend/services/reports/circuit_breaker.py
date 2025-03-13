@@ -4,6 +4,13 @@ import logging
 from enum import Enum, auto
 from typing import Type, Callable, Any, Optional
 
+from metrics import (
+    track_circuit_breaker_state, 
+    track_circuit_breaker_failure,
+    track_circuit_breaker_success,
+    track_circuit_breaker_rejection
+)
+
 logger = logging.getLogger(__name__)
 
 class CircuitState(Enum):
@@ -34,6 +41,9 @@ class CircuitBreaker:
         # Store the instance in class variable for tracking
         CircuitBreaker._instances[name] = self
         
+        # Initialize metrics for this circuit breaker
+        track_circuit_breaker_state(name, "closed")
+        
         logger.info(f"Circuit breaker '{name}' initialized (threshold={failure_threshold}, timeout={recovery_timeout}s)")
     
     def __call__(self, func):
@@ -49,8 +59,10 @@ class CircuitBreaker:
             if time.time() - self.last_failure_time > self.recovery_timeout:
                 logger.info(f"Circuit '{self.name}' attempting reset (half-open)")
                 self.state = CircuitState.HALF_OPEN
+                track_circuit_breaker_state(self.name, "half_open")
             else:
                 logger.warning(f"Circuit '{self.name}' is OPEN - failing fast")
+                track_circuit_breaker_rejection(self.name)
                 raise CircuitBreakerError(
                     f"Circuit '{self.name}' is open"
                 )
@@ -62,7 +74,9 @@ class CircuitBreaker:
             if self.state == CircuitState.HALF_OPEN:
                 logger.info(f"Circuit '{self.name}' reset successful - closing circuit")
                 self.reset()
-                
+            
+            # Track success
+            track_circuit_breaker_success(self.name)
             return result
             
         except self.expected_exception as e:
@@ -79,10 +93,14 @@ class CircuitBreaker:
         """Record a failure and check if circuit should open"""
         self.last_failure_time = time.time()
         
+        # Track the failure in metrics
+        track_circuit_breaker_failure(self.name)
+        
         # In half-open state, a single failure opens the circuit again
         if self.state == CircuitState.HALF_OPEN:
             logger.warning(f"Circuit '{self.name}' failed in half-open state - opening circuit")
             self.state = CircuitState.OPEN
+            track_circuit_breaker_state(self.name, "open")
             self.failure_count = self.failure_threshold
             return
             
@@ -93,12 +111,14 @@ class CircuitBreaker:
         if self.failure_count >= self.failure_threshold:
             logger.warning(f"Circuit '{self.name}' exceeded failure threshold - opening circuit")
             self.state = CircuitState.OPEN
+            track_circuit_breaker_state(self.name, "open")
     
     def reset(self):
         """Reset the circuit breaker to closed state"""
         logger.info(f"Resetting circuit '{self.name}'")
         self.failure_count = 0
         self.state = CircuitState.CLOSED
+        track_circuit_breaker_state(self.name, "closed")
         
     @classmethod
     def get_status(cls) -> dict:

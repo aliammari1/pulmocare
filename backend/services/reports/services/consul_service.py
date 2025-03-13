@@ -3,6 +3,7 @@ import socket
 import logging
 import consul
 import requests
+from config import Config
 
 class ConsulService:
     """Service for Consul registration and discovery"""
@@ -14,10 +15,31 @@ class ConsulService:
     def register_service(self):
         """Register service with Consul"""
         try:
-            consul_client = consul.Consul(
-                host=self.config.CONSUL_HOST,
-                port=self.config.CONSUL_PORT
-            )
+            # Skip registration in development if we can't connect to Consul
+            if self.config.ENV == 'development':
+                try:
+                    # Try with a short timeout in development
+                    consul_client = consul.Consul(
+                        host=self.config.CONSUL_HOST,
+                        port=self.config.CONSUL_PORT,
+                        scheme='http',
+                        token=self.config.CONSUL_TOKEN,
+                        verify=False,
+                        timeout=3
+                    )
+                    # Test connection with a simple ping
+                    consul_client.agent.self()
+                except Exception as e:
+                    self.logger.warning(f"Skipping Consul registration in development mode: {str(e)}")
+                    return
+            else:
+                # Production settings with longer timeout
+                consul_client = consul.Consul(
+                    host=self.config.CONSUL_HOST,
+                    port=self.config.CONSUL_PORT,
+                    scheme='http',
+                    token=self.config.CONSUL_TOKEN
+                )
             
             # Get hostname or use container name
             hostname = os.getenv('HOSTNAME', socket.gethostname())
@@ -28,7 +50,13 @@ class ConsulService:
             
             # Get the actual host address for registration
             try:
+                # In Docker, use container IP for internal network
                 container_ip = socket.gethostbyname(hostname)
+                
+                # For development on Windows, make sure we use the actual network interface
+                if self.config.ENV == 'development' and container_ip == '127.0.0.1':
+                    # Get the non-loopback IP address
+                    container_ip = self._get_local_ip()
             except:
                 container_ip = '127.0.0.1'  # fallback
             
@@ -58,10 +86,36 @@ class ConsulService:
         except Exception as e:
             self.logger.error(f"Failed to register with Consul: {str(e)}")
     
+    def _get_local_ip(self):
+        """Get a non-loopback IP address for the local machine"""
+        try:
+            # Create a socket that connects to an external server
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # It doesn't actually connect, just sets up the socket
+            s.connect(('8.8.8.8', 80))
+            # Get the local IP address used for the connection
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except:
+            return '127.0.0.1'
+    
     def _register_metadata(self, service_name, container_ip, service_port):
         """Register additional metadata with registry service"""
         try:
-            registry_url = "http://registry:8761/services/metadata"
+            # Skip in development if registry errors should be ignored
+            if self.config.ENV == 'development' and self.config.REGISTRY_IGNORE_ERRORS:
+                registry_host = self.config.REGISTRY_HOST
+                registry_port = self.config.REGISTRY_PORT
+            else:
+                registry_host = "registry"
+                registry_port = 8761
+                
+            registry_url = f"http://{registry_host}:{registry_port}/services/metadata"
+            
+            # Shorter timeout in development
+            timeout = 3 if self.config.ENV == 'development' else 10
+            
             requests.post(
                 registry_url,
                 json={
@@ -71,8 +125,11 @@ class ConsulService:
                     'team': 'Medical Team',
                     'documentation': f'https://github.com/aliammari/medapp/wiki/{service_name}'
                 },
-                timeout=5
+                timeout=timeout
             )
             self.logger.info(f"Registered metadata with registry service")
         except Exception as registry_error:
-            self.logger.warning(f"Failed to register metadata with registry: {str(registry_error)}")
+            if self.config.ENV == 'development' and self.config.REGISTRY_IGNORE_ERRORS:
+                self.logger.warning(f"Failed to register metadata with registry: {str(registry_error)}")
+            else:
+                self.logger.error(f"Failed to register metadata with registry: {str(registry_error)}")

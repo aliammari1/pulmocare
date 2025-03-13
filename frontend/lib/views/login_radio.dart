@@ -108,7 +108,7 @@ class _LoginRadioViewState extends State<LoginRadioView> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          'Medicare',
+                          'Pulmocare',
                           style: TextStyle(
                             fontSize: 40,
                             fontWeight: FontWeight.bold,

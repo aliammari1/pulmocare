@@ -6,7 +6,7 @@ import socket
 from circuit_breaker import CircuitBreaker
 from config import Config
 from typing import Optional, Tuple, Dict, Any
-from metrics import track_rabbitmq_metrics, update_queue_metrics
+from metrics import track_rabbitmq_metrics, update_queue_metrics, track_dependency_status
 
 logger = logging.getLogger(__name__)
 
@@ -27,21 +27,39 @@ class MessageBroker:
             'report.analysis': ['report.created'],
             'report.notifications': ['report.#']
         }
-        logger.info("MessageBroker initialized with circuit breaker")
+        # Flag to indicate if we're in a development environment with connection errors ignored
+        self._ignore_connection_errors = Config.RABBITMQ_IGNORE_CONNECTION_ERRORS
+        
+        # Set initial dependency status
+        track_dependency_status('rabbitmq', False)
+        
+        logger.info(f"MessageBroker initialized with circuit breaker (ignore_errors={self._ignore_connection_errors})")
     
     @property
     def connection(self) -> pika.BlockingConnection:
         """Get or create RabbitMQ connection"""
         if not self._connection or self._connection.is_closed:
-            self._connection = self._create_connection()
+            try:
+                self._connection = self._create_connection()
+                # Update dependency status to available
+                track_dependency_status('rabbitmq', True)
+            except Exception as e:
+                # Update dependency status to unavailable
+                track_dependency_status('rabbitmq', False)
+                if self._ignore_connection_errors:
+                    logger.warning(f"Failed to connect to RabbitMQ but errors are ignored: {str(e)}")
+                    return None
+                raise
         return self._connection
     
     @property
     def channel(self) -> pika.channel.Channel:
         """Get or create RabbitMQ channel"""
         if not self._channel or self._channel.is_closed:
-            self._channel = self.connection.channel()
-            self._declare_infrastructure()
+            conn = self.connection
+            if conn:
+                self._channel = conn.channel()
+                self._declare_infrastructure()
         return self._channel
     
     @CircuitBreaker(name="rabbitmq_connection")
@@ -77,6 +95,11 @@ class MessageBroker:
                         logger.info(f"Resolved {Config.RABBITMQ_HOST} to {resolved_ip}")
                     except socket.gaierror:
                         logger.warning(f"Could not resolve hostname {Config.RABBITMQ_HOST}")
+                        # In development mode, don't fail
+                        if self._ignore_connection_errors:
+                            raise pika.exceptions.AMQPConnectionError(
+                                f"Could not resolve hostname {Config.RABBITMQ_HOST} (ignored in development)")
+                        raise
                 
                 connection = pika.BlockingConnection(connection_params)
                 logger.info("Successfully connected to RabbitMQ")
@@ -107,10 +130,14 @@ class MessageBroker:
     
     def _declare_infrastructure(self):
         """Declare exchanges, queues and bindings"""
+        if not self._channel:
+            logger.warning("Cannot declare RabbitMQ infrastructure: no channel available")
+            return
+            
         try:
             # Declare exchanges
             logger.info(f"Declaring exchange: {self._exchange_name}")
-            self.channel.exchange_declare(
+            self._channel.exchange_declare(
                 exchange=self._exchange_name,
                 exchange_type='topic',
                 durable=True
@@ -119,14 +146,14 @@ class MessageBroker:
             # Declare queues and bindings
             for queue, routing_keys in self._queues.items():
                 logger.info(f"Declaring queue: {queue}")
-                self.channel.queue_declare(
+                self._channel.queue_declare(
                     queue=queue,
                     durable=True
                 )
                 
                 for routing_key in routing_keys:
                     logger.info(f"Binding queue {queue} to exchange {self._exchange_name} with routing key {routing_key}")
-                    self.channel.queue_bind(
+                    self._channel.queue_bind(
                         exchange=self._exchange_name,
                         queue=queue,
                         routing_key=routing_key
@@ -134,21 +161,26 @@ class MessageBroker:
             
             # Initialize queue metrics
             for queue in self._queues:
-                update_queue_metrics(self.channel, queue)
+                update_queue_metrics(self._channel, queue)
                 
             logger.info("Successfully declared RabbitMQ infrastructure")
         except Exception as e:
             logger.error(f"Error declaring RabbitMQ infrastructure: {str(e)}")
-            raise
+            if not self._ignore_connection_errors:
+                raise
     
     @track_rabbitmq_metrics
     def publish(self, routing_key: str, message: dict, **properties):
         """Publish message with circuit breaker and metrics"""
+        if not self._channel and self._ignore_connection_errors:
+            logger.warning(f"Skipping message publish (routing_key={routing_key}): RabbitMQ connection not available")
+            return
+            
         try:
             logger.info(f"Publishing message to {self._exchange_name} with routing key: {routing_key}")
             logger.debug(f"Message content: {message}")
             
-            self.channel.basic_publish(
+            self._channel.basic_publish(
                 exchange=self._exchange_name,
                 routing_key=routing_key,
                 body=json.dumps(message),
@@ -164,14 +196,18 @@ class MessageBroker:
             for queue, routes in self._queues.items():
                 for route in routes:
                     if self._routing_key_matches(route, routing_key):
-                        update_queue_metrics(self.channel, queue)
+                        update_queue_metrics(self._channel, queue)
             
         except pika.exceptions.AMQPError as e:
             logger.error(f"Failed to publish message: {str(e)}")
-            raise
+            if self._ignore_connection_errors:
+                logger.warning("Message publishing error ignored in development mode")
+            else:
+                raise
         except Exception as e:
             logger.error(f"Unexpected error publishing message: {str(e)}")
-            raise
+            if not self._ignore_connection_errors:
+                raise
     
     def _routing_key_matches(self, pattern: str, routing_key: str) -> bool:
         """Check if routing key matches pattern with wildcards"""

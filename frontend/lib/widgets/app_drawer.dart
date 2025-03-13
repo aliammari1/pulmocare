@@ -28,7 +28,7 @@ class AppDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Medicare',
+                  'Pulmocare',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,

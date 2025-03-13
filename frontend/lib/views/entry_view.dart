@@ -29,7 +29,7 @@ class EntryView extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Medicare',
+                'Pulmocare',
                 style: TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,

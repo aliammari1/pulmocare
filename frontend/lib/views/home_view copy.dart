@@ -45,7 +45,7 @@ class _HomeViewState extends State<HomeView> {
         elevation: 0,
         automaticallyImplyLeading: true, // Show drawer icon
         title: Text(
-          "Medicare",
+          "Pulmocare",
           style: TextStyle(
             color: Colors.lightBlue, // Bleu caractéristique de Facebook
             fontSize: 28, // Taille plus grande
