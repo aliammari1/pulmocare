@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:medapp/components/chat_dialog.dart';
-import '../services/gemini_service.dart';
+import 'package:medapp/widgets/chat_dialog.dart';
+import 'gemini_service.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final GeminiService _geminiService = GeminiService();

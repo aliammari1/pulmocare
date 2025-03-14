@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../views/ordonnance_screen.dart';
-import '../views/pdf_actions_screen.dart';
-import '../views/ordonnances_list_screen.dart';
+import '../screens/ordonnance_screen.dart';
+import '../screens/pdf_actions_screen.dart';
+import '../screens/ordonnances_list_screen.dart';
 
 class AppRouter {
   static const String home = '/';

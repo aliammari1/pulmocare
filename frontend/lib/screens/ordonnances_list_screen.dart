@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../viewmodels/ordonnance_viewmodel.dart';
+import '../services/ordonnance_viewmodel.dart';
 import 'pdf_actions_screen.dart';
 
 class OrdonnancesListScreen extends StatefulWidget {

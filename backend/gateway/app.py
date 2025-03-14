@@ -294,6 +294,45 @@ def xray_service(path):
 def reports_service(path):
     return proxy_request('reports-service', f"/api/{path}", request.method)
 
+# Add patient-specific routes
+@app.route('/api/patient/signup', methods=['POST'])
+@limiter.limit("10/minute")
+@handle_service_error
+def patient_signup():
+    return proxy_request('patients-service', f"/api/patient/signup", request.method)
+
+@app.route('/api/patient/login', methods=['POST'])
+@limiter.limit("20/minute")
+@handle_service_error
+def patient_login():
+    return proxy_request('patients-service', f"/api/patient/login", request.method)
+
+@app.route('/api/patient/forgot-password', methods=['POST'])
+@limiter.limit("5/minute")
+@handle_service_error
+def patient_forgot_password():
+    return proxy_request('patients-service', f"/api/patient/forgot-password", request.method)
+
+@app.route('/api/patient/verify-otp', methods=['POST'])
+@limiter.limit("10/minute")
+@handle_service_error
+def patient_verify_otp():
+    return proxy_request('patients-service', f"/api/patient/verify-otp", request.method)
+
+@app.route('/api/patient/reset-password', methods=['POST'])
+@limiter.limit("5/minute")
+@handle_service_error
+def patient_reset_password():
+    return proxy_request('patients-service', f"/api/patient/reset-password", request.method)
+
+
+@app.route('/api/patient/list', methods=['GET'])
+@limiter.limit("30/minute")
+@handle_service_error
+def patient_list():
+    return proxy_request('patients-service', '/api/patient/list', request.method)
+
+
 # Add direct routes to medecins service endpoints
 @app.route('/api/signup', methods=['POST'])
 @limiter.limit("10/minute")

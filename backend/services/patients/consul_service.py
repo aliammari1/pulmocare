@@ -21,18 +21,18 @@ class ConsulService:
             # Get container IP or fallback to hostname
             ip_address = socket.gethostbyname(socket.gethostname())
 
-            logger.info(f"Registering service {self.config.SERVICE_NAME} with Consul at {ip_address}:{self.config.PORT}")
+            logger.info(f"Registering service {self.config.SERVICE_NAME} with Consul at {ip_address}:8083")
 
             # Register service
             self.consul.agent.service.register(
                 name=self.config.SERVICE_NAME,
                 service_id=self.service_id,
                 address=ip_address,
-                port=self.config.PORT,
+                port=8083,
                 tags=["microservice", "medical"],
                 check={
                     "name": f"Health check for {self.config.SERVICE_NAME}",
-                    "http": f"http://{ip_address}:{self.config.PORT}/health",
+                    "http": f"http://{ip_address}:8083/health",
                     "interval": self.config.HEALTH_CHECK_INTERVAL,
                     "timeout": self.config.HEALTH_CHECK_TIMEOUT,
                     "deregister_critical_service_after": self.config.HEALTH_CHECK_DEREGISTER_TIMEOUT

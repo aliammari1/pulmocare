@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart'; // Add this import for PdfPageFormat
 import 'package:intl/intl.dart';
-import '../viewmodels/ordonnance_viewmodel.dart';
+import '../services/ordonnance_viewmodel.dart';
 
 class PdfActionsScreen extends StatefulWidget {
   const PdfActionsScreen({super.key});

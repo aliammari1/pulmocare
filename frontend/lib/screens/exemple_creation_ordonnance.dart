@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/ordonnance.dart';
 import '../models/medicament.dart';
-import '../viewmodels/ordonnance_viewmodel.dart';
+import '../services/ordonnance_viewmodel.dart';
 
 class ExempleCreationOrdonnance extends StatelessWidget {
   const ExempleCreationOrdonnance({super.key});

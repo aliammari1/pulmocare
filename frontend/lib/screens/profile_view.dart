@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import '../components/verification_alert.dart';
-import './signature_view.dart';
+import '../widgets/verification_alert.dart';
+import 'signature_view.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});

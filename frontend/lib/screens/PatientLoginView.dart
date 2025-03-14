@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/screens/face_login_screen.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model_patient.dart';
 
 class PatientLoginView extends StatefulWidget {
   const PatientLoginView({super.key});
@@ -166,7 +166,7 @@ class _PatientLoginViewState extends State<PatientLoginView> {
                               if (result == true) {
                                 // Face authentication successful
                                 // Implement face login logic here
-                                final authVM = context.read<AuthViewModel>();
+                                final authVM = context.read<PatientAuthViewModel>();
                                 try {
                                   await authVM.loginWithFace();
                                   if (mounted && authVM.isAuthenticated) {
@@ -203,7 +203,7 @@ class _PatientLoginViewState extends State<PatientLoginView> {
                                           ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
                                       final authVM =
-                                          context.read<AuthViewModel>();
+                                          context.read<PatientAuthViewModel>();
 
                                       try {
                                         await authVM.login(
@@ -254,7 +254,7 @@ class _PatientLoginViewState extends State<PatientLoginView> {
                       ),
                     ),
                     // Error Message
-                    Consumer<AuthViewModel>(
+                    Consumer<PatientAuthViewModel>(
                       builder: (context, authVM, child) {
                         return authVM.errorMessage.isNotEmpty
                             ? Container(

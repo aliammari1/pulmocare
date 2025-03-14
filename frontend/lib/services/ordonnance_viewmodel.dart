@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 // Add this import
 import '../models/medicament.dart';
 import '../models/ordonnance.dart';
-import '../services/api_service_ordonnance.dart';
+import 'api_service_ordonnance.dart';
 import 'dart:io';
 
 class OrdonnanceViewModel extends ChangeNotifier {

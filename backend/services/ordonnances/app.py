@@ -13,7 +13,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialize MongoDB client for health checks
-mongo_client = MongoClient(Config.get_mongodb_uri())
+mongo_client = MongoClient('mongodb://admin:admin@localhost:27017/')
 
 
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/chat_viewmodel.dart';
+import '../services/chat_viewmodel.dart';
 import '../theme/app_theme.dart';
 import '../utils/medical_prompts.dart';
 

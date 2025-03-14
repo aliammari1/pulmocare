@@ -180,9 +180,9 @@ services:
     ports:
       - "4317:4317"
       - "14318:4318"
-      - "8888:8888" 
-      - "8889:8889" 
-      - "13133:13133" 
+      - "8888:8888"
+      - "8889:8889"
+      - "13133:13133"
     networks:
       - medapp-network
     depends_on:
@@ -209,25 +209,6 @@ services:
       - medapp-network
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:16686"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Tempo - Grafana's distributed tracing backend
-  tempo:
-    image: grafana/tempo
-    container_name: medapp-tempo
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
-    volumes:
-      - ./monitoring/tempo:/etc/tempo
-      - tempo_data:/tmp/tempo
-    ports:
-      - "3200:3200" # Tempo Query API
-      - "4318:4318" # OTLP HTTP
-    networks:
-      - medapp-network
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3200/ready"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -465,9 +446,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
-      - "9093:9090"
+      - "9093:9093" # Changed from 9093:9090 to 9093:9093 to avoid internal port conflict
     environment:
       - PORT=8085
+      - PROMETHEUS_PORT=9093
       - CONSUL_HOST=consul
       - CONSUL_PORT=8500
       - REDIS_HOST=redis
@@ -503,6 +485,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
   # Flutter Development Server
   # flutter-dev:
   #   build:
@@ -525,6 +508,46 @@ services:
   #   networks:
   #     - medapp-network
 
+  # SonarQube - Code Quality Analysis
+  sonarqube:
+    image: sonarqube:community
+    container_name: medapp-sonarqube
+    ports:
+      - "9001:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jenkins - CI/CD
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: medapp-jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   medapp-network:
     driver: bridge
@@ -537,4 +560,7 @@ volumes:
   grafana_data:
   flutter-pub-cache:
   consul_data:
-  tempo_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  jenkins_home:

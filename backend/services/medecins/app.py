@@ -19,7 +19,7 @@ import io
 from PIL import Image
 import pytesseract
 from consul_service import ConsulService
-
+from config import Config
 load_dotenv()
 
 # Configure logging
@@ -32,17 +32,6 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {'origins': '*', 'methods': ['GET', 'POST', 'OPTIONS']}})
 
-# Configuration class for service settings
-class Config:
-    SERVICE_NAME = "medecins-service"
-    PORT = int(os.getenv('PORT', 8081))
-    HOST = os.getenv("HOST", "0.0.0.0")
-    DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-    CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
-    CONSUL_PORT = int(os.getenv("CONSUL_PORT", "8500"))
-    HEALTH_CHECK_INTERVAL = os.getenv("HEALTH_CHECK_INTERVAL", "10s")
-    HEALTH_CHECK_TIMEOUT = os.getenv("HEALTH_CHECK_TIMEOUT", "5s")
-    HEALTH_CHECK_DEREGISTER_TIMEOUT = os.getenv("HEALTH_CHECK_DEREGISTER_TIMEOUT", "30s")
 
 # MongoDB configuration
 client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://admin:admin@localhost:27017/'))

@@ -102,16 +102,15 @@ def handle_service_error(func):
                 prometheus_service.record_latency(method, endpoint, time.time() - start_time)
     return wrapper
 
-# Health check endpoint
-@api.route('/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     mongodb_status = mongodb_client.check_health()
     redis_status = redis_client.check_health()
-    rabbitmq_status = rabbitmq_client.check_health()
+    rabbitmq_status = rabbitmq_client.check_health() if rabbitmq_client else 'DISABLED'
 
     health_status = {
-        'status': 'UP' if all(s == 'UP' for s in [mongodb_status, redis_status, rabbitmq_status]) else 'DOWN',
+        'status': 'UP' if all(s == 'UP' for s in [mongodb_status, redis_status]) else 'DOWN',
         'timestamp': datetime.utcnow().isoformat(),
         'version': Config.VERSION,
         'dependencies': {

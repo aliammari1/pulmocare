@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/theme/app_theme.dart';
-import 'package:medapp/views/profile_view.dart';
+import 'package:medapp/screens/profile_view.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model.dart';
 import 'patients_view.dart';
-import '../components/chat_dialog.dart';
-import '../viewmodels/chat_viewmodel.dart';
+import '../widgets/chat_dialog.dart';
+import '../services/chat_viewmodel.dart';
 import 'news_view.dart';
-import '../components/Drawer.dart';
+import '../widgets/Drawer.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});

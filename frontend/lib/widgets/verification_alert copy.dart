@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_radio_view_model.dart';
+import '../services/auth_radio_view_model.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 

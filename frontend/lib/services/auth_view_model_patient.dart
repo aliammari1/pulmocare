@@ -4,7 +4,7 @@ import 'package:medapp/config.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AuthViewModel extends ChangeNotifier {
+class PatientAuthViewModel extends ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = false;
   String _errorMessage = '';

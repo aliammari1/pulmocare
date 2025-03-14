@@ -16,7 +16,7 @@ class Config:
     VERSION = "1.0.0"
     ENV = os.getenv('ENV', 'development')
     DEBUG = ENV == 'development'
-    PORT = int(os.getenv('PORT', 8081))
+    PORT = int(os.getenv('PORT', 8082))
     
     # Server settings
     HOST = os.getenv("HOST", "0.0.0.0")

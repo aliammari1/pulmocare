@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def get_database():
     try:
-        client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://admin:admin@localhost:27017/'))
+        client = MongoClient('mongodb://admin:admin@localhost:27017/')
         # Test the connection
         client.admin.command('ping')
         logger.info("Successfully connected to MongoDB")

@@ -18,8 +18,6 @@ class TracingService:
         self.app = app
         self.logger = logging.getLogger(__name__)
         self.enabled = True
-        
-        # Initialize OpenTelemetry
         self._setup_tracing()
     
     def _setup_tracing(self):
@@ -81,7 +79,7 @@ class TracingService:
             # Create a no-op tracer as fallback
             self.tracer = NoOpTracer()
             self.enabled = False
-            
+    
     def is_enabled(self):
         """Check if tracing is enabled"""
         return self.enabled

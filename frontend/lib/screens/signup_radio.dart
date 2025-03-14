@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:medapp/views/map_selection_dialog.dart';
+import 'package:medapp/screens/map_selection_dialog.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_radio_view_model.dart';
+import '../services/auth_radio_view_model.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../services/location_service.dart';
 import 'package:shimmer/shimmer.dart';
@@ -346,7 +346,7 @@ class _SignupRadioViewState extends State<SignupRadioView> {
                                                   'Account created successfully!',
                                                   true);
                                               Navigator.pushReplacementNamed(
-                                                  context, '/home');
+                                                  context, '/homeRadio');
                                             }
                                           } catch (e) {
                                             _showAlert(

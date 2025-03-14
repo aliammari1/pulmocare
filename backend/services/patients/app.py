@@ -28,8 +28,8 @@ CORS(app)
 
 print("Patient class: ", Patient)
 # MongoDB configuration
-client = MongoClient("mongodb://localhost:27017/")  # Adjust if using a different host/port
-db = client["medical_app"]  # Use your database name
+client = MongoClient('mongodb://admin:admin@localhost:27017/')  # Adjust if using a different host/port
+db = client["medapp"]  # Use your database name
 patients_collection = db["patients"]
 
 print("MongoDB Connection Successful")
@@ -238,6 +238,41 @@ def test_email_config():
     
     return jsonify(config_info)
 
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    try:
+        # Test MongoDB connection
+        client.admin.command('ping')
+        return jsonify({
+            'status': 'UP',
+            'timestamp': datetime.now().isoformat(),
+            'service': 'patients',
+            'database': 'connected'
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            'status': 'DOWN',
+            'error': str(e),
+            'service': 'patients'
+        }), 503
+
+@app.route('/api/patient/list', methods=['GET'])
+def get_all_patients():
+    try:
+        # Get all patients from MongoDB
+        patients_list = list(patients_collection.find({}, {'password_hash': 0, 'reset_otp': 0, 'otp_expiry': 0}))
+        
+        # Convert ObjectId to string for JSON serialization
+        for patient in patients_list:
+            patient['_id'] = str(patient['_id'])
+        
+        return jsonify(patients_list), 200
+    except Exception as e:
+        logger.error(f"Error getting patients list: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 if __name__ == '__main__':
     ConsulService(Config).register_service()
-    app.run(debug=True,host='0.0.0.0',port=8083)    
+    app.run(debug=True,host='0.0.0.0',port=8083)

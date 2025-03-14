@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:medapp/viewmodels/notification_provider.dart';
-import 'package:medapp/views/AppointmentsScreen.dart';
-import 'package:medapp/views/ArchiveScreen.dart';
-import 'package:medapp/views/RapportScreen.dart';
-import 'package:medapp/views/homeScreen.dart';
-import 'package:medapp/views/profile_radio.dart';
+import 'package:medapp/services/notification_provider.dart';
+import 'package:medapp/screens/AppointmentsScreen.dart';
+import 'package:medapp/screens/ArchiveScreen.dart';
+import 'package:medapp/screens/RapportScreen.dart';
+import 'package:medapp/screens/homeScreen.dart';
+import 'package:medapp/screens/profile_radio.dart';
 import 'package:medapp/widgets/app_drawer.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_radio_view_model.dart';
+import '../services/auth_radio_view_model.dart';
 
-class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+class HomeViewRadio extends StatefulWidget {
+  const HomeViewRadio({super.key});
 
   @override
   _HomeViewState createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeViewRadio> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [

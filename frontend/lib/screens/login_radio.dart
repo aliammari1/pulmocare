@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/theme/app_theme.dart';
-import 'package:medapp/views/forgot_password_radio.dart';
+import 'package:medapp/screens/forgot_password_radio.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_radio_view_model.dart';
+import '../services/auth_radio_view_model.dart';
 import 'signup_radio.dart';
 
 class LoginRadioView extends StatefulWidget {
@@ -205,7 +205,7 @@ class _LoginRadioViewState extends State<LoginRadioView> {
                                               _showAlert('Success',
                                                   'Login successful!', true);
                                               Navigator.pushReplacementNamed(
-                                                  context, '/home');
+                                                  context, '/homeRadio');
                                             }
                                           } catch (e) {
                                             _showAlert(

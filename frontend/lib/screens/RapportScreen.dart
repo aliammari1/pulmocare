@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/services/rapport_service.dart';
 import 'package:medapp/theme/app_theme.dart';
-import 'package:medapp/viewmodels/notification_provider.dart';
+import 'package:medapp/services/notification_provider.dart';
 import 'package:provider/provider.dart';
 
 class RapportScreen extends StatefulWidget {

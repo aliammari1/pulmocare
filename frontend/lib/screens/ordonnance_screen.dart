@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import '../services/navigation_service.dart';
 import '../models/medicament.dart';
-import '../viewmodels/ordonnance_viewmodel.dart';
+import '../services/ordonnance_viewmodel.dart';
 import '../widgets/signature_pad.dart';
 import '../widgets/cachet_medecin.dart';
 import '../models/ordonnance.dart';

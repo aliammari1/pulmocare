@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_radio_view_model.dart';
+import '../services/auth_radio_view_model.dart';
 import '../theme/app_theme.dart';
 
 class ForgotPasswordRadioView extends StatefulWidget {

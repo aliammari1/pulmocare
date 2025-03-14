@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/theme/app_theme.dart';
-import 'package:medapp/views/forgot_password_view.dart';
+import 'package:medapp/screens/forgot_password_view.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model.dart';
 import 'signup_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -213,7 +213,7 @@ class _LoginViewState extends State<LoginView> {
                                           _showAlert('Success',
                                               'Login successful!', true);
                                           Navigator.pushReplacementNamed(
-                                              context, '/dashboard');
+                                              context, '/home');
                                         }
                                       } catch (e) {
                                         _showAlert(

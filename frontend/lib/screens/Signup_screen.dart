@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model_patient.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:shimmer/shimmer.dart';
+
 class PatientSignupView extends StatefulWidget {
   const PatientSignupView({super.key});
 
@@ -100,7 +101,9 @@ class _PatientSignupViewState extends State<PatientSignupView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+        body: ChangeNotifierProvider(
+      create: (_) => PatientAuthViewModel(),
+      child: Stack(
         children: [
           Container(
             decoration: BoxDecoration(
@@ -202,28 +205,39 @@ class _PatientSignupViewState extends State<PatientSignupView> {
                                       setState(() => _isLoading = true);
                                       try {
                                         await context
-                                            .read<AuthViewModel>()
+                                            .read<PatientAuthViewModel>()
                                             .patientSignup(
                                               _nameController.text,
                                               _emailController.text,
                                               _passwordController.text,
                                               _phoneController.text,
                                             );
-                                        if (context
-                                            .read<AuthViewModel>()
-                                            .isAuthenticated) {
-                                          _showAlert(
-                                              'Success',
-                                              'Patient account created successfully!',
-                                              true);
-                                          Navigator.pushReplacementNamed(
-                                              context, '/profile');
-                                        }
+
+                                        // Show success SnackBar
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Patient account created successfully!'),
+                                            backgroundColor: Colors.green,
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+
+                                        // Navigate to patients doctor view
+                                        Navigator.of(context)
+                                            .pushNamedAndRemoveUntil(
+                                          '/patients_doctor',
+                                          (Route<dynamic> route) => false,
+                                        );
                                       } catch (e) {
+                                        if (!mounted) return;
                                         _showAlert(
                                             'Error', e.toString(), false);
                                       } finally {
-                                        setState(() => _isLoading = false);
+                                        if (mounted) {
+                                          setState(() => _isLoading = false);
+                                        }
                                       }
                                     }
                                   },
@@ -250,7 +264,7 @@ class _PatientSignupViewState extends State<PatientSignupView> {
                       ),
                     ),
                     // Error Message
-                    Consumer<AuthViewModel>(
+                    Consumer<PatientAuthViewModel>(
                       builder: (context, authVM, child) {
                         return authVM.errorMessage.isNotEmpty
                             ? Container(
@@ -299,7 +313,7 @@ class _PatientSignupViewState extends State<PatientSignupView> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildPhoneField() {

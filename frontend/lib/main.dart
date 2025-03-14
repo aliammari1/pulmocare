@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:medapp/viewmodels/auth_radio_view_model.dart';
+import 'package:medapp/screens/Signup_screen.dart';
+import 'package:medapp/services/auth_radio_view_model.dart';
+import 'package:medapp/services/auth_view_model_patient.dart';
+import 'package:medapp/screens/patients_view.dart';
 import 'package:medapp/widgets/app_drawer.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -13,31 +16,29 @@ import 'services/report_service.dart';
 import 'providers/report_provider.dart';
 import 'screens/reports/reports_list_screen.dart';
 import 'screens/report_editor_screen.dart';
-import 'viewmodels/auth_view_model.dart';
-import 'viewmodels/chat_viewmodel.dart';
-import 'views/login_view.dart';
-import 'views/home_view copy.dart';
-import 'views/entry_view.dart';
-import 'views/login_radio.dart';
+import 'services/auth_view_model.dart';
+import 'services/chat_viewmodel.dart';
+import 'screens/login_view.dart';
+import 'screens/home_view_radio.dart';
+import 'screens/home_view.dart';
+import 'screens/entry_view.dart';
+import 'screens/login_radio.dart';
 import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
-import 'package:medapp/views/AppointmentsScreen.dart';
-import 'package:medapp/views/ArchiveScreen.dart';
-import 'package:medapp/views/RapportScreen.dart';
-import 'package:medapp/views/homeScreen.dart';
-import 'package:medapp/views/profile_radio.dart';
-import 'package:medapp/views/signup_view.dart';
-import 'package:medapp/views/signup_radio.dart';
-import 'package:medapp/viewmodels/notification_provider.dart';
-import 'package:medapp/views/signup_radio.dart';
+import 'package:medapp/screens/AppointmentsScreen.dart';
+import 'package:medapp/screens/ArchiveScreen.dart';
+import 'package:medapp/screens/RapportScreen.dart';
+import 'package:medapp/screens/homeScreen.dart';
+import 'package:medapp/screens/profile_radio.dart';
+import 'package:medapp/screens/signup_view.dart';
+import 'package:medapp/screens/signup_radio.dart';
+import 'package:medapp/services/notification_provider.dart';
+import 'package:medapp/screens/signup_radio.dart';
 
 void main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Hive
-    await Hive.initFlutter();
-    Hive.registerAdapter(MedicalReportAdapter());
 
     // Setup service locator
     await setupServiceLocator();
@@ -61,6 +62,7 @@ void main() async {
             create: (_) => ReportProvider(getIt<ReportService>()),
           ),
           ChangeNotifierProvider(create: (_) => AuthRadioViewModel()),
+          ChangeNotifierProvider(create: (_) => PatientAuthViewModel()),
           ChangeNotifierProvider(create: (_) => NotificationProvider())
         ],
         child: const MedicalApp(),
@@ -93,6 +95,7 @@ class MedicalApp extends StatelessWidget {
       home: const EntryView(),
       routes: {
         '/home': (context) => const HomeView(),
+        '/homeRadio': (context) => const HomeViewRadio(),
         '/dashboard': (context) => const HomeScreen(),
         '/login': (context) => const LoginView(userType: 'default'),
         '/loginRadio': (context) => const LoginRadioView(),
@@ -105,6 +108,8 @@ class MedicalApp extends StatelessWidget {
         '/profileRadio': (context) => const ProfileRadioView(),
         '/createReport': (context) => const CreateReportScreen(),
         '/reportsList': (context) => const ReportsListScreen(),
+        "/add-patient": (context) => const PatientSignupView(),
+        "/patients_doctor": (context) => const PatientsView(),
       },
     );
   }

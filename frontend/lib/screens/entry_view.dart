@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:medapp/screens/login_screen.dart';
 import 'package:medapp/theme/app_theme.dart';
-import 'package:medapp/views/login_radio.dart';
+import 'package:medapp/screens/login_radio.dart';
 import 'login_view.dart';
 
 class EntryView extends StatelessWidget {

@@ -9,10 +9,10 @@ logger = logging.getLogger(__name__)
 class ConsulService:
     def __init__(self, config):
         self.config = config
-        self.service_id = f"{config.SERVICE_NAME}-{uuid.uuid4()}"
+        self.service_id = f"registry-service-{uuid.uuid4()}"
         self.consul = consul.Consul(
-            host=config.CONSUL_HOST,
-            port=config.CONSUL_PORT
+            host=os.getenv('CONSUL_HOST', 'localhost'),
+            port=int(os.getenv('CONSUL_PORT', '8500'))
         )
 
     def register_service(self):
@@ -21,25 +21,25 @@ class ConsulService:
             # Get container IP or fallback to hostname
             ip_address = socket.gethostbyname(socket.gethostname())
 
-            logger.info(f"Registering service {self.config.SERVICE_NAME} with Consul at {ip_address}:8082")
+            logger.info(f"Registering registry service with Consul at {ip_address}:8761")
 
             # Register service
             self.consul.agent.service.register(
-                name=self.config.SERVICE_NAME,
+                name="registry-service",
                 service_id=self.service_id,
                 address=ip_address,
-                port=8082,
-                tags=["microservice", "medical"],
+                port=8761,
+                tags=["registry", "medical"],
                 check={
-                    "name": f"Health check for {self.config.SERVICE_NAME}",
-                    "http": f"http://{ip_address}:8082/health",
-                    "interval": self.config.HEALTH_CHECK_INTERVAL,
-                    "timeout": self.config.HEALTH_CHECK_TIMEOUT,
-                    "deregister_critical_service_after": self.config.HEALTH_CHECK_DEREGISTER_TIMEOUT
+                    "name": "Registry health check",
+                    "http": f"http://{ip_address}:8761/health",
+                    "interval": "10s",
+                    "timeout": "5s",
+                    "deregister_critical_service_after": "30s"
                 }
             )
 
-            logger.info(f"Successfully registered {self.config.SERVICE_NAME} with Consul")
+            logger.info("Successfully registered registry service with Consul")
             return True
         except Exception as e:
             logger.error(f"Failed to register service with Consul: {str(e)}")

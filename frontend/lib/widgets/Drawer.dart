@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import '../viewmodels/auth_view_model.dart';
+import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart'; // Add this import
 
 class AppDrawer extends StatelessWidget {
