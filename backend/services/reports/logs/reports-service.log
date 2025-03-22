@@ -25895,3 +25895,323 @@ socket.gaierror: [Errno 11001] getaddrinfo failed
 2025-03-22 07:05:14,791 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:05:14] "[35m[1mGET /health HTTP/1.1[0m" 503 -
 2025-03-22 07:05:24,820 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
 2025-03-22 07:05:24,824 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:05:24] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:05:34,860 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:05:34,864 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:05:34] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:05:44,898 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:05:44,903 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:05:44] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:05:54,936 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:05:54,940 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:05:54] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:04,993 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:05,002 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:05] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:15,038 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:15,043 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:15] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:25,091 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:25,098 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:25] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:35,132 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:35,138 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:35] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:45,173 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:45,177 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:45] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:06:55,206 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:06:55,211 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:06:55] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:05,254 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:05,261 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:05] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:15,306 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:15,312 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:15] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:25,350 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:25,385 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:25] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:35,418 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:35,423 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:35] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:45,451 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:45,456 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:45] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:07:55,488 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:07:55,493 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:07:55] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:05,524 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:05,528 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:05] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:15,561 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:15,565 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:15] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:25,601 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:25,605 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:25] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:35,637 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:35,641 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:35] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:45,677 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:45,681 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:45] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:08:55,710 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:08:55,716 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:08:55] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:05,745 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:05,749 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:05] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:15,778 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:15,783 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:15] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:25,819 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:25,823 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:25] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:35,855 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:35,860 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:35] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:45,893 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:45,898 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:45] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:09:55,927 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:09:55,932 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:09:55] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:05,977 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:05,984 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:05] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:16,016 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:16,020 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:16] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:26,051 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:26,056 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:26] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:36,087 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:36,091 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:36] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:46,121 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:46,126 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:46] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:10:56,160 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:10:56,165 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:10:56] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:06,198 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:06,202 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:06] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:16,232 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:16,236 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:16] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:26,266 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:26,270 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:26] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:36,304 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:36,308 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:36] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:46,337 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:46,341 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:46] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:11:56,373 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:11:56,378 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:11:56] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:06,409 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:06,413 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:06] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:16,442 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:16,446 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:16] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:26,477 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:26,481 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:26] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:36,513 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:36,518 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:36] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:46,553 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:46,559 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:46] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:12:56,591 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:12:56,595 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:12:56] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:06,626 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:06,631 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:06] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:16,665 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:16,669 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:16] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:26,699 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:26,703 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:26] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:36,735 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:36,739 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:36] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:46,768 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:46,772 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:46] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:13:56,802 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:13:56,806 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:13:56] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:06,841 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:06,846 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:06] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:16,877 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:16,881 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:16] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:26,914 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:26,918 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:26] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:36,950 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:36,954 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:36] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:46,981 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:46,985 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:46] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:14:57,024 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:14:57,031 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:14:57] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:07,069 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:07,074 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:07] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:17,110 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:17,115 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:17] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:27,146 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:27,151 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:27] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:37,185 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:37,190 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:37] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:47,219 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:47,222 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:47] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:15:57,260 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:15:57,265 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:15:57] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:07,374 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:07,388 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:07] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:17,434 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:17,439 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:17] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:27,469 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:27,473 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:27] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:37,510 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:37,515 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:37] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:47,545 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:47,549 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:47] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:16:57,582 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:16:57,586 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:16:57] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:07,617 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:07,621 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:07] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:17,654 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:17,659 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:17] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:27,689 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:27,694 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:27] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:37,733 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:37,739 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:37] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:47,768 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:47,774 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:47] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:17:57,843 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:17:57,851 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:17:57] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:07,884 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:07,888 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:07] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:17,916 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:17,920 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:17] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:27,952 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:27,957 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:27] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:37,998 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:38,005 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:38] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:48,036 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:48,040 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:48] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:18:58,072 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:18:58,076 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:18:58] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:08,104 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:08,109 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:08] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:18,138 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:18,142 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:18] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:28,175 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:28,179 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:28] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:38,210 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:38,215 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:38] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:48,248 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:48,253 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:48] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:19:58,283 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:19:58,287 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:19:58] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:08,320 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:08,324 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:08] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:18,351 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:18,355 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:18] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:28,387 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:28,392 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:28] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:38,422 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:38,426 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:38] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:48,453 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:48,457 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:48] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:20:58,492 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:20:58,497 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:20:58] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:08,537 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:08,543 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:08] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:18,583 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:18,588 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:18] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:28,626 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:28,632 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:28] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:38,666 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:38,671 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:38] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:48,699 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:48,703 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:48] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:21:58,736 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:21:58,741 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:21:58] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:08,789 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:08,797 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:08] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:18,841 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:18,846 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:18] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:28,889 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:28,895 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:28] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:38,930 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:38,935 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:38] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:48,965 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:48,969 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:48] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:22:59,001 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:22:59,005 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:22:59] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:09,040 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:09,044 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:09] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:19,073 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:19,077 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:19] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:29,109 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:29,113 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:29] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:39,149 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:39,154 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:39] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:49,185 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:49,189 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:49] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:23:59,228 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:23:59,233 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:23:59] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:09,269 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:09,273 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:09] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:19,305 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:19,310 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:19] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:29,344 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:29,350 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:29] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:39,385 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:39,391 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:39] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:49,427 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:49,432 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:49] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:24:59,469 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:24:59,474 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:24:59] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:09,511 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:09,516 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:09] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:19,549 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:19,553 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:19] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:29,587 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:29,592 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:29] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:39,630 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:39,635 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:39] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:49,668 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:49,673 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:49] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:25:59,706 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:25:59,711 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:25:59] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:09,745 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:09,751 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:09] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:19,788 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:19,794 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:19] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:29,828 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:29,833 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:29] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:39,866 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:39,870 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:39] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:49,900 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:49,904 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:49] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:26:59,939 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:26:59,942 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:26:59] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:27:09,975 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:27:09,979 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:27:09] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:27:20,011 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:27:20,017 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:27:20] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:27:30,049 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:27:30,054 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:27:30] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:27:40,090 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:27:40,094 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:27:40] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:27:50,128 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:27:50,133 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:27:50] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:00,184 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:00,189 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:00] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:10,227 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:10,232 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:10] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:20,262 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:20,265 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:20] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:30,306 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:30,312 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:30] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:40,345 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:40,350 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:40] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:28:50,380 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:28:50,385 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:28:50] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:00,419 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:00,424 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:00] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:10,458 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:10,462 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:10] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:20,496 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:20,500 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:20] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:30,531 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:30,535 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:30] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:40,582 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:40,588 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:40] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:29:50,621 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:29:50,627 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:29:50] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:00,660 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:00,666 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:00] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:10,697 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:10,701 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:10] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:20,736 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:20,740 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:20] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:30,794 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:30,801 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:30] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:40,838 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:40,843 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:40] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:30:50,873 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:30:50,878 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:30:50] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:00,908 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:00,913 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:00] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:10,948 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:10,953 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:10] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:20,983 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:20,987 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:20] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:31,028 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:31,033 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:31] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:41,068 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:41,073 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:41] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:31:51,111 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:31:51,118 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:31:51] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:32:01,155 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:32:01,160 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:32:01] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:32:11,195 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:32:11,200 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:32:11] "[35m[1mGET /health HTTP/1.1[0m" 503 -
