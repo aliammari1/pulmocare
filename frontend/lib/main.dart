@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:medapp/screens/Signup_screen.dart';
 import 'package:medapp/services/auth_radio_view_model.dart';
 import 'package:medapp/services/auth_view_model_patient.dart';
@@ -9,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'screens/create_report_screen.dart';
 import 'screens/handwriting_screen.dart';
-import 'models/medical_report.dart';
 import 'services/service_locator.dart';
 import 'services/logging_service.dart';
 import 'services/report_service.dart';
@@ -28,12 +26,10 @@ import 'theme/app_theme.dart';
 import 'package:medapp/screens/AppointmentsScreen.dart';
 import 'package:medapp/screens/ArchiveScreen.dart';
 import 'package:medapp/screens/RapportScreen.dart';
-import 'package:medapp/screens/homeScreen.dart';
 import 'package:medapp/screens/profile_radio.dart';
 import 'package:medapp/screens/signup_view.dart';
 import 'package:medapp/screens/signup_radio.dart';
 import 'package:medapp/services/notification_provider.dart';
-import 'package:medapp/screens/signup_radio.dart';
 
 void main() async {
   await runZonedGuarded(() async {

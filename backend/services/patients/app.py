@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from pymongo import MongoClient
 import os
@@ -15,16 +15,24 @@ import inspect
 from models.patient import Patient
 from consul_service import ConsulService
 from config import Config
+import sys
+
+# Add parent directory to path to import health check
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from health_check import health_check_middleware
+
 print("Patient class parameters:", inspect.signature(Patient.__init__))
 print("Patient class source:", inspect.getsource(Patient.__init__))
 print("Current directory:", os.getcwd())
 print("List of files in models:", os.listdir("models"))
 
-
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Apply health check middleware
+app = health_check_middleware(Config)(app)
 
 print("Patient class: ", Patient)
 # MongoDB configuration
@@ -274,5 +282,12 @@ def get_all_patients():
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    ConsulService(Config).register_service()
-    app.run(debug=True,host='0.0.0.0',port=8083)
+    # Register with Consul
+    try:
+        consul_service = ConsulService(Config)
+        consul_service.register_service()
+        logger.info(f"Registered {Config.SERVICE_NAME} with Consul")
+    except Exception as e:
+        logger.error(f"Failed to register with Consul: {e}")
+        
+    app.run(host=Config.HOST, port=Config.PORT, debug=True)

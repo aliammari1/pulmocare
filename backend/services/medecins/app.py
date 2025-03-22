@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from pymongo import MongoClient
 from models import Doctor
@@ -20,6 +20,9 @@ from PIL import Image
 import pytesseract
 from consul_service import ConsulService
 from config import Config
+import sys
+from health_check import health_check_middleware
+
 load_dotenv()
 
 # Configure logging
@@ -30,8 +33,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {'origins': '*', 'methods': ['GET', 'POST', 'OPTIONS']}})
+CORS(app)
 
+# Apply health check middleware
+app = health_check_middleware(Config)(app)
 
 # MongoDB configuration
 client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://admin:admin@localhost:27017/'))
@@ -115,28 +120,28 @@ def send_otp_email(to_email, otp):
         return False
 
 # Add health check endpoint for Consul
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint for Consul"""
-    try:
-        # Ping the MongoDB to check connection
-        client.admin.command('ping')
+# @app.route('/health', methods=['GET'])
+# def health_check():
+#     """Health check endpoint for Consul"""
+#     try:
+#         # Ping the MongoDB to check connection
+#         client.admin.command('ping')
         
-        return jsonify({
-            'status': 'UP',
-            'service': Config.SERVICE_NAME,
-            'timestamp': datetime.utcnow().isoformat(),
-            'dependencies': {
-                'mongodb': 'UP'
-            }
-        }), 200
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return jsonify({
-            'status': 'DOWN',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 503
+#         return jsonify({
+#             'status': 'UP',
+#             'service': Config.SERVICE_NAME,
+#             'timestamp': datetime.utcnow().isoformat(),
+#             'dependencies': {
+#                 'mongodb': 'UP'
+#             }
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Health check failed: {str(e)}")
+#         return jsonify({
+#             'status': 'DOWN',
+#             'error': str(e),
+#             'timestamp': datetime.utcnow().isoformat()
+#         }), 503
 
 @app.route('/api/signup', methods=['POST'])
 def signup():

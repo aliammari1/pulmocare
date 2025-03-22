@@ -3,10 +3,14 @@ import logging
 import socket
 import os
 import uuid
+import sys
+from base_consul_service import BaseConsulService
 
 logger = logging.getLogger(__name__)
 
-class ConsulService:
+class ConsulService(BaseConsulService):
+    """Gateway service Consul integration with Kong-specific enhancements"""
+    
     def __init__(self, config):
         self.config = config
         self.service_id = f"gateway-service-{uuid.uuid4()}"
@@ -15,35 +19,24 @@ class ConsulService:
             port=int(os.getenv('CONSUL_PORT', '8500'))
         )
 
-    def register_service(self):
-        """Register service with Consul"""
+    def register_service(self) -> bool:
+        """Override to add Kong-specific metadata"""
         try:
-            # Get container IP or fallback to hostname
-            ip_address = socket.gethostbyname(socket.gethostname())
-
-            logger.info(f"Registering gateway service with Consul at {ip_address}:5000")
-
-            # Register service
-            self.consul.agent.service.register(
-                name="gateway-service",
-                service_id=self.service_id,
-                address=ip_address,
-                port=5000,
-                tags=["gateway", "medical"],
-                check={
-                    "name": "Gateway health check",
-                    "http": f"http://{ip_address}:5000/health",
-                    "interval": "10s",
-                    "timeout": "5s",
-                    "deregister_critical_service_after": "30s"
-                }
-            )
-
-            logger.info("Successfully registered gateway service with Consul")
-            return True
+            result = super().register_service()
+            if result:
+                # Add Kong-specific metadata
+                self.consul.kv.put(
+                    f'kong/services/{self.config.SERVICE_NAME}/routes',
+                    'api-gateway'
+                )
+                self.consul.kv.put(
+                    f'kong/services/{self.config.SERVICE_NAME}/plugins',
+                    'jwt,rate-limiting,cors'
+                )
+            return result
         except Exception as e:
-            logger.error(f"Failed to register service with Consul: {str(e)}")
-            raise
+            self.logger.error(f"Failed to register Kong metadata: {str(e)}")
+            return False
 
     def deregister_service(self):
         """Deregister service from Consul"""

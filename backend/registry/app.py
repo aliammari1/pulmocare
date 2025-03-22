@@ -1,17 +1,16 @@
 from flask import Flask, jsonify, request
+from datetime import datetime
 import logging
 import os
-from datetime import datetime
+from config import Config
+from health_check import health_check_middleware
+from kong_consul_sync import KongConsulSync
 import consul
 import redis
+import threading
 import time
 from functools import wraps
 from flask_cors import CORS
-
-app = Flask(__name__)
-
-# Enable CORS
-CORS(app)
 
 # Configure logging
 logging.basicConfig(
@@ -20,84 +19,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Consul and Redis clients (initialized lazily)
+app = Flask(__name__)
+app = health_check_middleware(Config)(app)
+
+# Enable CORS
+CORS(app)
+
+# Initialize services
 consul_client = None
 redis_client = None
+kong_sync = None
 
-def init_redis_client(max_retries=10, retry_interval=5):
-    """Initialize Redis client with retry logic"""
-    redis_host = os.getenv('REDIS_HOST', 'localhost')
-    redis_port = int(os.getenv('REDIS_PORT', 6379))
-    redis_password = os.getenv('REDIS_PASSWORD', 'redispass')
-    
-    for attempt in range(max_retries):
-        try:
-            client = redis.Redis(
-                host=redis_host,
-                port=redis_port,
-                password=redis_password,
-                decode_responses=True,
-                socket_timeout=5,
-                socket_connect_timeout=5,
-                retry_on_timeout=True,
-                health_check_interval=30
-            )
-            # Test connection
-            client.ping()
-            logger.info(f"Successfully connected to Redis at {redis_host}:{redis_port}")
-            return client
-        except redis.RedisError as e:
-            logger.warning(f"Attempt {attempt+1}/{max_retries} to connect to Redis failed: {str(e)}")
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_interval} seconds...")
-                time.sleep(retry_interval)
-            else:
-                logger.error(f"Failed to connect to Redis after {max_retries} attempts")
-                return None
-
-# Initialize clients with retry logic
 def init_clients():
-    global consul_client, redis_client
-    
-    # Consul client initialization with retry
-    consul_host = os.getenv('CONSUL_HOST', 'localhost')
-    consul_port = int(os.getenv('CONSUL_PORT', '8500'))
-    max_retries = 10
-    retry_interval = 5  # seconds
-    
-    for attempt in range(max_retries):
-        try:
-            consul_client = consul.Consul(host=consul_host, port=consul_port)
-            # Test connection
-            consul_client.status.leader()
-            logger.info(f"Successfully connected to Consul at {consul_host}:{consul_port}")
-            break
-        except Exception as e:
-            logger.warning(f"Attempt {attempt+1}/{max_retries} to connect to Consul failed: {str(e)}")
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_interval} seconds...")
-                time.sleep(retry_interval)
-            else:
-                logger.error(f"Failed to connect to Consul after {max_retries} attempts")
-    
-    # Initialize Redis with the new function
-    redis_client = init_redis_client()
+    """Initialize service clients"""
+    global consul_client, redis_client, kong_sync
+    try:
+        consul_client = consul.Consul(**Config.get_consul_config())
+        redis_client = redis.Redis(**Config.get_redis_config())
+        kong_sync = KongConsulSync(Config)
+        logger.info("Successfully initialized service clients")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to initialize clients: {str(e)}")
+        return False
 
-# Ensure clients are available when needed
-def ensure_clients():
-    global consul_client, redis_client
-    if consul_client is None or redis_client is None:
-        init_clients()
+def watch_services():
+    """Watch for service changes in Consul and sync to Kong"""
+    global consul_client, kong_sync
     
-    # Verify Redis connection is still active
-    if redis_client:
+    index = None
+    while True:
         try:
-            redis_client.ping()
-        except (redis.ConnectionError, redis.TimeoutError):
-            logger.warning("Redis connection lost, attempting to reconnect...")
-            redis_client = init_redis_client()
-    
-    return consul_client is not None and redis_client is not None
+            index, services = consul_client.catalog.services(index=index)
+            
+            for service_name in services:
+                _, service_data = consul_client.catalog.service(service_name)
+                if service_data:
+                    kong_sync.sync_service(service_name, service_data[0])
+            
+            time.sleep(5)  # Wait before next check
+        except Exception as e:
+            logger.error(f"Service watch error: {str(e)}")
+            time.sleep(5)  # Wait before retry
 
 def validate_service_metadata(f):
     @wraps(f)
@@ -114,30 +77,28 @@ def validate_service_metadata(f):
 @validate_service_metadata
 def update_service_metadata():
     """Update service metadata in Redis"""
-    if not ensure_clients():
-        return jsonify({'error': 'Service unavailable - cannot connect to required services'}), 503
-    
-    data = request.json
-    service_name = data['name']
+    if not redis_client:
+        return jsonify({'error': 'Service registry unavailable'}), 503
+
     try:
-        redis_client.hset(
-            f"service:{service_name}:metadata",
-            mapping={
-                'team': data['team'],
-                'documentation': data['documentation'],
-                'updated_at': datetime.utcnow().isoformat()
-            }
-        )
-        return jsonify({'status': 'success', 'service': service_name})
+        data = request.json
+        service_name = data.get('name')
+        metadata = data.get('metadata', {})
+        
+        if not service_name:
+            return jsonify({'error': 'Service name is required'}), 400
+        
+        redis_client.hmset(f"service:{service_name}:metadata", metadata)
+        return jsonify({'status': 'success'})
     except Exception as e:
-        logger.error(f"Error updating metadata: {str(e)}")
+        logger.error(f"Error updating service metadata: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/services/health', methods=['GET'])
 def get_services_health():
     """Get aggregated health status of all services"""
-    if not ensure_clients():
-        return jsonify({'error': 'Service unavailable - cannot connect to required services'}), 503
+    if not consul_client:
+        return jsonify({'error': 'Service registry unavailable'}), 503
     
     try:
         services = {}
@@ -210,12 +171,15 @@ def health():
         }), 200  # Return 200 to prevent container restart loops
 
 if __name__ == '__main__':
-    # Initialize clients but don't fail if they're not available
-    init_clients()
-    
-    app.run(
-        host='0.0.0.0',
-        port=int(os.getenv('PORT', 8761)),
-        debug=os.getenv('DEBUG', 'False').lower() == 'true',
-        threaded=True
-    )
+    # Initialize clients
+    if init_clients():
+        # Start service watcher in a background thread
+        watcher_thread = threading.Thread(target=watch_services, daemon=True)
+        watcher_thread.start()
+        
+        app.run(
+            host=Config.HOST,
+            port=Config.PORT,
+            debug=os.getenv('DEBUG', 'False').lower() == 'true',
+            threaded=True
+        )

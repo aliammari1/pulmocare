@@ -4,7 +4,6 @@ from datetime import datetime
 import pika
 from pymongo import MongoClient
 from config import Config
-from xray_analyzer import analyze_report
 
 # Set up logging
 logging.config.dictConfig(Config.init_logging())
@@ -42,8 +41,8 @@ def callback(ch, method, properties, body):
             return
             
         # Analyze report
-        analysis_result = analyze_report(report)
-        
+        # analysis_result = analyze_report(report)
+        analysis_result = ""
         # Update report with analysis
         db.reports.update_one(
             {'_id': report_id},

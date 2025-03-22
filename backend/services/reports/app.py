@@ -22,11 +22,14 @@ from services.prometheus_service import PrometheusService
 from services.tracing_service import TracingService
 from services.report_service import ReportService
 from report_generator import ReportGenerator
+from health_check import health_check_middleware
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
+# Apply health check middleware
+app = health_check_middleware(Config)(app)
 
 # Initialize API blueprint
 api = Blueprint('api', __name__)
@@ -102,25 +105,25 @@ def handle_service_error(func):
                 prometheus_service.record_latency(method, endpoint, time.time() - start_time)
     return wrapper
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    mongodb_status = mongodb_client.check_health()
-    redis_status = redis_client.check_health()
-    rabbitmq_status = rabbitmq_client.check_health() if rabbitmq_client else 'DISABLED'
+# @app.route('/health', methods=['GET'])
+# def health_check():
+#     """Health check endpoint"""
+#     mongodb_status = mongodb_client.check_health()
+#     redis_status = redis_client.check_health()
+#     rabbitmq_status = rabbitmq_client.check_health() if rabbitmq_client else 'DISABLED'
 
-    health_status = {
-        'status': 'UP' if all(s == 'UP' for s in [mongodb_status, redis_status]) else 'DOWN',
-        'timestamp': datetime.utcnow().isoformat(),
-        'version': Config.VERSION,
-        'dependencies': {
-            'mongodb': mongodb_status,
-            'redis': redis_status,
-            'rabbitmq': rabbitmq_status
-        }
-    }
+#     health_status = {
+#         'status': 'UP' if all(s == 'UP' for s in [mongodb_status, redis_status]) else 'DOWN',
+#         'timestamp': datetime.utcnow().isoformat(),
+#         'version': Config.VERSION,
+#         'dependencies': {
+#             'mongodb': mongodb_status,
+#             'redis': redis_status,
+#             'rabbitmq': rabbitmq_status
+#         }
+#     }
 
-    return jsonify(health_status), 200 if health_status['status'] == 'UP' else 503
+#     return jsonify(health_status), 200 if health_status['status'] == 'UP' else 503
 
 # API Routes
 @api.route('/', methods=['GET'])

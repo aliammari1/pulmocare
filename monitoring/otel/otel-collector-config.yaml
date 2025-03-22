@@ -60,11 +60,6 @@ exporters:
     tls:
       insecure: true
 
-  otlphttp:
-    endpoint: "http://tempo:4318"
-    tls:
-      insecure: true
-
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -81,7 +76,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/jaeger, otlphttp, debug]
+      exporters: [otlp/jaeger, debug]
     
     metrics:
       receivers: [otlp, prometheus]

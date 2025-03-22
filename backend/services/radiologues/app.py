@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 from pymongo import MongoClient
 from models import Doctor
@@ -25,7 +25,10 @@ import requests
 from bs4 import BeautifulSoup
 import uuid
 from consul_service import ConsulService
-
+from health_check import health_check_middleware
+from pymongo import MongoClient
+from config import Config
+from services.rabbitmq_client import RabbitMQClient
 
 load_dotenv()
 
@@ -37,19 +40,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {'origins': '*', 'methods': ['GET', 'POST', 'OPTIONS']}})
+CORS(app)
 
-# Configuration class for service settings
-class Config:
-    SERVICE_NAME = "radiologues-service"
-    PORT = int(os.getenv('PORT', 8084))
-    HOST = os.getenv("HOST", "0.0.0.0")
-    DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-    CONSUL_HOST = os.getenv("CONSUL_HOST", "localhost")
-    CONSUL_PORT = int(os.getenv("CONSUL_PORT", "8500"))
-    HEALTH_CHECK_INTERVAL = os.getenv("HEALTH_CHECK_INTERVAL", "10s")
-    HEALTH_CHECK_TIMEOUT = os.getenv("HEALTH_CHECK_TIMEOUT", "5s")
-    HEALTH_CHECK_DEREGISTER_TIMEOUT = os.getenv("HEALTH_CHECK_DEREGISTER_TIMEOUT", "30s")
+# Apply health check middleware
+app = health_check_middleware(Config)(app)
 
 # MongoDB configuration
 client = MongoClient(os.getenv('MONGODB_URI', 'mongodb://admin:admin@localhost:27017/'))
@@ -64,28 +58,28 @@ medtn_doctors_collection = db['medtn_doctors']
 JWT_SECRET = os.getenv('JWT_SECRET', 'replace-with-strong-secret')
 
 # Add health check endpoint for Consul
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint for Consul"""
-    try:
-        # Ping the MongoDB to check connection
-        client.admin.command('ping')
+# @app.route('/health', methods=['GET'])
+# def health_check():
+#     """Health check endpoint for Consul"""
+#     try:
+#         # Ping the MongoDB to check connection
+#         client.admin.command('ping')
         
-        return jsonify({
-            'status': 'UP',
-            'service': Config.SERVICE_NAME,
-            'timestamp': datetime.utcnow().isoformat(),
-            'dependencies': {
-                'mongodb': 'UP'
-            }
-        }), 200
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return jsonify({
-            'status': 'DOWN',
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 503
+#         return jsonify({
+#             'status': 'UP',
+#             'service': Config.SERVICE_NAME,
+#             'timestamp': datetime.utcnow().isoformat(),
+#             'dependencies': {
+#                 'mongodb': 'UP'
+#             }
+#         }), 200
+#     except Exception as e:
+#         logger.error(f"Health check failed: {str(e)}")
+#         return jsonify({
+#             'status': 'DOWN',
+#             'error': str(e),
+#             'timestamp': datetime.utcnow().isoformat()
+#         }), 503
 
 def token_required(f):
     @wraps(f)
@@ -474,7 +468,7 @@ def scan_visit_card():
 # Repport API
 @app.route("/api/rapport", methods=["POST"])
 def ajouter_rapport():
-    data = request.json  # Récupérer les données envoyées en JSON
+    data = request.json
 
     if not data:
         return jsonify({"error": "Données manquantes"}), 400
@@ -484,14 +478,35 @@ def ajouter_rapport():
         "examType": data["examType"],
         "reportType": data["reportType"],
         "content": data["content"],
-        "date": datetime.utcnow()
+        "date": datetime.utcnow(),
+        "status": "pending_analysis"
     }
 
-    result = rapports_collection.insert_one(rapport)
+    try:
+        # Insert report
+        result = rapports_collection.insert_one(rapport)
+        report_id = str(result.inserted_id)
 
-    return jsonify({"message": "Rapport ajouté avec succès", "rapport_id": str(result.inserted_id)}), 201
+        # Publish event for analysis
+        rabbitmq_client = RabbitMQClient(Config)
+        rabbitmq_client.publish_radiology_report(report_id, {
+            "patientName": data["patientName"],
+            "examType": data["examType"],
+            "reportType": data["reportType"],
+            "content": data["content"]
+        })
+        rabbitmq_client.close()
 
-
+        return jsonify({
+            "message": "Rapport ajouté avec succès", 
+            "rapport_id": report_id
+        }), 201
+    except Exception as e:
+        logger.error(f"Error creating report: {str(e)}")
+        return jsonify({
+            "error": "Failed to create report",
+            "details": str(e)
+        }), 500
 
 @app.route("/api/rapports", methods=["GET"])
 def afficher_rapports():
