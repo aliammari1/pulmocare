@@ -26215,3 +26215,5 @@ socket.gaierror: [Errno 11001] getaddrinfo failed
 2025-03-22 07:32:01,160 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:32:01] "[35m[1mGET /health HTTP/1.1[0m" 503 -
 2025-03-22 07:32:11,195 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
 2025-03-22 07:32:11,200 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:32:11] "[35m[1mGET /health HTTP/1.1[0m" 503 -
+2025-03-22 07:32:21,258 - opentelemetry.trace.status - WARNING - Invalid status description type, expected str
+2025-03-22 07:32:21,267 - werkzeug - INFO - 127.0.0.1 - - [22/Mar/2025 07:32:21] "[35m[1mGET /health HTTP/1.1[0m" 503 -
