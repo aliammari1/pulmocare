@@ -21,29 +21,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # MongoDB UI (Mongo Express)
-  mongo-express:
-    image: mongo-express:latest
-    container_name: medapp-mongo-express
-    ports:
-      - "8090:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
-      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@mongodb:27017/
-      ME_CONFIG_BASICAUTH: false
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    networks:
-      - medapp-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8090/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-
   # Consul Service Discovery
   consul:
     image: hashicorp/consul:latest
@@ -69,8 +46,11 @@ services:
 
   # Kong API Gateway
   kong:
-    image: kong/kong-gateway:latest
+    build:
+      context: ./config/kong
+      dockerfile: Dockerfile
     container_name: medapp-kong
+    user: root
     depends_on:
       redis:
         condition: service_healthy
@@ -95,16 +75,13 @@ services:
       - KONG_REDIS_TIMEOUT=2000
       - KONG_RATE_LIMITING_POLICY=redis
       - KONG_PROXY_ERROR_LOG_LEVEL=notice
-      - KONG_DNS_NAMESERVER=consul:8600 # Tell Kong to use Consul for DNS
-      - KONG_DNS_CACHE_TTL=30 # Cache DNS results for 30 seconds (adjust as needed)
-      - KONG_DNS_RESOLVER=consul:8600
+      - KONG_DNS_NAMESERVER=127.0.0.11:53
+      - KONG_DNS_CACHE_TTL=30
       - KONG_DNS_STALE_TTL=600
       - KONG_DNS_NOT_FOUND_TTL=30
       - KONG_DNS_ERROR_TTL=1
-      - KONG_DNS_HOST=consul
-      - KONG_DNS_PORT=8600
       - KONG_ADMIN_GUI_URL=http://localhost:8002
-      - KONG_ADMIN_GUI_AUTH=basic-auth
+      - KONG_DNS_HOSTSFILE=/etc/hosts
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -123,29 +100,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  # Service Registry
-  service-registry:
-    build:
-      context: ./backend/registry
-      dockerfile: Dockerfile
-    ports:
-      - "8761:8761"
-    environment:
-      - SERVER_PORT=8761
-      - CONSUL_HOST=consul
-      - CONSUL_PORT=8500
-    networks:
-      - medapp-network
-    depends_on:
-      consul:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8761/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
 
   # RabbitMQ Service
   rabbitmq:
@@ -275,60 +229,15 @@ services:
       timeout: 5s
       retries: 5
 
-  # Mobile Gateway (Disabled - Replaced by Kong)
-  # mobile-gateway:
-  #   build:
-  #     context: ./backend/gateway
-  #     dockerfile: Dockerfile
-  #   container_name: medapp-gateway
-  #   ports:
-  #     - "5000:5000"
-  #   environment:
-  #     - PORT=5000
-  #     - CONSUL_HOST=consul
-  #     - CONSUL_PORT=8500
-  #     - RABBITMQ_HOST=rabbitmq
-  #     - RABBITMQ_USER=${RABBITMQ_USER:-guest}
-  #     - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
-  #     - SPRING_PROFILES_ACTIVE=dev
-  #     - MONGODB_HOST=mongodb
-  #     - MONGODB_PORT=27017
-  #     - MONGODB_USERNAME=admin
-  #     - MONGODB_PASSWORD=admin
-  #     - MONGODB_DATABASE=medapp
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   depends_on:
-  #     service-registry:
-  #       condition: service_healthy
-  #     consul:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #     mongodb:
-  #       condition: service_healthy
-  #   networks:
-  #     - medapp-network
-  #   volumes:
-  #     - ./backend/gateway:/app
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-
   # medecins Service
   medecins-service:
     build:
-      context: ./backend/services/medecins
+      context: ./backend/medecins
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
     environment:
+      - ENV=production
       - PORT=8081
       - CONSUL_HOST=consul
       - CONSUL_PORT=8500
@@ -359,7 +268,7 @@ services:
     networks:
       - medapp-network
     volumes:
-      - ./backend/services/medecins:/app
+      - ./backend/medecins:/app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8081/health" ]
       interval: 10s
@@ -369,11 +278,12 @@ services:
   # ordonnances Service
   ordonnances-service:
     build:
-      context: ./backend/services/ordonnances
+      context: ./backend/ordonnances
       dockerfile: Dockerfile
     ports:
       - "8082:8082"
     environment:
+      - ENV=production
       - PORT=8082
       - CONSUL_HOST=consul
       - CONSUL_PORT=8500
@@ -404,7 +314,7 @@ services:
     networks:
       - medapp-network
     volumes:
-      - ./backend/services/ordonnances:/app
+      - ./backend/ordonnances:/app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8082/health" ]
       interval: 10s
@@ -414,11 +324,12 @@ services:
   # Patients Service
   patients-service:
     build:
-      context: ./backend/services/patients
+      context: ./backend/patients
       dockerfile: Dockerfile
     ports:
       - "8083:8083"
     environment:
+      - ENV=production
       - PORT=8083
       - CONSUL_HOST=consul
       - CONSUL_PORT=8500
@@ -449,7 +360,7 @@ services:
     networks:
       - medapp-network
     volumes:
-      - ./backend/services/patients:/app
+      - ./backend/patients:/app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8083/health" ]
       interval: 10s
@@ -459,11 +370,12 @@ services:
   # radiologues Service
   radiologues-service:
     build:
-      context: ./backend/services/radiologues
+      context: ./backend/radiologues
       dockerfile: Dockerfile
     ports:
       - "8084:8084"
     environment:
+      - ENV=production
       - PORT=8084
       - CONSUL_HOST=consul
       - CONSUL_PORT=8500
@@ -494,7 +406,7 @@ services:
     networks:
       - medapp-network
     volumes:
-      - ./backend/services/radiologues:/app
+      - ./backend/radiologues:/app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8084/health" ]
       interval: 10s
@@ -504,12 +416,13 @@ services:
   # Reports Service
   reports-service:
     build:
-      context: ./backend/services/reports
+      context: ./backend/reports
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
       - "9093:9093"
     environment:
+      - ENV=production
       - PORT=8085
       - PROMETHEUS_PORT=9093
       - CONSUL_HOST=consul
@@ -541,7 +454,7 @@ services:
     networks:
       - medapp-network
     volumes:
-      - ./backend/services/reports:/app
+      - ./backend/reports:/app
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8085/health" ]
       interval: 10s
