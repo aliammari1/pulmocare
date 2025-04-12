@@ -1,0 +1,43 @@
+name: medapp
+description: Medical prescription application
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0" # Updated minimum SDK version
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.3.2 # إضافة مكتبة Dio
+  provider: ^6.1.1
+  pdf: ^3.10.7
+  printing: ^5.14.2
+  image_picker: ^1.0.4
+  path_provider: ^2.1.2
+  flutter_email_sender: ^6.0.2
+  http: ^0.13.3
+  intl: ^0.18.1
+  signature: ^5.4.0 # Ajout pour une meilleure gestion des signatures
+  cached_network_image: ^3.3.0 # Pour la gestion du cache des images
+  http_parser: ^4.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

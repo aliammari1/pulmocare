@@ -9,9 +9,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+        "origins": ["*"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Accept", "Origin"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
         "supports_credentials": True,
         "max_age": 3600
     }
@@ -40,7 +40,8 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 
-app.register_blueprint(ordonnance_bp, url_prefix='/api/ordonnances')
+# Mise à jour de l'enregistrement du blueprint
+app.register_blueprint(ordonnance_bp, url_prefix='/ordonnances')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

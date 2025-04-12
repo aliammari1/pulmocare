@@ -381,39 +381,36 @@ Votre médecin
     }
   }
 
-  Future<bool> createOrdonnance(Ordonnance ordonnance) async {
+  Future<Map<String, dynamic>> createOrdonnance(Ordonnance ordonnance) async {
     try {
-      _setLoading(true);
-      _clearError();
-
-      // Validation des données
-      if (ordonnance.patientId.isEmpty || ordonnance.medecinId.isEmpty) {
-        throw Exception('ID patient et médecin requis');
-      }
-
-      if (ordonnance.medicaments.isEmpty) {
-        throw Exception('Au moins un médicament est requis');
-      }
+      _isLoading = true;
+      notifyListeners();
 
       final response = await _apiService.createOrdonnance(ordonnance);
+      _ordonnance = ordonnance;
 
-      // Mettre à jour l'ID de l'ordonnance avec celui retourné par le serveur
-      if (response['id'] != null) {
-        ordonnance.id = response['id'];
-        _ordonnance = ordonnance;
+      _isLoading = false;
+      _errorMessage = null;
+      notifyListeners();
+
+      return response;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+
+      print('=== ERREUR DANS LE VIEWMODEL ===');
+      print('Type: ${e.runtimeType}');
+      print('Message: ${e.toString()}');
+
+      String errorMessage = 'Une erreur est survenue';
+      if (e.toString().contains('Connection refused') ||
+          e.toString().contains('Unable to connect')) {
+        errorMessage = 'Impossible de se connecter au serveur. '
+            'Veuillez vérifier votre connexion internet et réessayer.';
       }
 
-      _setLoading(false);
-      return true;
-    } catch (e, stackTrace) {
-      print('\n=== ERREUR DANS LE VIEWMODEL ===');
-      print('Type: ${e.runtimeType}');
-      print('Message: $e');
-      print('Stack trace:\n$stackTrace');
-
-      _setError(e.toString());
-      _setLoading(false);
-      return false;
+      throw Exception(errorMessage);
     }
   }
 

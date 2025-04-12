@@ -10,15 +10,31 @@ import '../models/medicament.dart';
 import '../models/ordonnance.dart';
 import '../constants.dart';
 import 'package:dio/dio.dart'; // نستخدم Dio بدلاً من http
+import 'dart:io' show Platform;
 
 class ApiService {
   static const String openFdaBaseUrl = 'https://api.fda.gov/drug';
   // Mise à jour de la clé API FDA
   static const String apiKey = '4DpshbRmBvQ4k0hg27yZT2zEEFvYVHbqa8WHlhan';
-  static const String backendBaseUrl = 'http://127.0.0.1:5000';
+  static const Duration timeoutDuration = Duration(seconds: 10);
+  static const int maxRetries = 3;
+  static const Map<String, String> headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      return 'http://192.168.190.173:5000';
+    } else {
+      return 'http://192.168.190.173:5000';
+    }
+  }
+
+  static String get backendBaseUrl => baseUrl;
 
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://127.0.0.1:5000',
+    baseUrl: baseUrl,
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -30,71 +46,179 @@ class ApiService {
     try {
       print("Searching medications with query: $query");
 
-      // Construire la requête avec un OU logique pour le nom et le dosage
-      final searchQuery =
-          'openfda.brand_name:"$query" OR openfda.strength:"$query"';
+      // D'abord, chercher dans la base de données locale
+      final localResults = await searchLocalMedicaments(query);
+      if (localResults.isNotEmpty) {
+        return localResults;
+      }
 
+      // Si rien trouvé localement, chercher via l'API FDA
+      return await searchFdaMedicaments(query);
+    } catch (e) {
+      print('Erreur recherche médicaments: $e');
+      return [];
+    }
+  }
+
+  Future<List<Medicament>> searchLocalMedicaments(String query) async {
+    try {
       final response = await http.get(
-        Uri.parse('$openFdaBaseUrl/label.json'
-            '?api_key=$apiKey'
-            '&search=$searchQuery'
-            '&limit=20'),
+        Uri.parse('$backendBaseUrl/medicaments/search?q=$query'),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['results'] != null) {
-          final results = data['results'] as List;
-          return results.map((item) {
-            final openfda = item['openfda'] ?? {};
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Medicament.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Erreur recherche locale: $e');
+      return [];
+    }
+  }
 
-            // Extract more detailed information
-            final brandName = (openfda['brand_name'] as List?)?.first ?? '';
-            final genericName = (openfda['generic_name'] as List?)?.first ?? '';
-            final dosageForm = (openfda['dosage_form'] as List?)?.first ?? '';
-            final strength = (openfda['strength'] as List?)?.first ?? '';
-            final manufacturer =
-                (openfda['manufacturer_name'] as List?)?.first ?? '';
+  Future<List<Medicament>> searchFdaMedicaments(String query) async {
+    try {
+      if (query.length < 2) return [];
 
-            // Get detailed dosage instructions with fallback
-            String dosageInstructions = '';
-            if (item['dosage_and_administration'] != null) {
-              dosageInstructions = (item['dosage_and_administration'] as List)
-                  .map((instruction) => instruction.toString())
-                  .where((instruction) => instruction.isNotEmpty)
-                  .join('\n');
-            } else if (item['dosage_forms_and_strengths'] != null) {
-              dosageInstructions = (item['dosage_forms_and_strengths'] as List)
-                  .map((instruction) => instruction.toString())
-                  .where((instruction) => instruction.isNotEmpty)
-                  .join('\n');
+      print("Starting OpenFDA search with query: $query");
+      List<Medicament> allResults = [];
+
+      // Construire plusieurs requêtes pour obtenir plus de résultats
+      final searchQueries = [
+        'openfda.brand_name:$query~', // Recherche approximative du nom de marque
+        'openfda.generic_name:$query~', // Recherche approximative du nom générique
+        'openfda.substance_name:$query~', // Recherche par substance
+        'openfda.manufacturer_name:$query~', // Recherche par fabricant
+        '_exists_:openfda.brand_name', // Tous les médicaments avec un nom de marque
+      ];
+
+      for (String searchQuery in searchQueries) {
+        try {
+          final url = Uri.parse('$openFdaBaseUrl/label.json'
+              '?api_key=$apiKey'
+              '&search=${Uri.encodeComponent(searchQuery)}'
+              '&limit=100');
+
+          print("Calling OpenFDA URL for query: $searchQuery");
+          final response =
+              await http.get(url).timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            if (data['results'] != null) {
+              final results = data['results'] as List;
+              print("Found ${results.length} results for query: $searchQuery");
+
+              allResults.addAll(results.map((item) {
+                final openfda = item['openfda'] ?? {};
+                final name = _getBestName(openfda);
+                final dosage =
+                    _extractDosageInfo(openfda); // Utiliser la bonne méthode
+                final usage = _extractUsageInfo(item);
+                final route = _getFirstValue(openfda['route']);
+
+                return Medicament(
+                  name: name,
+                  dosage: dosage,
+                  usage: usage,
+                  route: route,
+                );
+              }).where((med) =>
+                  med.name.isNotEmpty && _isMedicamentRelevant(med, query)));
             }
-
-            // Get route of administration
-            final route = (openfda['route'] as List?)?.first ?? '';
-
-            // Combine dosage form and strength if available
-            final dosage = [dosageForm, strength]
-                .where((element) => element.isNotEmpty)
-                .join(' ');
-
-            return Medicament(
-              name: brandName,
-              usage: genericName,
-              dosage: dosage,
-              posologie: _formatPosologie(dosageInstructions),
-              laboratoire: manufacturer,
-              route: route,
-              warning: _extractWarnings(item['warnings'] ?? []),
-            );
-          }).toList()
-            ..sort((a, b) => a.name.compareTo(b.name)); // Sort alphabetically
+          }
+        } catch (e) {
+          print('Error in query $searchQuery: $e');
+          continue; // Continuer avec la prochaine requête en cas d'erreur
         }
       }
+
+      // Dédupliquer et trier les résultats
+      return _getUniqueMedicaments(allResults);
     } catch (e) {
-      print('Erreur recherche OpenFDA: $e');
+      print('Error in FDA search: $e');
+      return [];
     }
-    return [];
+  }
+
+  String _getBestName(Map<String, dynamic> openfda) {
+    final brandName = _getFirstValue(openfda['brand_name']);
+    final genericName = _getFirstValue(openfda['generic_name']);
+    final substanceName = _getFirstValue(openfda['substance_name']);
+
+    return brandName ?? genericName ?? substanceName ?? '';
+  }
+
+  bool _isMedicamentRelevant(Medicament med, String query) {
+    final searchTerms = query.toLowerCase().split(' ');
+    final medicamentName = med.name.toLowerCase();
+
+    // Vérifier si au moins un terme de recherche est présent dans le nom
+    return searchTerms.any((term) => medicamentName.contains(term));
+  }
+
+  String? _getFirstValue(dynamic list) {
+    if (list is List && list.isNotEmpty) {
+      return list.first.toString();
+    }
+    return null;
+  }
+
+  String _extractUsageInfo(Map<String, dynamic> item) {
+    final usageList = item['indications_and_usage'] as List?;
+    if (usageList != null && usageList.isNotEmpty) {
+      return usageList.first.toString();
+    }
+    return '';
+  }
+
+  String _extractPosologie(Map<String, dynamic> item) {
+    final List<String> instructions = [];
+
+    if (item['dosage_and_administration'] is List) {
+      instructions.addAll((item['dosage_and_administration'] as List)
+          .map((e) => e.toString())
+          .where((e) => e.isNotEmpty));
+    }
+
+    return instructions.join('\n• ');
+  }
+
+  String _extractDosageInstructions(Map<String, dynamic> item) {
+    List<String> instructions = [];
+
+    if (item['dosage_and_administration'] != null) {
+      instructions.addAll(List<String>.from(item['dosage_and_administration']));
+    }
+    if (item['dosage_forms_and_strengths'] != null) {
+      instructions
+          .addAll(List<String>.from(item['dosage_forms_and_strengths']));
+    }
+    if (item['indications_and_usage'] != null) {
+      instructions.addAll(List<String>.from(item['indications_and_usage']));
+    }
+
+    return instructions.join('\n');
+  }
+
+  String _extractWarningsAndPrecautions(Map<String, dynamic> item) {
+    List<String> allWarnings = [];
+
+    if (item['warnings'] != null) {
+      allWarnings.addAll(List<String>.from(item['warnings']));
+    }
+    if (item['warnings_and_cautions'] != null) {
+      allWarnings.addAll(List<String>.from(item['warnings_and_cautions']));
+    }
+    if (item['precautions'] != null) {
+      allWarnings.addAll(List<String>.from(item['precautions']));
+    }
+    if (item['contraindications'] != null) {
+      allWarnings.addAll(List<String>.from(item['contraindications']));
+    }
+
+    return allWarnings.join('\n• ');
   }
 
   String _formatPosologie(String instructions) {
@@ -116,10 +240,14 @@ class ApiService {
   }
 
   Future<bool> validateOrdonnance(Ordonnance ordonnance) async {
-    if (ordonnance.patientId.isEmpty || ordonnance.medecinId.isEmpty) {
+    final bool hasRequiredIds =
+        ordonnance.patientId.isNotEmpty && ordonnance.medecinId.isNotEmpty;
+    final bool hasMedicaments = ordonnance.medicaments.isNotEmpty;
+
+    if (!hasRequiredIds) {
       throw Exception('ID patient et ID médecin sont requis');
     }
-    if (ordonnance.medicaments.isEmpty) {
+    if (!hasMedicaments) {
       throw Exception('Au moins un médicament est requis');
     }
     return true;
@@ -128,7 +256,7 @@ class ApiService {
   Future<Map<String, dynamic>> createOrdonnance(Ordonnance ordonnance) async {
     try {
       print('\n=== ENVOI DE LA REQUÊTE ===');
-      final url = Uri.parse('$backendBaseUrl/api/ordonnances');
+      final url = Uri.parse('$baseUrl/ordonnances');
       final body = jsonEncode(ordonnance.toJson());
 
       print('URL: $url');
@@ -140,8 +268,6 @@ class ApiService {
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'Origin': 'http://localhost:5000',
-              'Access-Control-Allow-Origin': '*',
             },
             body: body,
           )
@@ -151,8 +277,12 @@ class ApiService {
       print('Status: ${response.statusCode}');
       print('Body: ${response.body}');
 
-      if (response.statusCode == 201) {
-        return json.decode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData is Map<String, dynamic>) {
+          return responseData;
+        }
+        throw Exception('Format de réponse invalide');
       }
 
       throw Exception('Erreur HTTP ${response.statusCode}: ${response.body}');
@@ -160,8 +290,44 @@ class ApiService {
       print('\n=== ERREUR DE CRÉATION ===');
       print('Type: ${e.runtimeType}');
       print('Message: $e');
-      rethrow;
+      throw Exception('Erreur lors de la création: $e');
     }
+  }
+
+  Future<bool> createOrdonnanceWithRetry(Ordonnance ordonnance) async {
+    int retryCount = 0;
+    while (retryCount < maxRetries) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/api/ordonnances'),
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode(ordonnance.toJson()),
+            )
+            .timeout(timeoutDuration);
+
+        if (response.statusCode == 201) {
+          return true;
+        }
+        throw Exception('Server error: ${response.statusCode}');
+      } catch (e) {
+        retryCount++;
+        final isConnectionError = e is http.ClientException ||
+            e.toString().contains('Connection refused');
+
+        if (isConnectionError) {
+          if (retryCount == maxRetries) {
+            throw Exception(
+                'Unable to connect to server after $maxRetries attempts. '
+                'Please check your internet connection and try again.');
+          }
+          await Future.delayed(Duration(seconds: retryCount));
+          continue;
+        }
+        rethrow;
+      }
+    }
+    return false;
   }
 
   Future<List<Ordonnance>> getDoctorOrdonnances(String medecinId) async {
@@ -236,8 +402,7 @@ class ApiService {
     try {
       print("Fetching ordonnances for medecin: $medecinId");
       final response = await http.get(
-        Uri.parse(
-            '$backendBaseUrl/api/ordonnances/medecin/$medecinId/ordonnances'),
+        Uri.parse('$baseUrl/ordonnances/medecin/$medecinId/ordonnances'),
         headers: Constants.headers,
       );
 
@@ -345,7 +510,7 @@ class ApiService {
     try {
       print("Fetching ordonnance: $ordonnanceId");
       final response = await http.get(
-        Uri.parse('$backendBaseUrl/ordonnance/$ordonnanceId'),
+        Uri.parse('$backendBaseUrl/ordonnances/$ordonnanceId'), // Updated path
       );
 
       if (response.statusCode == 200) {
@@ -402,5 +567,42 @@ class ApiService {
       print('Error sending PDF: $e');
       return false;
     }
+  }
+
+  String _extractDosageInfo(Map<String, dynamic> openfda) {
+    try {
+      // Récupérer les informations de dosage de différentes sources de l'API OpenFDA
+      final dosageForm = _getFirstValue(openfda['dosage_form']);
+      final strength = _getFirstValue(openfda['strength']);
+      final route = _getFirstValue(openfda['route']);
+
+      // Combiner les informations disponibles
+      final List<String> dosageInfo = [];
+      if (strength != null) dosageInfo.add(strength);
+      if (dosageForm != null) dosageInfo.add(dosageForm);
+      if (route != null) dosageInfo.add("voie $route");
+
+      return dosageInfo.isNotEmpty ? dosageInfo.join(' - ') : '';
+    } catch (e) {
+      print('Erreur extraction dosage: $e');
+      return '';
+    }
+  }
+
+  String? _getListValues(dynamic list) {
+    if (list is List) {
+      return list.join(', ');
+    }
+    return null;
+  }
+
+  List<Medicament> _getUniqueMedicaments(List<Medicament> medicaments) {
+    final uniqueMeds = <String, Medicament>{};
+    for (var med in medicaments) {
+      if (!uniqueMeds.containsKey(med.name)) {
+        uniqueMeds[med.name] = med;
+      }
+    }
+    return uniqueMeds.values.toList()..sort((a, b) => a.name.compareTo(b.name));
   }
 }

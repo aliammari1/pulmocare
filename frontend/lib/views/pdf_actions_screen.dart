@@ -4,9 +4,19 @@ import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart'; // Add this import for PdfPageFormat
 import 'package:intl/intl.dart';
 import '../viewmodels/ordonnance_viewmodel.dart';
+import '../services/screen_size_service.dart';
+
+enum PdfActionMode { newOrdonnance, viewExisting }
 
 class PdfActionsScreen extends StatefulWidget {
-  const PdfActionsScreen({super.key});
+  final String ordonnanceId;
+  final PdfActionMode mode;
+
+  const PdfActionsScreen({
+    Key? key,
+    required this.ordonnanceId,
+    this.mode = PdfActionMode.viewExisting,
+  }) : super(key: key);
 
   @override
   State<PdfActionsScreen> createState() => _PdfActionsScreenState();
@@ -74,37 +84,51 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
           title: const Text('Gestion des PDFs'),
           elevation: 0,
         ),
-        body: Hero(
-          tag: 'pdf-content',
-          child: _buildBody(context),
+        body: SafeArea(
+          // Ajout de SafeArea
+          child: Hero(
+            tag: 'pdf-content',
+            child: _buildBody(context),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    final screenSize = ScreenSizeService();
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 400;
+
     return Consumer<OrdonnanceViewModel>(
       builder: (context, ordonnanceViewModel, _) {
         if (isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSuccessCard(),
-                const SizedBox(height: 20),
-                _buildActionsGrid(ordonnanceViewModel),
-                const SizedBox(height: 20),
-                _buildOrdonnancesList(ordonnanceViewModel),
-              ],
-            ),
+          padding: EdgeInsets.symmetric(
+            horizontal:
+                isSmallScreen ? 12.0 : screenSize.defaultPadding.horizontal,
+            vertical: 16.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSuccessCard(),
+              const SizedBox(height: 16),
+              _buildActionsGrid(ordonnanceViewModel, isSmallScreen),
+              const SizedBox(height: 16),
+              if (ordonnances != null && ordonnances!.isNotEmpty)
+                _buildOrdonnancesList(
+                    ordonnances!, ordonnanceViewModel, isSmallScreen)
+              else
+                const Center(
+                  child: Text('Aucune ordonnance disponible'),
+                ),
+            ],
           ),
         );
       },
@@ -160,104 +184,159 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
     );
   }
 
-  Widget _buildActionsGrid(OrdonnanceViewModel viewModel) {
+  Widget _buildActionsGrid(OrdonnanceViewModel viewModel, bool isSmallScreen) {
     return Card(
       elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Actions pour l\'ordonnance actuelle',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionButton(
-                  icon: Icons.visibility,
-                  label: 'Aperçu',
-                  color: Colors.blue,
-                  onPressed: () => _previewCurrentPdf(context, viewModel),
-                ),
-                _buildActionButton(
-                  icon: Icons.download,
-                  label: 'Télécharger',
-                  color: Colors.green,
-                  onPressed: () => _downloadCurrentPdf(context, viewModel),
-                ),
-                _buildActionButton(
-                  icon: Icons.email,
-                  label: 'Email',
-                  color: Colors.orange,
-                  onPressed: () => _showEmailDialog(context, viewModel),
-                ),
-              ],
-            ),
+            const SizedBox(height: 16),
+            isSmallScreen
+                ? Column(
+                    children: _buildActionButtons(viewModel),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: _buildActionButtons(viewModel),
+                  ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOrdonnancesList(OrdonnanceViewModel viewModel) {
-    if (ordonnances == null || ordonnances!.isEmpty) {
-      return const Center(
-        child: Text('Aucune ordonnance disponible'),
-      );
-    }
-
-    return Expanded(
-      child: ListView.builder(
-        itemCount: ordonnances!.length,
-        itemBuilder: (context, index) {
-          final ordonnance = ordonnances![index];
-          return _buildOrdonnanceItem(ordonnance, viewModel);
-        },
+  List<Widget> _buildActionButtons(OrdonnanceViewModel viewModel) {
+    return [
+      _buildActionButton(
+        icon: Icons.visibility,
+        label: 'Aperçu',
+        color: Colors.blue,
+        onPressed: () => _previewCurrentPdf(context, viewModel),
       ),
+      const SizedBox(height: 8, width: 8),
+      _buildActionButton(
+        icon: Icons.download,
+        label: 'Télécharger',
+        color: Colors.green,
+        onPressed: () => _downloadCurrentPdf(context, viewModel),
+      ),
+      const SizedBox(height: 8, width: 8),
+      _buildActionButton(
+        icon: Icons.email,
+        label: 'Email',
+        color: Colors.orange,
+        onPressed: () => _showEmailDialog(context, viewModel),
+      ),
+    ];
+  }
+
+  Widget _buildOrdonnancesList(
+    List<dynamic> ordonnances,
+    OrdonnanceViewModel viewModel,
+    bool isSmallScreen,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: ordonnances.map((ordonnance) {
+        return _buildOrdonnanceItem(
+          ordonnance,
+          viewModel,
+          isSmallScreen,
+        );
+      }).toList(),
     );
   }
 
   Widget _buildOrdonnanceItem(
-      dynamic ordonnance, OrdonnanceViewModel viewModel) {
+    dynamic ordonnance,
+    OrdonnanceViewModel viewModel,
+    bool isSmallScreen,
+  ) {
     final date = DateTime.parse(ordonnance['date']);
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: EdgeInsets.symmetric(
+        vertical: 4,
+        horizontal: isSmallScreen ? 0 : 4,
+      ),
       child: ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 8 : 16,
+          vertical: 8,
+        ),
         leading: CircleAvatar(
           backgroundColor: Colors.blue.shade100,
           child: const Icon(Icons.description, color: Colors.blue),
         ),
-        title: Text('Patient: ${ordonnance['patient_id']}'),
-        subtitle: Text(dateFormat.format(date)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.visibility, color: Colors.blue),
-              onPressed: () => _previewPdf(context, viewModel, ordonnance),
-              tooltip: 'Aperçu',
-            ),
-            IconButton(
-              icon: const Icon(Icons.download, color: Colors.green),
-              onPressed: () => _downloadPdf(context, viewModel, ordonnance),
-              tooltip: 'Télécharger',
-            ),
-            IconButton(
-              icon: const Icon(Icons.send, color: Colors.orange),
-              onPressed: () =>
-                  _showSendEmailDialog(context, viewModel, ordonnance),
-              tooltip: 'Envoyer',
-            ),
-          ],
+        title: Text(
+          'Patient: ${ordonnance['patient_id']}',
+          style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
         ),
+        subtitle: Text(
+          dateFormat.format(date),
+          style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+        ),
+        trailing: isSmallScreen
+            ? _buildPopupMenuButton(ordonnance, viewModel)
+            : _buildActionIcons(ordonnance, viewModel),
       ),
+    );
+  }
+
+  Widget _buildPopupMenuButton(
+    dynamic ordonnance,
+    OrdonnanceViewModel viewModel,
+  ) {
+    return PopupMenuButton(
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          child: const Text('Aperçu'),
+          onTap: () => _previewPdf(context, viewModel, ordonnance),
+        ),
+        PopupMenuItem(
+          child: const Text('Télécharger'),
+          onTap: () => _downloadPdf(context, viewModel, ordonnance),
+        ),
+        PopupMenuItem(
+          child: const Text('Envoyer'),
+          onTap: () => _showSendEmailDialog(context, viewModel, ordonnance),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionIcons(
+    dynamic ordonnance,
+    OrdonnanceViewModel viewModel,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.visibility, color: Colors.blue),
+          onPressed: () => _previewPdf(context, viewModel, ordonnance),
+          tooltip: 'Aperçu',
+        ),
+        IconButton(
+          icon: const Icon(Icons.download, color: Colors.green),
+          onPressed: () => _downloadPdf(context, viewModel, ordonnance),
+          tooltip: 'Télécharger',
+        ),
+        IconButton(
+          icon: const Icon(Icons.send, color: Colors.orange),
+          onPressed: () => _showSendEmailDialog(context, viewModel, ordonnance),
+          tooltip: 'Envoyer',
+        ),
+      ],
     );
   }
 

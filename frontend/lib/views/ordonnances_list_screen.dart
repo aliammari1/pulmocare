@@ -93,7 +93,9 @@ class _OrdonnancesListScreenState extends State<OrdonnancesListScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const PdfActionsScreen(),
+                            builder: (context) => PdfActionsScreen(
+                              ordonnanceId: ordonnance['_id'].toString(),
+                            ),
                           ),
                         );
                       }

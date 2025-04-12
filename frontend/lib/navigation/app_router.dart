@@ -19,9 +19,10 @@ class AppRouter {
           settings: settings,
         );
       case pdfActions:
+        final ordonnanceId = settings.arguments as String;
         return PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const PdfActionsScreen(),
+              PdfActionsScreen(ordonnanceId: ordonnanceId),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },

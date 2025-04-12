@@ -37,8 +37,8 @@ class Ordonnance {
           .map((m) => {
                 'name': m.name,
                 'dosage': m.dosage ?? '',
-                'posologie': m.posologie ?? '',
-                'laboratoire': m.laboratoire ?? '',
+                'usage': m.usage ?? '',
+                'route': m.route ?? '', 
               })
           .toList(),
       'clinique': clinique,
@@ -152,8 +152,7 @@ class Ordonnance {
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(5),
-                            child:
-                                pw.Text((med.posologie ?? '-').toUpperCase()),
+                            child: pw.Text((med.usage ?? '-').toUpperCase()),
                           ),
                         ],
                       ),

@@ -75,14 +75,18 @@ class SignaturePadState extends State<SignaturePad> {
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Wrap(
+              spacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 _buildColorButton(Colors.blue),
                 _buildColorButton(Colors.black),
                 _buildColorButton(Colors.red),
                 const SizedBox(width: 8),
-                _buildWidthSlider(),
+                SizedBox(
+                  width: 80,
+                  child: _buildWidthSlider(),
+                ),
               ],
             ),
           ),
@@ -139,8 +143,9 @@ class SignaturePadState extends State<SignaturePad> {
           // Boutons d'action
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Wrap(
+              spacing: 8,
+              alignment: WrapAlignment.spaceEvenly,
               children: [
                 _buildActionButton(
                   icon: Icons.clear,

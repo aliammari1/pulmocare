@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../services/navigation_service.dart';
 import '../models/medicament.dart';
 import '../viewmodels/ordonnance_viewmodel.dart';
@@ -10,6 +11,9 @@ import '../widgets/cachet_medecin.dart';
 import 'pdf_actions_screen.dart';
 import '../models/ordonnance.dart';
 import '../theme/style_constants.dart';
+import '../services/screen_size_service.dart';
+import '../services/voice_recognition_service.dart';
+import '../services/ocr_service.dart';
 
 class OrdonnanceScreen extends StatefulWidget {
   const OrdonnanceScreen({Key? key}) : super(key: key);
@@ -29,28 +33,35 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
   Uint8List? _signature;
   Uint8List? _cachet;
   bool isSearching = false;
+  final VoiceRecognitionService _voiceService = VoiceRecognitionService();
+  final List<OcrService> _ocrServices = [
+    GoogleMLKitOcr(),
+    ManualOcrService(),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = ScreenSizeService();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nouvelle Ordonnance')),
       body: Consumer<OrdonnanceViewModel>(
         builder: (context, viewModel, child) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: screenSize.defaultPadding,
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildPatientInfo(),
-                  const SizedBox(height: 20),
+                  SizedBox(height: screenSize.getScaledSize(20)),
                   _buildMedicamentSearch(viewModel),
-                  const SizedBox(height: 20),
+                  SizedBox(height: screenSize.getScaledSize(20)),
                   _buildMedicamentsList(),
-                  const SizedBox(height: 20),
+                  SizedBox(height: screenSize.getScaledSize(20)),
                   _buildSignatureAndCachet(),
-                  const SizedBox(height: 20),
+                  SizedBox(height: screenSize.getScaledSize(20)),
                   _buildActionButtons(),
                 ],
               ),
@@ -62,6 +73,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
   }
 
   Widget _buildPatientInfo() {
+    final screenSize = ScreenSizeService();
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -69,7 +81,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(screenSize.cardRadius),
         boxShadow: [
           BoxShadow(
             color: Colors.blue.withOpacity(0.1),
@@ -213,9 +225,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Barre de recherche élégante
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -229,27 +239,43 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                   ),
                 ],
               ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un médicament...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.blue),
-                  suffixIcon: isSearching
-                      ? Container(
-                          width: 24,
-                          height: 24,
-                          padding: const EdgeInsets.all(6),
-                          child:
-                              const CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide.none,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un médicament...',
+                        prefixIcon:
+                            const Icon(Icons.search, color: Colors.blue),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 20),
+                      ),
+                      onChanged: (value) =>
+                          _searchMedicaments(value, viewModel),
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                ),
-                onChanged: (value) => _searchMedicaments(value, viewModel),
+                  // Bouton OCR
+                  IconButton(
+                    icon: const Icon(Icons.document_scanner,
+                        color: Colors.purple),
+                    onPressed: () => _scanMedicamentWithOCR(),
+                    tooltip: 'Scanner une ordonnance',
+                  ),
+                  // Bouton Microphone
+                  IconButton(
+                    icon: Icon(
+                      _voiceService.isListening ? Icons.mic : Icons.mic_none,
+                      color:
+                          _voiceService.isListening ? Colors.red : Colors.blue,
+                    ),
+                    onPressed: () => _startVoiceRecognition(viewModel),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -300,39 +326,22 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          med.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        if (med.laboratoire != null)
-                          Text(
-                            med.laboratoire!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                      ],
-                    ),
+                    child: Text(med.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        )),
                   ),
                   _buildAddButton(med),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (med.dosage != null) ...[
+              if (med.dosage != null)
                 _buildInfoRow(Icons.medical_services, 'Dosage:', med.dosage!),
-              ],
-              if (med.posologie != null) ...[
-                const SizedBox(height: 4),
-                _buildInfoRow(Icons.schedule, 'Posologie:', med.posologie!),
-              ],
+              if (med.usage != null)
+                _buildInfoRow(Icons.info, 'Usage:', med.usage!),
+              if (med.route != null)
+                _buildInfoRow(Icons.route, 'Voie:', med.route!),
             ],
           ),
         ),
@@ -340,35 +349,31 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
     );
   }
 
-  Widget _buildAddButton(Medicament med) {
-    final bool isAdded = medicaments.any((m) => m.name == med.name);
-    return Material(
-      color: isAdded ? Colors.green : Colors.blue,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: () => _addMedicament(med),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
+  void _showMedicamentDetails(Medicament med) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(med.name),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isAdded ? Icons.check : Icons.add,
-                color: Colors.white,
-                size: 20,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isAdded ? 'Ajouté' : 'Ajouter',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              if (med.usage != null)
+                _buildInfoRow(Icons.info, 'Usage:', med.usage!),
+              if (med.dosage != null)
+                _buildInfoRow(Icons.medical_services, 'Dosage:', med.dosage!),
+              if (med.route != null)
+                _buildInfoRow(Icons.route, 'Voie:', med.route!),
             ],
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
       ),
     );
   }
@@ -407,54 +412,6 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
     setState(() => isSearching = true);
     await viewModel.fetchMedicaments(value);
     setState(() => isSearching = false);
-  }
-
-  void _showMedicamentDetails(Medicament med) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(med.name),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _infoRow('Usage', med.usage),
-              _infoRow('Dosage', med.dosage),
-              _infoRow('Route', med.route),
-              _infoRow('Posologie', med.posologie),
-              _infoRow('Laboratoire', med.laboratoire),
-              if (med.warning != null) ...[
-                const Divider(),
-                const Text('Avertissements:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(med.warning!),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
-        ],
-      ),
-    );
   }
 
   Widget _buildMedicamentsList() {
@@ -511,6 +468,14 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
     );
   }
 
+  Widget _buildAddButton(Medicament med) {
+    return IconButton(
+      icon: const Icon(Icons.add_circle, color: Colors.green),
+      onPressed: () => _addMedicament(med),
+      tooltip: 'Ajouter à l\'ordonnance',
+    );
+  }
+
   Widget _buildMedicamentItem(Medicament med) {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -521,29 +486,13 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Nom du médicament
-                    Text(
-                      med.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    if (med.laboratoire != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Laboratoire: ${med.laboratoire}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  med.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
                 ),
               ),
               IconButton(
@@ -552,39 +501,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Détails du médicament
-          _buildDetailRow('Dosage', med.dosage),
-          _buildDetailRow('Posologie', med.posologie),
-          if (med.route != null)
-            _buildDetailRow('Voie d\'administration', med.route),
-          if (med.warning != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber,
-                      color: Colors.orange.shade800, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      med.warning!,
-                      style: TextStyle(
-                        color: Colors.orange.shade900,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          if (med.dosage != null) _buildDetailRow('Dosage', med.dosage),
+          if (med.usage != null) _buildDetailRow('Usage', med.usage),
+          if (med.route != null) _buildDetailRow('Voie', med.route),
         ],
       ),
     );
@@ -648,61 +567,127 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
   }
 
   Widget _buildSignatureAndCachet() {
-    return Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 600;
+
+        return isSmallScreen
+            ? Column(
+                children: [
+                  _buildSignatureSection(),
+                  const SizedBox(height: 16),
+                  _buildCachetSection(),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Flexible(
+                    flex: 1,
+                    child: _buildSignatureSection(),
+                  ),
+                  const SizedBox(width: 16),
+                  Flexible(
+                    flex: 1,
+                    child: _buildCachetSection(),
+                  ),
+                ],
+              );
+      },
+    );
+  }
+
+  Widget _buildSignatureSection() {
+    return Column(
       children: [
-        Expanded(
-          child: Column(
-            children: [
-              const Text('Signature'),
-              const SizedBox(height: 8),
-              SignaturePad(
-                onSigned: (data) {
-                  setState(() => _signature = data);
-                },
-              ),
-            ],
-          ),
+        const Text('Signature'),
+        const SizedBox(height: 8),
+        SignaturePad(
+          onSigned: (data) {
+            setState(() => _signature = data);
+          },
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            children: [
-              const Text('Cachet'),
-              const SizedBox(height: 8),
-              CachetMedecin(
-                imageBytes: _cachet,
-                onSelect: (Uint8List bytes) {
-                  setState(() => _cachet = bytes);
-                },
-              ),
-            ],
-          ),
+      ],
+    );
+  }
+
+  Widget _buildCachetSection() {
+    return Column(
+      children: [
+        const Text('Cachet'),
+        const SizedBox(height: 8),
+        CachetMedecin(
+          imageBytes: _cachet,
+          onSelect: (Uint8List bytes) {
+            setState(() => _cachet = bytes);
+          },
         ),
       ],
     );
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ElevatedButton.icon(
-          icon: const Icon(StyleConstants.saveIcon),
-          label: const Text('Sauvegarder'),
-          onPressed: _saveOrdonnance,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: StyleConstants.primaryColor,
-          ),
-        ),
-        ElevatedButton.icon(
-          icon: const Icon(StyleConstants.ordonnanceIcon),
-          label: const Text('Mes Ordonnances'),
-          onPressed: () => Navigator.pushNamed(context, '/ordonnances-list'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: StyleConstants.secondaryColor,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 400;
+
+        return isSmallScreen
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(StyleConstants.saveIcon),
+                    label: const Text('Sauvegarder'),
+                    onPressed: _saveOrdonnance,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: StyleConstants.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(StyleConstants.ordonnanceIcon),
+                    label: const Text('Mes Ordonnances'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/ordonnances-list'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: StyleConstants.secondaryColor,
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(StyleConstants.saveIcon),
+                        label: const Text('Sauvegarder'),
+                        onPressed: _saveOrdonnance,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: StyleConstants.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(StyleConstants.ordonnanceIcon),
+                        label: const Text('Mes Ordonnances'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/ordonnances-list'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: StyleConstants.secondaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+      },
     );
   }
 
@@ -732,13 +717,29 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
       );
 
       final viewModel = context.read<OrdonnanceViewModel>();
-      final success = await viewModel.createOrdonnance(ordonnance);
+      final response = await viewModel.createOrdonnance(ordonnance);
 
       if (context.mounted) {
         Navigator.pop(context); // Fermer le dialogue de transition
 
-        if (success) {
-          await NavigationService.navigateToPdfActions(context);
+        if (response.containsKey('id')) {
+          try {
+            await Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PdfActionsScreen(
+                  ordonnanceId: response['id'],
+                  mode: PdfActionMode.newOrdonnance,
+                ),
+              ),
+            );
+          } catch (navError) {
+            print('Erreur de navigation: $navError');
+            // Fallback - Retour à l'écran principal si la navigation échoue
+            if (context.mounted) {
+              Navigator.pushReplacementNamed(context, '/');
+            }
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -794,5 +795,244 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
         );
       }
     });
+  }
+
+  Future<void> _startVoiceRecognition(OrdonnanceViewModel viewModel) async {
+    try {
+      if (_voiceService.isListening) {
+        _voiceService.stopListening();
+        return;
+      }
+
+      final hasPermission = await _voiceService.checkPermission();
+      if (!hasPermission) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La permission du microphone est requise'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => isSearching = true);
+
+      await _voiceService.startListening((text) {
+        setState(() {
+          _searchController.text = text;
+          isSearching = false;
+        });
+        // Au lieu de chercher, créer directement un médicament
+        _createMedicamentFromVoice(text);
+      });
+    } catch (e) {
+      setState(() => isSearching = false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _createMedicamentFromVoice(String text) {
+    // Créer un nouveau médicament avec le texte dicté
+    final medicament = Medicament(
+      name: text,
+      dosage: '', // A remplir manuellement si nécessaire
+      usage: '', // A remplir manuellement si nécessaire
+      route: '', // A remplir manuellement si nécessaire
+    );
+
+    _showMedicamentDetailsDialog(medicament);
+  }
+
+  void _showMedicamentDetailsDialog(Medicament medicament) {
+    final dosageController = TextEditingController();
+    final usageController = TextEditingController();
+    final routeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Compléter les détails pour ${medicament.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: dosageController,
+                decoration: const InputDecoration(
+                  labelText: 'Dosage',
+                  hintText: 'Ex: 1000mg',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: usageController,
+                decoration: const InputDecoration(
+                  labelText: 'Usage',
+                  hintText: 'Ex: 1 comprimé 3 fois par jour',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: routeController,
+                decoration: const InputDecoration(
+                  labelText: 'Voie d\'administration',
+                  hintText: 'Ex: orale',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final completedMedicament = Medicament(
+                name: medicament.name,
+                dosage: dosageController.text,
+                usage: usageController.text,
+                route: routeController.text,
+              );
+              Navigator.pop(context);
+              _addMedicament(completedMedicament);
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _scanMedicamentWithOCR() async {
+    try {
+      final selectedService = await showDialog<OcrService>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Choisir la méthode de saisie'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _ocrServices
+                .map((service) => ListTile(
+                      title: Text(service.name),
+                      subtitle: Text(service is ManualOcrService
+                          ? 'Saisir le texte manuellement'
+                          : 'Reconnaissance automatique du texte'),
+                      onTap: () => Navigator.pop(context, service),
+                    ))
+                .toList(),
+          ),
+        ),
+      );
+
+      if (selectedService == null) return;
+
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+          source: selectedService is ManualOcrService
+              ? ImageSource.gallery
+              : ImageSource.camera);
+
+      if (image == null) return;
+
+      String recognizedText = await selectedService.recognizeText(image.path);
+
+      if (selectedService is ManualOcrService) {
+        recognizedText = await _showManualInputDialog() ?? '';
+      }
+
+      if (recognizedText.isNotEmpty && context.mounted) {
+        _showOCRResultsDialog(recognizedText);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _showManualInputDialog() async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Saisir le texte'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Entrez le texte de l\'ordonnance',
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Valider'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOCRResultsDialog(String recognizedText) {
+    final lines = recognizedText
+        .split('\n')
+        .where((line) => line.trim().isNotEmpty)
+        .toList();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Texte détecté'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: lines.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(lines[index]),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createMedicamentFromText(lines[index]);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _createMedicamentFromText(String text) {
+    final medicament = Medicament(
+      name: text,
+      dosage: '',
+      usage: '',
+      route: '',
+    );
+    _showMedicamentDetailsDialog(medicament);
   }
 }

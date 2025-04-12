@@ -22,7 +22,7 @@ def handle_preflight():
         response.headers.update({
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
             "Access-Control-Max-Age": "120",
         })
         return response
@@ -35,13 +35,16 @@ def after_request(response):
     return response
 
 # Correction des routes pour correspondre au frontend
-@ordonnance_bp.route('', methods=['POST'])  # Changed from '/' to ''
+@ordonnance_bp.route('', methods=['POST'])  # Route principale sans /api
 def create_ordonnance():
     try:
         data = request.get_json()
-        print("Received data:", data)  # Debug print
-
-        # Valider les champs requis
+        if not data:
+            return jsonify({"error": "Données JSON manquantes"}), 400
+            
+        print("Received data:", data)
+        
+        # Validation des champs requis
         required_fields = ['patient_id', 'medecin_id', 'medicaments']
         if not all(field in data for field in required_fields):
             missing = [f for f in required_fields if f not in data]
@@ -58,8 +61,7 @@ def create_ordonnance():
             'specialite': data.get('specialite', ''),
             'date': datetime.datetime.now().isoformat()
         }
-
-        # Sauvegarder dans MongoDB
+        
         result = db.ordonnances.insert_one(ordonnance)
         
         return jsonify({
@@ -68,7 +70,7 @@ def create_ordonnance():
         }), 201
 
     except Exception as e:
-        print("Error:", str(e))  # Debug print
+        logger.error(f"Error creating ordonnance: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @ordonnance_bp.route('/', methods=['GET'])
@@ -119,13 +121,13 @@ def save_ordonnance_pdf(id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@ordonnance_bp.route('/ordonnance/<id>', methods=['GET'])
+@ordonnance_bp.route('/<id>', methods=['GET'])  # Changed from /ordonnance/<id>
 def get_ordonnance(id):
     try:
         # Validate ObjectId format
         try:
             obj_id = ObjectId(id)
-        except bson.errors.InvalidId:
+        except Exception:
             return jsonify({"error": "Invalid ordonnance ID format"}), 400
 
         ordonnance = db.ordonnances.find_one({"_id": obj_id})

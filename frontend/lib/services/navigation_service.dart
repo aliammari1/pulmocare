@@ -1,14 +1,30 @@
 import 'package:flutter/material.dart';
+import '../views/pdf_actions_screen.dart'; // Add this import
 
 class NavigationService {
-  static Future<void> navigateToPdfActions(
-    BuildContext context, {
-    bool withAnimation = true,
-  }) async {
-    if (withAnimation) {
-      await Navigator.pushNamed(context, '/pdf-actions');
-    } else {
-      await Navigator.pushReplacementNamed(context, '/pdf-actions');
+  static Future<void> navigateToPdfActions(BuildContext context,
+      {required String ordonnanceId}) async {
+    try {
+      await Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              PdfActionsScreen(
+            ordonnanceId: ordonnanceId,
+            mode: PdfActionMode.newOrdonnance,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    } catch (e) {
+      print('Erreur lors de la navigation: $e');
+      // Fallback navigation
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/');
+      }
     }
   }
 

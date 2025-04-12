@@ -23,30 +23,38 @@ class ExempleCreationOrdonnance extends StatelessWidget {
               Medicament(
                 name: "Doliprane",
                 dosage: "1000mg",
-                posologie: "1 comprimé 3 fois par jour",
-                laboratoire: "Sanofi",
+               
+                
               ),
             ],
           );
 
           final viewModel = context.read<OrdonnanceViewModel>();
-          final success = await viewModel.createOrdonnance(ordonnance);
+          final response = await viewModel.createOrdonnance(ordonnance);
+          final bool isSuccess =
+              response.containsKey('id') && response['id'] != null;
 
-          if (success) {
+          if (isSuccess) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Ordonnance créée avec succès!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            throw Exception('Échec de la création de l\'ordonnance');
+          }
+        } catch (e) {
+          if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ordonnance créée avec succès!'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: Text('Erreur: $e'),
+                backgroundColor: Colors.red,
               ),
             );
           }
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
         }
       },
       child: const Text('Créer Ordonnance Test'),
