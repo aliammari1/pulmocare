@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import '../localization/app_localizations.dart';
 
 class MapSelectionDialog extends StatefulWidget {
   final String initialAddress;
@@ -103,7 +104,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: 'Search location',
+                      labelText: context.tr('search_location'),
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -160,7 +161,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                       trafficEnabled: _trafficEnabled,
                       myLocationEnabled: true,
                       myLocationButtonEnabled: false,
-                      zoomControlsEnabled: false, 
+                      zoomControlsEnabled: false,
                       mapToolbarEnabled: true,
                       buildingsEnabled: true,
                       onTap: (latLng) async {
@@ -285,8 +286,8 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                 onPressed: () {
                   Navigator.pop(context, _selectedAddress);
                 },
-                child: const Text(
-                  'Confirm Location',
+                child: Text(
+                  context.tr('confirm_location'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),

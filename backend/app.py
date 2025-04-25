@@ -17,6 +17,8 @@ import io
 from PIL import Image
 import pytesseract
 import logging
+from langdetect import detect, LangDetectException
+from transliterate import translit
 
 load_dotenv()
 
@@ -413,6 +415,7 @@ def verify_doctor(user_id):
     try:
         data = request.get_json()
         image_data = data.get('image')
+        language_preference = data.get('language', 'auto')  # Allow specifying language or auto-detect
 
         if not image_data:
             return jsonify({'error': 'No image provided'}), 400
@@ -425,7 +428,7 @@ def verify_doctor(user_id):
         # Get doctor's name from database
         doctor_name = doctor_data['name'].lower().strip()
 
-        logger.debug(f"Checking for Name='{doctor_name}'")
+        logger.debug(f"Checking for Name='{doctor_name}' with language '{language_preference}'")
 
         # Process the image
         image = Image.open(io.BytesIO(base64.b64decode(image_data)))
@@ -434,22 +437,91 @@ def verify_doctor(user_id):
         image = image.convert('L')  # Convert to grayscale
         image = image.point(lambda x: 0 if x < 128 else 255, '1')  # Enhance contrast
 
-        # Extract text from image
-        extracted_text = pytesseract.image_to_string(image)
+        # Detect language in the document first
+        basic_text = pytesseract.image_to_string(image)
+        detected_language = detect_document_language(basic_text)
+        logger.debug(f"Detected document language: {detected_language}")
+        
+        # If a specific language was requested (not auto), verify it matches the detected language
+        if language_preference != 'auto' and detected_language != 'unknown':
+            expected_lang_code = get_language_code_for_comparison(language_preference)
+            actual_lang_code = get_language_code_for_comparison(detected_language)
+            
+            if expected_lang_code != actual_lang_code:
+                logger.warning(f"Language mismatch: Selected {language_preference}, but detected {detected_language}")
+                return jsonify({
+                    'verified': False,
+                    'error': f"Language mismatch: You selected {language_preference.capitalize()} but the document appears to be in {detected_language.capitalize()}. Please select the correct language.",
+                    'detected_language': detected_language
+                }), 400
+
+        # Language-specific OCR settings
+        if language_preference == 'auto':
+            # Auto-detect language logic
+            # ...existing code...
+            
+            # Check if Russian language pack is available
+            russian_available = check_tesseract_language('rus')
+            logger.debug(f"Russian language pack available: {russian_available}")
+            
+            # Auto-detect language
+            extracted_text = basic_text
+            try:
+                detected_lang = detect(basic_text)
+            except LangDetectException:
+                detected_lang = 'en'
+        else:
+            # Use specified language
+            lang_code = get_tesseract_lang_code(language_preference)
+            lang_available = check_tesseract_language(lang_code)
+            logger.debug(f"Using language '{language_preference}' with code '{lang_code}', available: {lang_available}")
+            
+            if lang_available:
+                extracted_text = pytesseract.image_to_string(image, lang=lang_code)
+            else:
+                # Fallback to default OCR if language pack not available
+                extracted_text = pytesseract.image_to_string(image)
+                logger.warning(f"Language pack for '{language_preference}' not available, using default")
+            
+            detected_lang = language_preference
+            is_likely_russian = language_preference == 'russian'
+        
+        original_extracted_text = extracted_text
         extracted_text = extracted_text.lower().strip()
         
-        logger.debug(f"Extracted text: {extracted_text}")
-
-        # Simple text matching for name
-        name_found = doctor_name in extracted_text
-
-        # If name has multiple parts, check each part
-        if not name_found:
+        logger.debug(f"Extracted text ({detected_lang}): {extracted_text[:100]}...")
+        
+        # Language-specific verification logic
+        name_found = False
+        
+        if detected_lang == 'ru' or is_likely_russian or language_preference == 'russian':
+            # Russian verification
+            name_found = verify_russian_document(doctor_name, extracted_text, original_extracted_text)
+            logger.debug(f"Russian verification result: {name_found}")
+        elif language_preference == 'arabic':
+            # Arabic verification - implement special handling if needed
+            # This is a placeholder - you would need to implement Arabic-specific verification
             name_parts = doctor_name.split()
-            name_found = all(part in extracted_text for part in name_parts)
+            name_found = any(part in extracted_text for part in name_parts)
+            logger.debug(f"Arabic verification result: {name_found}")
+        elif language_preference == 'french':
+            # French verification - implement special handling if needed
+            name_found = doctor_name in extracted_text
+            if not name_found:
+                name_parts = doctor_name.split()
+                name_found = all(part in extracted_text for part in name_parts)
+            logger.debug(f"French verification result: {name_found}")
+        else:
+            # Standard English verification
+            name_found = doctor_name in extracted_text
+            if not name_found:
+                name_parts = doctor_name.split()
+                name_found = all(part in extracted_text for part in name_parts)
+            logger.debug(f"Standard verification result: {name_found}")
 
         logger.debug(f"Name found: {name_found}")
 
+        # If verification succeeded, update status
         if name_found:
             # Update verification status
             result = doctors_collection.update_one(
@@ -458,33 +530,193 @@ def verify_doctor(user_id):
                     'is_verified': True,
                     'verification_details': {
                         'verified_at': datetime.utcnow(),
-                        'matched_text': extracted_text
+                        'matched_text': extracted_text[:200],
+                        'document_language': detected_lang,
+                        'verification_method': language_preference
                     }
                 }}
             )
             
             if result.modified_count > 0:
-                return jsonify({
+                response = {
                     'verified': True,
-                    'message': 'Name verification successful'
-                }), 200
+                    'message': 'Name verification successful',
+                    'document_language': detected_lang,
+                    'document_type': f"{language_preference.capitalize()} medical document"
+                }
+                
+                # Add installation notice if language pack was not available
+                if language_preference != 'auto' and not check_tesseract_language(get_tesseract_lang_code(language_preference)):
+                    response['notice'] = f"{language_preference.capitalize()} language pack not detected. For better results, install the language pack."
+                    response['installation_instructions'] = get_language_install_instructions()
+                    
+                return jsonify(response), 200
             else:
-                return jsonify({
-                    'error': 'Failed to update verification status'
-                }), 500
+                return jsonify({'error': 'Failed to update verification status'}), 500
         else:
-            return jsonify({
+            response = {
                 'verified': False,
                 'error': 'Verification failed: name not found in document',
+                'document_language': detected_lang,
                 'debug_info': {
                     'name_found': name_found,
-                    'doctor_name': doctor_name
+                    'doctor_name': doctor_name,
+                    'document_language': detected_lang,
+                    'text_sample': extracted_text[:100]
                 }
-            }), 400
+            }
+            
+            return jsonify(response), 400
 
     except Exception as e:
         logger.error(f"Verification error: {str(e)}")
         return jsonify({'error': f'Verification failed: {str(e)}'}), 500
+
+def get_tesseract_lang_code(language_preference):
+    """Convert language name to tesseract language code"""
+    language_codes = {
+        'english': 'eng',
+        'russian': 'rus',
+        'arabic': 'ara',
+        'french': 'fra',
+    }
+    return language_codes.get(language_preference.lower(), 'eng')
+
+def verify_russian_document(doctor_name, extracted_text_lower, original_text):
+    """
+    Improved verification for Russian documents with or without OCR language support
+    """
+    try:
+        # Try to transliterate the doctor's name to Cyrillic
+        try:
+            cyrillic_name = translit(doctor_name, 'ru').lower()
+            logger.debug(f"Transliterated name to Cyrillic: {cyrillic_name}")
+        except Exception as e:
+            logger.error(f"Transliteration error: {str(e)}")
+            cyrillic_name = doctor_name.lower()  # Fallback to original name
+        
+        # 1. Direct match of transliterated name
+        if cyrillic_name in extracted_text_lower:
+            logger.debug("Found exact transliterated name match")
+            return True
+            
+        # 2. Check for name in original form (in case the document contains Latin characters)
+        if doctor_name in extracted_text_lower:
+            logger.debug("Found original name match")
+            return True
+            
+        # 3. Check for name parts in Cyrillic (for documents with partial OCR success)
+        name_parts = cyrillic_name.split()
+        if len(name_parts) > 1:
+            # For each name part, check if it appears in the text
+            name_roots = [part[:min(len(part), 4)] for part in name_parts]  # First 4 chars are usually stable in Russian
+            found_parts = []
+            
+            for root in name_roots:
+                for word in extracted_text_lower.split():
+                    if root in word:
+                        found_parts.append(root)
+                        break
+                        
+            name_parts_found = len(found_parts) == len(name_roots)
+            if name_parts_found:
+                logger.debug(f"Found all name parts in Russian text: {found_parts}")
+                return True
+                
+        # 4. Check for name parts in original form
+        original_name_parts = doctor_name.split()
+        if len(original_name_parts) > 1:
+            # Check if all parts are somewhere in the text
+            all_parts_found = all(part.lower() in extracted_text_lower for part in original_name_parts)
+            if all_parts_found:
+                logger.debug("Found all original name parts in text")
+                return True
+                
+        # 5. Check for document type indicators (medical diploma, certificate, etc.)
+        document_indicators = [
+            'диплом', 'врач', 'доктор', 'медицинский', 'медицина',
+            'университет', 'институт', 'академия', 'сертификат',
+            'специалист', 'квалификация'
+        ]
+        
+        # Count how many medical indicators we found
+        indicators_found = [ind for ind in document_indicators if ind in extracted_text_lower]
+        
+        logger.debug(f"Medical document indicators found: {len(indicators_found)}")
+        
+        # If we found strong medical document indicators and at least one name part
+        if len(indicators_found) >= 3:
+            # This is definitely a medical document, check if any name part appears
+            any_name_part_found = any(part[:4] in extracted_text_lower for part in name_parts)
+            any_original_part_found = any(part.lower() in extracted_text_lower for part in original_name_parts)
+            
+            if any_name_part_found or any_original_part_found:
+                logger.debug("Found medical document with partial name match")
+                return True
+                
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error in Russian document verification: {str(e)}")
+        return False
+
+# Keep the original function for backwards compatibility
+def verify_russian_diploma(doctor_name, extracted_text_lower, original_text):
+    """Alias for verify_russian_document"""
+    return verify_russian_document(doctor_name, extracted_text_lower, original_text)
+
+def check_tesseract_language(lang_code):
+    """Check if a specific Tesseract language pack is available"""
+    try:
+        # Try a simple OCR with the language to check if it's available
+        sample_image = Image.new('RGB', (10, 10), color='white')
+        pytesseract.image_to_string(sample_image, lang=lang_code)
+        return True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "failed loading language" in error_str or "couldn't load any languages" in error_str:
+            return False
+        # If it's another type of error, assume language is available
+        return True
+
+def get_language_install_instructions():
+    """Get instructions for installing Tesseract language packs"""
+    os_system = os.uname().sysname.lower() if hasattr(os, 'uname') else 'unknown'
+    
+    if 'darwin' in os_system:  # macOS
+        return {
+            "os_detected": "macOS",
+            "instructions": [
+                "Install Tesseract language data using Homebrew:",
+                "brew install tesseract-lang",
+                "Or for just Russian:",
+                "brew install tesseract && sudo mkdir -p /opt/homebrew/share/tessdata && sudo wget -O /opt/homebrew/share/tessdata/rus.traineddata https://github.com/tesseract-ocr/tessdata/raw/main/rus.traineddata"
+            ]
+        }
+    elif 'linux' in os_system:  # Linux
+        return {
+            "os_detected": "Linux",
+            "instructions": [
+                "For Ubuntu/Debian:",
+                "sudo apt-get install tesseract-ocr-rus",
+                "For other distributions, please check your package manager"
+            ]
+        }
+    elif 'windows' in os_system:  # Windows
+        return {
+            "os_detected": "Windows",
+            "instructions": [
+                "Download the Russian language data file from: https://github.com/tesseract-ocr/tessdata/raw/main/rus.traineddata",
+                "Place it in the Tesseract tessdata directory (e.g., 'C:\\Program Files\\Tesseract-OCR\\tessdata\\')"
+            ]
+        }
+    else:
+        return {
+            "instructions": [
+                "Download the Russian language data file from: https://github.com/tesseract-ocr/tessdata/raw/main/rus.traineddata",
+                "Place it in your Tesseract tessdata directory and ensure TESSDATA_PREFIX environment variable is set correctly"
+            ]
+        }
 
 # Improve the extraction functions
 def extract_name(text):
@@ -567,6 +799,64 @@ def update_signature(user_id):
     except Exception as e:
         logger.error(f"Signature update error: {str(e)}")
         return jsonify({'error': f'Signature update failed: {str(e)}'}), 500
+
+def detect_document_language(text):
+    """Detect the language of a document based on text content"""
+    # Count characters from different scripts
+    russian_chars = set('абвгдеёжзийклмнопрстуфхцчшщъыьэюя')
+    arabic_chars = set('ابتثجحخدذرزسشصضطظعغفقكلمنهوي')
+    french_special_chars = set('àâçéèêëîïôùûüÿæœ')
+    
+    # Count characters
+    russian_count = sum(1 for char in text.lower() if char in russian_chars)
+    arabic_count = sum(1 for char in text if char in arabic_chars)
+    french_count = sum(1 for char in text.lower() if char in french_special_chars)
+    
+    # Basic language detection by script
+    if russian_count > 5:
+        return 'russian'
+    elif arabic_count > 5:
+        return 'arabic'
+    elif french_count > 3:  # French needs fewer special chars to detect
+        return 'french'
+    
+    # If no distinctive script was found, try langdetect
+    try:
+        lang = detect(text)
+        if lang == 'fr':
+            return 'french'
+        elif lang == 'ar':
+            return 'arabic'
+        elif lang == 'ru':
+            return 'russian'
+        elif lang == 'en':
+            return 'english'
+        else:
+            logger.debug(f"Detected language code: {lang}")
+            # Map other language codes as needed
+            return 'unknown'
+    except LangDetectException:
+        # If detection fails, check for English content by counting English words
+        english_word_pattern = r'\b[a-zA-Z]{3,}\b'
+        english_words = re.findall(english_word_pattern, text)
+        if len(english_words) > 5:  # If there are several English words
+            return 'english'
+        
+    return 'unknown'
+
+def get_language_code_for_comparison(language):
+    """Get standardized language code for comparison"""
+    language = language.lower()
+    if language in ['russian', 'ru', 'rus']:
+        return 'ru'
+    elif language in ['arabic', 'ar', 'ara']:
+        return 'ar'
+    elif language in ['french', 'fr', 'fra']:
+        return 'fr'
+    elif language in ['english', 'en', 'eng']:
+        return 'en'
+    else:
+        return language
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=4000, debug=True)

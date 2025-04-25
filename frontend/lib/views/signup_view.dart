@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medicare/localization/app_localizations.dart';
 import 'package:medicare/views/map_selection_dialog.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
@@ -84,52 +85,52 @@ class _SignupViewState extends State<SignupView> {
 
   String? _validateName(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Name is required';
+      return context.tr('name_required');
     }
     if (value.length < 2) {
-      return 'Name must be at least 2 characters';
+      return context.tr('name_min_length');
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return context.tr('email_required');
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
+      return context.tr('email_invalid');
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return context.tr('password_required');
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return context.tr('password_min_length');
     }
     return null;
   }
 
   String? _validateSpecialty(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Specialty is required';
+      return context.tr('specialty_required');
     }
     return null;
   }
 
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return context.tr('phone_required');
     }
     return null;
   }
 
   String? _validateAddress(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Address is required';
+      return context.tr('address_required');
     }
     return null;
   }
@@ -191,7 +192,7 @@ class _SignupViewState extends State<SignupView> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Create Account',
+                      context.tr('create_account'),
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -199,7 +200,7 @@ class _SignupViewState extends State<SignupView> {
                       ),
                     ),
                     Text(
-                      'Please fill in the details below',
+                      context.tr('fill_details_below'),
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
@@ -236,7 +237,7 @@ class _SignupViewState extends State<SignupView> {
                                 Icon(Icons.document_scanner,
                                     color: Colors.white),
                                 SizedBox(width: 8),
-                                Text('Scan Visit Card',
+                                Text(context.tr('scan_visit_card'),
                                     style: TextStyle(fontSize: 16)),
                               ],
                             ),
@@ -246,7 +247,7 @@ class _SignupViewState extends State<SignupView> {
                             controller: _nameController,
                             validator: _validateName,
                             decoration: InputDecoration(
-                              labelText: 'Full Name',
+                              labelText: context.tr('full_name'),
                               prefixIcon:
                                   Icon(Icons.person, color: Color(0xFF81C9F3)),
                               border: OutlineInputBorder(),
@@ -257,7 +258,7 @@ class _SignupViewState extends State<SignupView> {
                             controller: _emailController,
                             validator: _validateEmail,
                             decoration: InputDecoration(
-                              labelText: 'Email',
+                              labelText: context.tr('email'),
                               prefixIcon:
                                   Icon(Icons.email, color: Color(0xFF81C9F3)),
                               border: OutlineInputBorder(),
@@ -269,7 +270,7 @@ class _SignupViewState extends State<SignupView> {
                             validator: _validatePassword,
                             obscureText: true,
                             decoration: InputDecoration(
-                              labelText: 'Password',
+                              labelText: context.tr('password'),
                               prefixIcon:
                                   Icon(Icons.lock, color: Color(0xFF81C9F3)),
                               border: OutlineInputBorder(),
@@ -280,7 +281,7 @@ class _SignupViewState extends State<SignupView> {
                             controller: _specialtyController,
                             validator: _validateSpecialty,
                             decoration: InputDecoration(
-                              labelText: 'Specialty',
+                              labelText: context.tr('specialty'),
                               prefixIcon: Icon(Icons.medical_services,
                                   color: Color(0xFF81C9F3)),
                               border: OutlineInputBorder(),
@@ -293,7 +294,7 @@ class _SignupViewState extends State<SignupView> {
                             controller: _addressController,
                             validator: _validateAddress,
                             decoration: InputDecoration(
-                              labelText: 'Address',
+                              labelText: context.tr('address'),
                               prefixIcon: Icon(Icons.location_on,
                                   color: Color(0xFF81C9F3)),
                               suffixIcon: IconButton(
@@ -369,7 +370,7 @@ class _SignupViewState extends State<SignupView> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : Text('Sign Up',
+                                : Text(context.tr('sign_up'),
                                     style: TextStyle(fontSize: 16)),
                           ),
                         ],

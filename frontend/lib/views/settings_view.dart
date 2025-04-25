@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../localization/app_localizations.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -17,7 +18,7 @@ class SettingsView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Settings Coming Soon',
+            context.tr('settings_coming_soon'),
             style: TextStyle(
               fontSize: 20,
               color: AppTheme.turquoise.withOpacity(0.7),

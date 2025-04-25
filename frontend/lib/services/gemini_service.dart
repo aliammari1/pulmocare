@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
@@ -6,8 +7,9 @@ class GeminiService {
   late final GenerativeModel model;
 
   GeminiService() {
+    // Use a single model for both text and image processing
     model = GenerativeModel(
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash', // Using only gemini-2.0-flash for everything
       apiKey: apiKey,
     );
   }
@@ -39,6 +41,31 @@ class GeminiService {
     } catch (e) {
       print('Gemini API Error: $e'); // Add logging for debugging
       throw Exception('Failed to get AI response: $e');
+    }
+  }
+
+  Future<String> getMedicalResponseWithImage(
+      String prompt, Uint8List imageBytes) async {
+    try {
+      // Create Parts using the correct API for gemini-2.0-flash
+      final textPart = TextPart(
+          '$medicalContext\n\nAnalyze this medical image and answer: $prompt');
+      final imagePart = DataPart('image/jpeg', imageBytes);
+
+      final content = Content.multi([textPart, imagePart]);
+
+      // Use the same model for image analysis
+      final response = await model.generateContent([content]);
+      final responseText = response.text;
+
+      if (responseText == null || responseText.isEmpty) {
+        throw Exception('Empty response from Gemini API for image analysis');
+      }
+
+      return responseText;
+    } catch (e) {
+      print('Gemini Image API Error: $e'); // Add logging for debugging
+      throw Exception('Failed to get image analysis: $e');
     }
   }
 }

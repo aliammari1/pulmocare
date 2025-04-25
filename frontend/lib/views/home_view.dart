@@ -3,6 +3,7 @@ import 'package:medicare/theme/app_theme.dart';
 import 'package:medicare/views/profile_view.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
+import '../providers/theme_provider.dart';
 import 'patients_view.dart';
 import '../components/chat_dialog.dart';
 import '../viewmodels/chat_viewmodel.dart';
@@ -25,7 +26,7 @@ class _HomeViewState extends State<HomeView> {
     ProfileView(),
   ];
 
-  final List<String> _titles = ['News', 'Patients', 'Profile'];
+  final List<String> _titles = ['Home', 'Patients', 'Profile'];
 
   @override
   void initState() {
@@ -60,6 +61,8 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       endDrawer: const AppDrawer(), // Changed from drawer to endDrawer
       appBar: AppBar(
@@ -125,7 +128,7 @@ class _HomeViewState extends State<HomeView> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.newspaper),
                 activeIcon: Icon(Icons.newspaper),
-                label: 'News',
+                label: 'Home',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.people_outline),

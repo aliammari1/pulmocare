@@ -308,41 +308,60 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> verifyDoctor(String base64Image) async {
+  Future<bool> verifyDoctor(String base64Image, String language) async {
     try {
+      clearError();
+
       final response = await http.post(
         Uri.parse('$baseUrl/verify-doctor'),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
         },
-        body: json.encode({
-          'image': base64Image,
-        }),
+        body: json.encode({'image': base64Image, 'language': language}),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (currentDoctor != null) {
-          currentDoctor = Doctor(
-            id: currentDoctor!.id,
-            name: currentDoctor!.name,
-            email: currentDoctor!.email,
-            specialty: currentDoctor!.specialty,
-            phoneNumber: currentDoctor!.phoneNumber,
-            address: currentDoctor!.address,
-            profileImage: currentDoctor!.profileImage,
-            isVerified: true,
-          );
+        if (data.containsKey('verified') && data['verified'] == true) {
+          if (currentDoctor != null) {
+            currentDoctor = Doctor(
+              id: currentDoctor!.id,
+              name: currentDoctor!.name,
+              email: currentDoctor!.email,
+              specialty: currentDoctor!.specialty,
+              phoneNumber: currentDoctor!.phoneNumber,
+              address: currentDoctor!.address,
+              profileImage: currentDoctor!.profileImage,
+              isVerified: true,
+              verificationDetails: data['verification_details'],
+              signature: currentDoctor!.signature,
+            );
+          }
+          notifyListeners();
+          return true;
         }
-        errorMessage = '';
+
+        setErrorMessage(data['error'] ?? 'Verification failed');
+        return false;
       } else {
         final data = json.decode(response.body);
-        errorMessage = data['error'] ?? 'Verification failed';
+        setErrorMessage(data['error'] ?? 'Verification failed');
+        return false;
       }
     } catch (e) {
-      errorMessage = 'Network error: $e';
+      setErrorMessage('Verification error: $e');
+      return false;
     }
+  }
+
+  void clearError() {
+    errorMessage = '';
+    notifyListeners();
+  }
+
+  void setErrorMessage(String message) {
+    errorMessage = message;
     notifyListeners();
   }
 

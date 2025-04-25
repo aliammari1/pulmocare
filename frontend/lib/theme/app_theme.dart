@@ -4,7 +4,8 @@ class AppTheme {
   // Couleurs principales de l'application
   static const Color kPrimaryBlue = Color(0xFF0D47A1); // Bleu profond
   static const Color kSecondaryGreen = Color(0xFF00796B); // Vert forêt
-  static const Color kAccentPurple = Color(0xFF6A1B9A); // Violet royal
+  static const Color kAccentPurple =
+      Color.fromARGB(255, 0, 0, 0); // Violet royal
   static const Color kHighlightYellow = Color(0xFFFFC107); // Jaune ambre
   static const Color kBackgroundWhite = Color(0xFFF8F9FA); // Blanc cassé
   static const Color kErrorRed = Color(0xFFB00020); // Rouge erreur
@@ -222,4 +223,116 @@ class AppTheme {
           ),
         ),
       );
+
+  // Light Theme
+  static final ThemeData customLightTheme = ThemeData(
+    brightness: Brightness.light,
+    primaryColor: turquoise,
+    scaffoldBackgroundColor: Colors.white,
+    colorScheme: const ColorScheme.light(
+      primary: turquoise,
+      secondary: paleBlue,
+      error: kErrorRed,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: turquoise,
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardTheme: CardTheme(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: turquoise,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 15),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: turquoise,
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      contentPadding: const EdgeInsets.all(16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: turquoise),
+      ),
+    ),
+    dividerTheme: const DividerThemeData(
+      thickness: 1,
+      color: Colors.black12,
+    ),
+  );
+
+  // Dark Theme
+  static final ThemeData darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: turquoise,
+    scaffoldBackgroundColor: Colors.grey[900],
+    colorScheme: const ColorScheme.dark(
+      primary: turquoise,
+      secondary: paleBlue,
+      error: kErrorRed,
+      surface: Color(0xFF303030),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.grey[850],
+      foregroundColor: Colors.white,
+      elevation: 0,
+    ),
+    cardTheme: CardTheme(
+      color: Colors.grey[850],
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: turquoise,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 15),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: paleBlue,
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey[800],
+      contentPadding: const EdgeInsets.all(16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: turquoise),
+      ),
+    ),
+    dividerTheme: const DividerThemeData(
+      thickness: 1,
+      color: Colors.white24,
+    ),
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../localization/app_localizations.dart';
 
 class AppointmentsView extends StatelessWidget {
   const AppointmentsView({super.key});
@@ -17,7 +18,7 @@ class AppointmentsView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Appointments Coming Soon',
+            context.tr('appointments_coming_soon'),
             style: TextStyle(
               fontSize: 20,
               color: AppTheme.turquoise.withOpacity(0.7),

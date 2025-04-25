@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../localization/app_localizations.dart';
+import '../theme/app_theme.dart';
 
 class VisitCardScanDialog extends StatefulWidget {
   @override
@@ -70,7 +72,7 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Scan Visit Card',
+              context.tr('scan_visit_card'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -83,12 +85,12 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
               children: [
                 _buildOptionButton(
                   icon: Icons.camera_alt,
-                  label: 'Camera',
+                  label: context.tr('camera'),
                   onTap: () => _getImage(ImageSource.camera),
                 ),
                 _buildOptionButton(
                   icon: Icons.photo_library,
-                  label: 'Gallery',
+                  label: context.tr('gallery'),
                   onTap: () => _getImage(ImageSource.gallery),
                 ),
               ],

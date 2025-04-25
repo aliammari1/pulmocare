@@ -1,0 +1,2 @@
+/Users/aladinhabibi/Desktop/medapp/frontend/android/app/.cxx/Debug/2d4f1448/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/aladinhabibi/Desktop/medapp/frontend/android/app/.cxx/Debug/2d4f1448/armeabi-v7a/CMakeFiles/rebuild_cache.dir

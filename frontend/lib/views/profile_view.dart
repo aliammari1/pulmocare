@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import '../components/verification_alert.dart';
+import '../localization/app_localizations.dart';
 import './signature_view.dart';
 
 class ProfileView extends StatelessWidget {
@@ -30,7 +31,7 @@ class ProfileView extends StatelessWidget {
             physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
-                // Modern Profile Header with animated gradient
+                // Enhanced Profile Header with animated gradient and glassmorphism effect
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -42,80 +43,141 @@ class ProfileView extends StatelessWidget {
                         AppTheme.skyBlue,
                         AppTheme.turquoise.withOpacity(0.9),
                       ],
+                      stops: const [0.1, 0.5, 0.9],
                     ),
                     borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(50),
-                      bottomRight: Radius.circular(50),
+                      bottomLeft: Radius.circular(60),
+                      bottomRight: Radius.circular(60),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.skyBlue.withOpacity(0.3),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 40),
-                      // Profile Image with animations
+                      const SizedBox(height: 50),
+                      // Enhanced Profile Image with animations and glow effect
                       Hero(
                         tag: 'profile-image',
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.8),
+                                Colors.white
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black12,
+                                color: Colors.white.withOpacity(0.5),
                                 blurRadius: 20,
-                                offset: Offset(0, 10),
+                                spreadRadius: 5,
                               ),
                             ],
                           ),
                           child: CircleAvatar(
-                            radius: 70,
+                            radius: 75,
                             backgroundColor: Colors.white,
                             child: CircleAvatar(
-                              radius: 65,
+                              radius: 70,
                               backgroundColor: AppTheme.lightGray,
                               backgroundImage: imageBytes != null
                                   ? MemoryImage(imageBytes)
                                   : null,
                               child: imageBytes == null
-                                  ? Icon(Icons.person,
-                                      size: 65, color: AppTheme.turquoise)
+                                  ? Icon(
+                                      Icons.person_outline,
+                                      size: 50,
+                                      color: Colors.grey[400],
+                                    )
                                   : null,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Text(
-                        doctor.name,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black12,
-                              offset: Offset(0, 2),
-                              blurRadius: 4,
+                      // Enhanced name with animated entrance
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.translate(
+                              offset: Offset(0, 20 * (1 - value)),
+                              child: Text(
+                                doctor.name,
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black26,
+                                      offset: Offset(0, 3),
+                                      blurRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          doctor.specialty,
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                      const SizedBox(height: 10),
+                      // Animated specialty badge
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 1000),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.medical_services_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    doctor.specialty,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 30),
                     ],
@@ -125,80 +187,199 @@ class ProfileView extends StatelessWidget {
                 // Verification Alert
                 VerificationAlert(isVerified: doctor.isVerified),
 
-                // Information Cards with enhanced design
+                // Information Cards with enhanced design and animations
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      _buildModernInfoCard(
+                      // Animated information cards
+                      _buildAnimatedInfoCard(
+                        context,
                         Icons.email_outlined,
-                        'Email Address',
+                        context.tr('email_address'),
                         doctor.email,
                         AppTheme.turquoise,
+                        0,
                       ),
-                      _buildModernInfoCard(
+                      _buildAnimatedInfoCard(
+                        context,
                         Icons.phone_outlined,
-                        'Phone Number',
+                        context.tr('phone_number'),
                         doctor.phoneNumber,
                         AppTheme.skyBlue,
+                        1,
                       ),
-                      _buildModernInfoCard(
+                      _buildAnimatedInfoCard(
+                        context,
                         Icons.location_on_outlined,
-                        'Office Address',
+                        context.tr('office_address'),
                         doctor.address,
                         AppTheme.turquoise,
+                        2,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 30),
 
-                      // Replace old signature button with this new one
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: ElevatedButton.icon(
-                          onPressed: () => doctor.signature != null
-                              ? _showSignatureDialog(context, doctor.signature!)
-                              : _showSignatureCreationDialog(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.paleBlue,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 20),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      // Enhanced signature button with animation
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.easeOutQuad,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 24),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppTheme.paleBlue,
+                                    Color(0xFFE6F7FF)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.skyBlue.withOpacity(0.15),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  splashColor:
+                                      AppTheme.turquoise.withOpacity(0.1),
+                                  onTap: () => doctor.signature != null
+                                      ? _showSignatureDialog(
+                                          context, doctor.signature!)
+                                      : _showSignatureCreationDialog(context),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16, horizontal: 20),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                doctor.signature != null
+                                                    ? Icons.draw
+                                                    : Icons.add,
+                                                color: AppTheme.turquoise,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  doctor.signature != null
+                                                      ? context
+                                                          .tr('your_signature')
+                                                      : context
+                                                          .tr('add_signature'),
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  doctor.signature != null
+                                                      ? context
+                                                          .tr('View or update')
+                                                      : context.tr(
+                                                          'Required for prescriptions'),
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        Icon(
+                                          Icons.arrow_forward_ios,
+                                          color: Colors.black45,
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          icon: Icon(
-                              doctor.signature != null ? Icons.draw : Icons.add,
-                              color: Colors.black87),
-                          label: Text(
-                            doctor.signature != null
-                                ? 'View Signature'
-                                : 'Add Signature',
-                            style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
 
-                      // Modern Action Buttons
+                      // Modern Action Buttons with staggered animations
                       Row(
                         children: [
                           Expanded(
-                            child: _buildActionButton(
-                              'Change\nPassword',
-                              Icons.lock_outline,
-                              AppTheme.turquoise,
-                              () => _showChangePasswordDialog(context),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              duration: const Duration(milliseconds: 800),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, child) {
+                                return Transform.translate(
+                                  offset: Offset(-30 * (1 - value), 0),
+                                  child: Opacity(
+                                    opacity: value,
+                                    child: _buildEnhancedActionButton(
+                                      context,
+                                      context.tr('change_password'),
+                                      Icons.lock_outline,
+                                      [
+                                        AppTheme.turquoise,
+                                        AppTheme.turquoise.withOpacity(0.7)
+                                      ],
+                                      () => _showChangePasswordDialog(context),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: _buildActionButton(
-                              'Edit\nProfile',
-                              Icons.edit_outlined,
-                              AppTheme.skyBlue,
-                              () => _showEditProfileDialog(context),
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.0, end: 1.0),
+                              duration: const Duration(milliseconds: 1000),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, child) {
+                                return Transform.translate(
+                                  offset: Offset(30 * (1 - value), 0),
+                                  child: Opacity(
+                                    opacity: value,
+                                    child: _buildEnhancedActionButton(
+                                      context,
+                                      context.tr('edit_profile'),
+                                      Icons.edit_outlined,
+                                      [
+                                        AppTheme.skyBlue,
+                                        AppTheme.skyBlue.withOpacity(0.7)
+                                      ],
+                                      () => _showEditProfileDialog(context),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -214,81 +395,163 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildModernInfoCard(
-      IconData icon, String title, String value, Color color) {
+  Widget _buildAnimatedInfoCard(BuildContext context, IconData icon,
+      String title, String? value, Color color, int index) {
+    // Handle null or empty values with appropriate placeholder
+    final displayValue =
+        (value == null || value.isEmpty) ? context.tr('not_provided') : value;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 800 + (index * 150)),
+      curve: Curves.easeOutCubic,
+      builder: (context, animValue, child) {
+        return Opacity(
+          opacity: animValue,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - animValue)),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          color.withOpacity(0.2),
+                          color.withOpacity(0.1)
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: color, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Use FutureBuilder-like approach for displaying data
+                        value == null
+                            ? _buildLoadingText()
+                            : Text(
+                                displayValue,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: value.isEmpty
+                                      ? Colors.grey[500]
+                                      : Colors.black87,
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                  // Add edit icon for editable fields if needed
+                  if (title != context.tr('email_address'))
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: Colors.grey[400],
+                        size: 20,
+                      ),
+                      splashRadius: 20,
+                      onPressed: () => _showEditProfileDialog(context),
+                      tooltip: context.tr('edit_info'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingText() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      width: 120,
+      height: 16,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: LinearProgressIndicator(
+        backgroundColor: Colors.transparent,
+        valueColor: AlwaysStoppedAnimation<Color>(
+          AppTheme.turquoise.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedActionButton(BuildContext context, String text,
+      IconData icon, List<Color> gradientColors, VoidCallback onPressed) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 20,
-            offset: Offset(0, 5),
+            color: gradientColors[0].withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Color(0xFFD8EFF5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.white.withOpacity(0.2),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
                 Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 16,
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    fontSize: 16,
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-      String text, IconData icon, Color color, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
         ),
-        elevation: 4,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(text),
-        ],
       ),
     );
   }
@@ -298,116 +561,295 @@ class ProfileView extends StatelessWidget {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool obscureCurrentPass = true;
+    bool obscureNewPass = true;
+    bool obscureConfirmPass = true;
     String errorText = '';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Change Password'),
-          content: Form(
-            key: formKey,
+        builder: (ctx, setState) => Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.turquoise.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextFormField(
-                  controller: currentPasswordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Current Password',
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your current password';
-                    }
-                    return null;
-                  },
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.turquoise.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.lock, color: AppTheme.turquoise),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        context.tr('change_password'),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: newPasswordController,
-                  decoration: const InputDecoration(
-                    labelText: 'New Password',
-                    border: OutlineInputBorder(),
+                const Divider(height: 30),
+                Form(
+                  key: formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: currentPasswordController,
+                        decoration: InputDecoration(
+                          labelText: context.tr('current_password'),
+                          prefixIcon: Icon(Icons.vpn_key_outlined,
+                              color: AppTheme.skyBlue),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppTheme.turquoise),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureCurrentPass
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(
+                                () => obscureCurrentPass = !obscureCurrentPass),
+                          ),
+                        ),
+                        obscureText: obscureCurrentPass,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return context.tr('current_password_required');
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: newPasswordController,
+                        decoration: InputDecoration(
+                          labelText: context.tr('new_password'),
+                          prefixIcon:
+                              Icon(Icons.lock_outline, color: AppTheme.skyBlue),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppTheme.turquoise),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureNewPass
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(
+                                () => obscureNewPass = !obscureNewPass),
+                          ),
+                        ),
+                        obscureText: obscureNewPass,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return context.tr('new_password_required');
+                          }
+                          if (value.length < 6) {
+                            return context.tr('password_min_length');
+                          }
+                          if (value == currentPasswordController.text) {
+                            return context.tr('new_password_different');
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        decoration: InputDecoration(
+                          labelText: context.tr('confirm_new_password'),
+                          prefixIcon: Icon(Icons.check_circle_outline,
+                              color: AppTheme.skyBlue),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppTheme.turquoise),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirmPass
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(
+                                () => obscureConfirmPass = !obscureConfirmPass),
+                          ),
+                        ),
+                        obscureText: obscureConfirmPass,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return context.tr('confirm_password_required');
+                          }
+                          if (value != newPasswordController.text) {
+                            return context.tr('passwords_do_not_match');
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a new password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    if (value == currentPasswordController.text) {
-                      return 'New password must be different from current password';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: confirmPasswordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your new password';
-                    }
-                    if (value != newPasswordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
                 ),
                 if (errorText.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Text(
-                      errorText,
-                      style: const TextStyle(color: Colors.red),
+                  Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            errorText,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          context.tr('cancel'),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (formKey.currentState!.validate()) {
+                            try {
+                              await context
+                                  .read<AuthViewModel>()
+                                  .changePassword(
+                                    currentPasswordController.text.trim(),
+                                    newPasswordController.text.trim(),
+                                  );
+
+                              final error =
+                                  context.read<AuthViewModel>().errorMessage;
+                              if (error.isEmpty) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(context.tr('password_updated')),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                setState(() => errorText = error);
+                              }
+                            } catch (e) {
+                              setState(() => errorText =
+                                  context.tr('password_change_failed') +
+                                      ': $e');
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.turquoise,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: Text(
+                          context.tr('change'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (formKey.currentState!.validate()) {
-                  try {
-                    await context.read<AuthViewModel>().changePassword(
-                          currentPasswordController.text.trim(),
-                          newPasswordController.text.trim(),
-                        );
-
-                    final error = context.read<AuthViewModel>().errorMessage;
-                    if (error.isEmpty) {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Password updated successfully'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      setState(() => errorText = error);
-                    }
-                  } catch (e) {
-                    setState(() => errorText = 'Failed to change password: $e');
-                  }
-                }
-              },
-              child: const Text('Change'),
-            ),
-          ],
         ),
       ),
     );
@@ -596,7 +1038,6 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  // Add this method at the bottom of the class
   void _showSignatureDialog(BuildContext context, String signatureBase64) {
     showDialog(
       context: context,
@@ -613,8 +1054,8 @@ class ProfileView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Your Signature',
+              Text(
+                context.tr('your_signature'),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -643,16 +1084,15 @@ class ProfileView extends StatelessWidget {
                   TextButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _showSignatureCreationDialog(
-                          context); // Show new signature dialog
+                      _showSignatureCreationDialog(context);
                     },
                     icon: const Icon(Icons.edit),
-                    label: const Text('Change'),
+                    label: Text(context.tr('change')),
                   ),
                   TextButton.icon(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
-                    label: const Text('Close'),
+                    label: Text(context.tr('close')),
                   ),
                 ],
               ),
@@ -663,7 +1103,6 @@ class ProfileView extends StatelessWidget {
     );
   }
 
-  // Add this new method to show signature creation dialog
   void _showSignatureCreationDialog(BuildContext context) {
     final doctor = context.read<AuthViewModel>().currentDoctor;
     showDialog(

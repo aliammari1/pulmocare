@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../viewmodels/chat_viewmodel.dart';
 import '../theme/app_theme.dart';
 import '../utils/medical_prompts.dart';
@@ -10,6 +12,7 @@ class ChatMessage {
   final bool isBot;
   final DateTime timestamp;
   final String? imageUrl;
+  final File? imageFile;
 
   ChatMessage({
     required this.id,
@@ -17,6 +20,7 @@ class ChatMessage {
     required this.isBot,
     required this.timestamp,
     this.imageUrl,
+    this.imageFile,
   });
 }
 
@@ -30,6 +34,7 @@ class ChatDialog extends StatefulWidget {
 class _ChatDialogState extends State<ChatDialog> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -75,6 +80,18 @@ class _ChatDialogState extends State<ChatDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Display image if available
+            if (message.imageFile != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  message.imageFile!,
+                  height: 150,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            if (message.imageFile != null) const SizedBox(height: 8),
+
             if (message.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -85,6 +102,8 @@ class _ChatDialogState extends State<ChatDialog> {
                   fit: BoxFit.cover,
                 ),
               ),
+            if (message.imageUrl != null) const SizedBox(height: 8),
+
             Text(
               message.content,
               style: TextStyle(
@@ -183,58 +202,148 @@ class _ChatDialogState extends State<ChatDialog> {
     );
   }
 
-  Widget _buildMessageInput() {
+  Widget _buildSelectedImagePreview(ChatViewModel chatVM) {
+    if (chatVM.selectedImage == null) return const SizedBox.shrink();
+
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, -2),
-            blurRadius: 5,
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      color: Colors.grey[100],
       child: Row(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: MedicalPrompts.getRandomSuggestion(),
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.all(16),
-              ),
-              onSubmitted: _sendMessage,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              chatVM.selectedImage!,
+              height: 60,
+              width: 60,
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.turquoise,
-              shape: BoxShape.circle,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Image selected',
+              style: TextStyle(color: Colors.grey[600]),
             ),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () => _sendMessage(_messageController.text),
-            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => chatVM.clearSelectedImage(),
+            color: Colors.grey[600],
           ),
         ],
       ),
     );
   }
 
-  void _sendMessage(String message) {
-    if (message.trim().isEmpty) return;
+  Widget _buildMessageInput() {
+    return Consumer<ChatViewModel>(
+      builder: (context, chatVM, child) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSelectedImagePreview(chatVM),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    offset: const Offset(0, -2),
+                    blurRadius: 5,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.image_outlined,
+                        color: AppTheme.turquoise),
+                    onPressed: () => _pickImage(chatVM),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: chatVM.selectedImage != null
+                            ? "Ask about this image..."
+                            : MedicalPrompts.getRandomSuggestion(),
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                      onSubmitted: (text) => _sendMessage(text, chatVM),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: AppTheme.turquoise,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: () =>
+                          _sendMessage(_messageController.text, chatVM),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-    context.read<ChatViewModel>().sendMessage(message);
+  Future<void> _pickImage(ChatViewModel chatVM) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return;
+
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      chatVM.setImage(File(pickedFile.path));
+      _scrollToBottom();
+    }
+  }
+
+  void _sendMessage(String message, ChatViewModel chatVM) {
+    final trimmedMessage = message.trim();
+    if (trimmedMessage.isEmpty && chatVM.selectedImage == null) return;
+
+    // When sending only an image with no text, add a placeholder text
+    final textToSend = trimmedMessage.isEmpty && chatVM.selectedImage != null
+        ? "Please analyze this medical image"
+        : trimmedMessage;
+
+    chatVM.sendMessage(textToSend);
     _messageController.clear();
     _scrollToBottom();
   }

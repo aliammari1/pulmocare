@@ -3,6 +3,7 @@ import 'package:medicare/theme/app_theme.dart';
 import 'package:medicare/views/forgot_password_view.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_view_model.dart';
+import '../localization/app_localizations.dart';
 import 'signup_view.dart';
 
 class LoginView extends StatefulWidget {
@@ -22,21 +23,21 @@ class _LoginViewState extends State<LoginView> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return context.tr('email_required');
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
+      return context.tr('email_invalid');
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return context.tr('password_required');
     }
     if (value.length < 8) {
-      return 'Password must be at least 8 characters';
+      return context.tr('password_min_length');
     }
     return null;
   }
@@ -60,7 +61,7 @@ class _LoginViewState extends State<LoginView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
+            child: Text(context.tr('ok')),
           ),
         ],
       ),
@@ -108,7 +109,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Medicare',
+                      context.tr('app_name'),
                       style: TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -141,7 +142,7 @@ class _LoginViewState extends State<LoginView> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Welcome Back',
+                            context.tr('welcome_back'),
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -150,10 +151,12 @@ class _LoginViewState extends State<LoginView> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Sign in as ${widget.userType.capitalize()}',
+                            context.tr('sign_in_as') +
+                                ' ' +
+                                widget.userType.capitalize(),
                             style: TextStyle(
-                              fontSize: 24,
-                              color: Colors.white,
+                              fontSize: 16,
+                              color: Colors.grey[700],
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -161,7 +164,7 @@ class _LoginViewState extends State<LoginView> {
                             controller: _emailController,
                             validator: _validateEmail,
                             decoration: AppTheme.inputDecoration.copyWith(
-                              labelText: 'Email',
+                              labelText: context.tr('email'),
                               prefixIcon:
                                   Icon(Icons.email, color: Color(0xFF81C9F3)),
                             ),
@@ -172,7 +175,7 @@ class _LoginViewState extends State<LoginView> {
                             validator: _validatePassword,
                             obscureText: true,
                             decoration: AppTheme.inputDecoration.copyWith(
-                              labelText: 'Password',
+                              labelText: context.tr('password'),
                               prefixIcon:
                                   Icon(Icons.lock, color: Color(0xFF81C9F3)),
                             ),
@@ -188,7 +191,7 @@ class _LoginViewState extends State<LoginView> {
                                         const ForgotPasswordView()),
                               ),
                               child: Text(
-                                'Forgot Password?',
+                                context.tr('forgot_password'),
                                 style: TextStyle(color: Color(0xFF81C9F3)),
                               ),
                             ),
@@ -239,7 +242,8 @@ class _LoginViewState extends State<LoginView> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : Text('Login', style: TextStyle(fontSize: 16)),
+                                : Text(context.tr('login'),
+                                    style: TextStyle(fontSize: 16)),
                           ),
                         ],
                       ),
@@ -253,11 +257,11 @@ class _LoginViewState extends State<LoginView> {
                       ),
                       child: RichText(
                         text: TextSpan(
-                          text: "Don't have an account? ",
+                          text: context.tr('dont_have_account') + ' ',
                           style: TextStyle(color: Colors.white70),
                           children: [
                             TextSpan(
-                              text: 'Create Account',
+                              text: context.tr('create_account'),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
