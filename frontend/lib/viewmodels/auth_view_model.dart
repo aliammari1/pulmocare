@@ -12,13 +12,12 @@ class AuthViewModel extends ChangeNotifier {
   String errorMessage = '';
   String? authToken;
 
-  static const String baseUrl = 'http://10.0.2.2:4000/api';
   Future<void> login(String email, String password) async {
     try {
-      print('Attempting login with: $email'); // Add debug log
+      print('Attempting login with: $email'); // Debug log
 
       final response = await http.post(
-        Uri.parse('$baseUrl/login'), // Use baseUrl instead of ApiConfig
+        Uri.parse(ApiConfig.login), // Use ApiConfig instead of hardcoded URL
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
@@ -26,8 +25,8 @@ class AuthViewModel extends ChangeNotifier {
         }),
       );
 
-      print('Response status: ${response.statusCode}'); // Add debug log
-      print('Response body: ${response.body}'); // Add debug log
+      print('Response status: ${response.statusCode}'); // Debug log
+      print('Response body: ${response.body}'); // Debug log
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -42,7 +41,7 @@ class AuthViewModel extends ChangeNotifier {
           profileImage: data['profile_image'],
           isVerified: data['is_verified'] ?? false,
           verificationDetails: data['verification_details'],
-          signature: data['signature'], // Add this line
+          signature: data['signature'],
         );
         isAuthenticated = true;
         errorMessage = '';
@@ -52,7 +51,7 @@ class AuthViewModel extends ChangeNotifier {
         isAuthenticated = false;
       }
     } catch (e) {
-      print('Login error: $e'); // Add debug log
+      print('Login error: $e'); // Debug log
       errorMessage = 'Network error: ${e.toString()}';
       isAuthenticated = false;
     }
@@ -106,7 +105,7 @@ class AuthViewModel extends ChangeNotifier {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/forgot-password'),
+        Uri.parse(ApiConfig.forgotPassword), // Use ApiConfig
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email}),
       );
@@ -125,7 +124,7 @@ class AuthViewModel extends ChangeNotifier {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/verify-otp'),
+        Uri.parse(ApiConfig.verifyOTP), // Use ApiConfig
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'otp': otp}),
       );
@@ -151,7 +150,7 @@ class AuthViewModel extends ChangeNotifier {
     errorMessage = '';
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/reset-password'),
+        Uri.parse(ApiConfig.resetPassword), // Use ApiConfig
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,
@@ -181,7 +180,7 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/profile'),
+        Uri.parse(ApiConfig.profile),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
@@ -214,7 +213,7 @@ class AuthViewModel extends ChangeNotifier {
       String currentPassword, String newPassword) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/change-password'),
+        Uri.parse(ApiConfig.changePassword),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
@@ -246,7 +245,7 @@ class AuthViewModel extends ChangeNotifier {
   }) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/update-profile'),
+        Uri.parse(ApiConfig.updateProfile),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
@@ -291,7 +290,7 @@ class AuthViewModel extends ChangeNotifier {
     if (authToken == null) return;
     try {
       await http.post(
-        Uri.parse('$baseUrl/logout'),
+        Uri.parse(ApiConfig.logout),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
@@ -313,7 +312,7 @@ class AuthViewModel extends ChangeNotifier {
       clearError();
 
       final response = await http.post(
-        Uri.parse('$baseUrl/verify-doctor'),
+        Uri.parse(ApiConfig.verifyDoctor),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',
@@ -368,7 +367,7 @@ class AuthViewModel extends ChangeNotifier {
   Future<void> updateSignature(String signatureBase64) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/update-signature'),
+        Uri.parse(ApiConfig.updateSignature),
         headers: {
           'Authorization': 'Bearer $authToken',
           'Content-Type': 'application/json',

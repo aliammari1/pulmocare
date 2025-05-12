@@ -1,0 +1,15 @@
+{
+  "nearby_radiologists": "Nearby Radiologists",
+  "search_radius": "Search Radius",
+  "retry": "Retry",
+  "settings": "Settings",
+  "dark_mode": "Dark Mode",
+  "language": "Language",
+  "privacy": "Privacy",
+  "help_support": "Help & Support",
+  "about": "About",
+  "logout": "Logout",
+  "logout_confirmation": "Are you sure you want to log out?",
+  "cancel": "Cancel",
+  "select_language": "Select Language"
+}

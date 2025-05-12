@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../viewmodels/auth_view_model.dart';
 import '../theme/app_theme.dart';
 import '../providers/theme_provider.dart';
 import '../providers/language_provider.dart';
 import '../models/app_language.dart';
 import '../localization/app_localizations.dart';
+import 'nearby_radiologists_dialog.dart'; // Import the NearbyRadiologistsDialog
+import 'child_health_risk_dialog.dart'; // Import the ChildHealthRiskDialog
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -60,7 +63,7 @@ class AppDrawer extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      context.tr('logout_confirmation'),
+                      context.tr('Logout confirmation'),
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 16,
@@ -190,6 +193,38 @@ class AppDrawer extends StatelessWidget {
           ),
           const Divider(height: 1),
 
+          // Nearby Radiologists Button
+          ListTile(
+            leading: Icon(Icons.location_on, color: AppTheme.turquoise),
+            title: Text(
+              context.tr('Nearby Radiologists'),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _showNearbyRadiologistsDialog(context);
+            },
+          ),
+
+          // Child Health Risk Prediction Button
+          ListTile(
+            leading: Icon(Icons.child_care, color: AppTheme.turquoise),
+            title: Text(
+              context.tr('Child Health Risk Predictor'),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _showChildHealthRiskDialog(context);
+            },
+          ),
+
           // Updated Settings Section with Multiple Settings
           ExpansionTile(
             leading: Icon(Icons.settings, color: AppTheme.turquoise),
@@ -301,6 +336,26 @@ class AppDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // Method to show Nearby Radiologists dialog
+  void _showNearbyRadiologistsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return NearbyRadiologistsDialog();
+      },
+    );
+  }
+
+  // Method to show Child Health Risk dialog
+  void _showChildHealthRiskDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return const ChildHealthRiskDialog();
+      },
     );
   }
 
@@ -553,29 +608,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Helper method to build switch tiles
-  Widget _buildSwitchTile(String title, String subtitle, bool initialValue) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        bool isEnabled = initialValue;
-        return SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(title),
-          subtitle: Text(
-            subtitle,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          ),
-          value: isEnabled,
-          activeColor: AppTheme.turquoise,
-          onChanged: (value) {
-            setState(() {
-              isEnabled = value;
-            });
-          },
-        );
-      },
-    );
-  }
+  // Helper method has been removed as it was unused
 
   // Helper method to build privacy tiles
   Widget _buildPrivacyTile(String title, IconData icon, VoidCallback onTap) {

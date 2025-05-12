@@ -1,0 +1,15 @@
+{
+  "nearby_radiologists": "أطباء الأشعة القريبون",
+  "search_radius": "نطاق البحث",
+  "retry": "إعادة المحاولة",
+  "settings": "الإعدادات",
+  "dark_mode": "الوضع الليلي",
+  "language": "اللغة",
+  "privacy": "الخصوصية",
+  "help_support": "المساعدة والدعم",
+  "about": "حول التطبيق",
+  "logout": "تسجيل الخروج",
+  "logout_confirmation": "هل أنت متأكد من رغبتك في تسجيل الخروج؟",
+  "cancel": "إلغاء",
+  "select_language": "اختر اللغة"
+}

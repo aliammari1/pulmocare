@@ -263,6 +263,41 @@ const Map<String, String> englishTranslations = {
   'terms_conditions': 'Terms & Conditions',
   'rate_app': 'Rate App',
   'share_app': 'Share App',
+
+  // Child Health Risk Prediction
+  'Child Health Risk Assessment': 'Child Health Risk Assessment',
+  'Child Health Risk Predictor': 'Child Health Risk Predictor',
+  'About this tool': 'About this tool',
+  'This tool helps estimate potential health risks for children based on parental conditions and lifestyle factors. The results are for informational purposes only and should not replace professional medical advice.':
+      'This tool helps estimate potential health risks for children based on parental conditions and lifestyle factors. The results are for informational purposes only and should not replace professional medical advice.',
+  'Child Details': 'Child Details',
+  'Height (cm)': 'Height (cm)',
+  'Weight (kg)': 'Weight (kg)',
+  'Optional': 'Optional',
+  'Parental Health Conditions': 'Parental Health Conditions',
+  'Select all conditions that apply to biological parents':
+      'Select all conditions that apply to biological parents',
+  'Lifestyle Factors': 'Lifestyle Factors',
+  'Select all that apply to the child\'s current lifestyle':
+      'Select all that apply to the child\'s current lifestyle',
+  'Calculate Health Risks': 'Calculate Health Risks',
+  'Overall Health Risk Score': 'Overall Health Risk Score',
+  'Risk Categories': 'Risk Categories',
+  'Recommendations': 'Recommendations',
+  'Low Risk': 'Low Risk',
+  'Moderate Risk': 'Moderate Risk',
+  'High Risk': 'High Risk',
+  'Start New Assessment': 'Start New Assessment',
+  'Start Assessment': 'Start Assessment',
+  'Later': 'Later',
+  'Assess hereditary risk factors': 'Assess hereditary risk factors',
+  'Evaluate lifestyle impact': 'Evaluate lifestyle impact',
+  'Get personalized recommendations': 'Get personalized recommendations',
+  'Track progress over time': 'Track progress over time',
+  'Potential Associated Conditions:': 'Potential Associated Conditions:',
+  'Risk': 'Risk',
+  'Disclaimer: This assessment is for informational purposes only and does not constitute medical advice. Always consult with healthcare professionals for proper medical guidance.':
+      'Disclaimer: This assessment is for informational purposes only and does not constitute medical advice. Always consult with healthcare professionals for proper medical guidance.',
 };
 
 // French translations
