@@ -45,10 +45,10 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with specific origins in production
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 # Apply health check middleware
@@ -98,7 +98,7 @@ async def create_ordonnance(ordonnance_data: OrdonnanceCreate, user_info: dict =
 
     except Exception as e:
         logger_service.error(f"Error creating prescription: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Failed to create prescription: {e!s}")
+        raise HTTPException(status_code=500, detail="Failed to create prescription")
 
 
 @app.get(
@@ -138,7 +138,7 @@ async def get_ordonnances(
 
     except Exception as e:
         logger_service.error(f"Error retrieving prescriptions: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve prescriptions: {e!s}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve prescriptions")
 
 
 @app.get(
@@ -165,7 +165,7 @@ async def get_ordonnance(ordonnance_id: str):
         raise
     except Exception as e:
         logger_service.error(f"Error retrieving prescription: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve prescription: {e!s}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve prescription")
 
 
 @app.put(

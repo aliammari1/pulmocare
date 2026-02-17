@@ -1,61 +1,65 @@
-import os
+"""
+PulmoCare Patients Service.
+
+Provides patient management functionality.
+"""
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
+
+from pulmocare_shared import RedisClient, RabbitMQClient, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import create_health_router
 
 from config import Config
 from routes.integration_routes import router as integration_router
 from routes.patients_routes import router as patients_router
-from services.rabbitmq_client import RabbitMQClient
-from services.redis_client import RedisClient
-from services.tracing_service import TracingService
-
-# Determine environment and load corresponding .env file
-env = os.getenv("ENV", "development")
-dotenv_file = f".env.{env}"
-if not os.path.exists(dotenv_file):
-    dotenv_file = ".env"
-
-load_dotenv(dotenv_path=dotenv_file)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Patients API",
+    title="PulmoCare Patients API",
     description="API for patient management",
-    version="1.0.0",
+    version=Config.version,
 )
 
 # Security scheme
 security = HTTPBearer()
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup CORS
+setup_cors(app, Config)
 
-# Initialize services
+# Setup OpenTelemetry
+setup_telemetry(Config, app)
+
+# Initialize services using shared clients
 redis_client = RedisClient(Config)
 rabbitmq_client = RabbitMQClient(Config)
-tracing_service = TracingService(Config)
 
-# Create authentication and routes
+# Create health check router with dependencies
+health_router = create_health_router(
+    config=Config,
+    redis_client=redis_client,
+    rabbitmq_client=rabbitmq_client,
+)
+
+# Include routers
+app.include_router(health_router)
 app.include_router(integration_router)
 app.include_router(patients_router)
 
 
-# Health check endpoint
+# Keep legacy health endpoint for backward compatibility
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "UP", "service": "patients-service"}
+    """Health check endpoint."""
+    return {"status": "UP", "service": Config.service_name}
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=Config.HOST, port=Config.PORT)
+    uvicorn.run(
+        "app:app",
+        host=Config.host,
+        port=Config.port,
+        reload=Config.is_development,
+        log_level=Config.log_level.lower(),
+    )
