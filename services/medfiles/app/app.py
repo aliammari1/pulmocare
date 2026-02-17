@@ -1,34 +1,46 @@
-# filepath: /home/azureuser/medapp-backend/services/medfiles/app/app.py
+"""
+MedFiles Service - FastAPI Application.
+
+Handles medical file uploads, storage, and streaming with MinIO.
+"""
+
 import asyncio
 import base64
 import os
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
+from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 
+from config import get_config
 from models.file_models import FileListResponse, FileMetadata, FileResponse
 from services.auth_service import get_current_user
-from services.logger_service import LoggerService
 from services.minio_service import MinioService
 
-logger = LoggerService()
+# Get configuration
+config = get_config()
+
+# Initialize logger using shared module
+logger = LoggerService(config)
 
 app = FastAPI(
     title="MedApp Files Service",
     description="Service for handling medical file uploads and storage",
-    version="1.0.0",
+    version=config.version,
+    docs_url="/docs" if config.is_development else None,
+    redoc_url="/redoc" if config.is_development else None,
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup CORS using shared module
+setup_cors(app, config.cors_origins)
+
+# Setup OpenTelemetry using shared module
+setup_telemetry(app, config)
+
+# Include health check router
+app.include_router(health_router)
 
 minio_service = MinioService()
 
@@ -40,12 +52,6 @@ async def startup_event():
     await minio_service.create_bucket("radiologyimages")
     await minio_service.create_bucket("patientdocuments")
     logger.info("MedFiles service started")
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
 
 
 @app.post("/api/files/upload", response_model=FileResponse)
@@ -192,20 +198,31 @@ async def update_file_metadata(
 @app.get("/api/v1/download-shared-object/{encoded_url}")
 async def download_shared_object(encoded_url: str):
     """
-    Proxy endpoint for downloading shared files using an encoded URL
-    This allows sharing files without requiring authentication
+    Proxy endpoint for downloading shared files using an encoded URL.
+    Only allows redirects to the internal MinIO service for security.
     """
     try:
-        # Decode the URL from base64
         decoded_bytes = base64.b64decode(encoded_url)
         original_url = decoded_bytes.decode("utf-8")
 
-        logger.info(f"Processing shared download request for: {original_url}")
+        # Validate URL to prevent open redirect attacks
+        from urllib.parse import urlparse
+        parsed = urlparse(original_url)
+        allowed_hosts = {
+            os.getenv("MINIO_HOST", "minio"),
+            "localhost",
+            "127.0.0.1",
+        }
+        if parsed.hostname not in allowed_hosts:
+            logger.warning(f"Blocked redirect to unauthorized host: {parsed.hostname}")
+            raise HTTPException(status_code=403, detail="Unauthorized redirect target")
 
-        # Redirect to the actual presigned URL
+        logger.info("Processing shared download request")
         return RedirectResponse(url=original_url)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error processing shared download: {e!s}")
+        logger.error(f"Error processing shared download: {type(e).__name__}")
         raise HTTPException(status_code=400, detail="Invalid or expired download link")
 
 
@@ -286,10 +303,14 @@ async def stream_shared_object(
         try:
             decoded_bytes = base64.b64decode(object_id)
             object_path = decoded_bytes.decode("utf-8")
-        except:
+        except Exception:
             raise HTTPException(status_code=400, detail="Invalid object identifier")
 
-        logger.info(f"Processing shared stream request for: {object_path} in {bucket}")
+        # Validate bucket name to prevent path traversal
+        if "/" in bucket or ".." in bucket:
+            raise HTTPException(status_code=400, detail="Invalid bucket name")
+
+        logger.info(f"Processing shared stream request in bucket {bucket}")
 
         # Get file info to verify existence and get content type
         try:
@@ -297,7 +318,7 @@ async def stream_shared_object(
                 minio_service.executor,
                 lambda: minio_service.client.stat_object(bucket, object_path),
             )
-        except:
+        except Exception:
             raise HTTPException(status_code=404, detail="File not found")
 
         # Get file stream
@@ -320,5 +341,10 @@ async def stream_shared_object(
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8088))
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(
+        "app:app",
+        host=config.host,
+        port=config.port,
+        reload=config.is_development,
+        log_level="debug" if config.debug else "info",
+    )

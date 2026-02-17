@@ -1,12 +1,20 @@
+"""
+Reports Service - FastAPI Application.
+
+Handles medical report generation with AI/ML capabilities.
+"""
+
+import threading
 import time
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
+from pulmocare_shared import setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 
-from config import Config
+from config import get_config
 from report_generator import ReportGenerator
 from routes.integration_routes import router as integration_router
 from services.mongodb_client import MongoDBClient
@@ -14,25 +22,33 @@ from services.rabbitmq_client import RabbitMQClient
 from services.redis_client import RedisClient
 from services.report_service import ReportService
 
+# Get configuration
+config = get_config()
+
 # Initialize API router
 api = APIRouter()
 
 # Initialize FastAPI app
-app = FastAPI(title="Reports API", version="1.0.0")
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="Reports API",
+    version=config.version,
+    docs_url="/docs" if config.is_development else None,
+    redoc_url="/redoc" if config.is_development else None,
 )
 
+# Setup CORS using shared module
+setup_cors(app, config.cors_origins)
+
+# Setup OpenTelemetry using shared module
+setup_telemetry(app, config)
+
+# Include health check router
+app.include_router(health_router)
+
 # Initialize services
-redis_client = RedisClient(Config)
-mongodb_client = MongoDBClient(Config)
-rabbitmq_client = RabbitMQClient(Config)
+redis_client = RedisClient(config)
+mongodb_client = MongoDBClient(config)
+rabbitmq_client = RabbitMQClient(config)
 
 report_generator = ReportGenerator()
 report_service = ReportService(mongodb_client, redis_client, rabbitmq_client)
@@ -123,29 +139,11 @@ async def export_report(
     )
 
 
-# Add this endpoint to the app.py file after the existing routes
-
-
-@app.get("/health", tags=["Health"])
-async def health():
-    """Health check endpoint for the reports service"""
-    status = {
-        "status": "healthy",
-        "service": "reports-service",
-        "version": "1.0.0",
-        "timestamp": int(time.time()),
-        "checks": {"database": {"status": "up"}, "system": {"status": "up"}},
-    }
-    return status
-
-
 # Register routes
 app.include_router(api, prefix="/api/reports")
 app.include_router(integration_router)
 
 # Import the consumer module and threading
-import threading
-
 from consumer import main as consumer_main
 
 if __name__ == "__main__":
@@ -154,4 +152,11 @@ if __name__ == "__main__":
     consumer_thread.start()
 
     # Run the FastAPI app with uvicorn in the main thread
-    uvicorn.run("app:app", host=Config.HOST, port=Config.PORT, reload=True)
+    uvicorn.run(
+        "app:app",
+        host=config.host,
+        port=config.port,
+        reload=config.is_development,
+        log_level="debug" if config.debug else "info",
+    )
+

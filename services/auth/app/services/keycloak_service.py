@@ -418,11 +418,16 @@ class KeycloakService:
         """
         try:
             config_well_known = self.keycloak_openid.well_known()
-            token_info = self.keycloak_openid.decode_token(token, False)
-            print(f"Decoded token info: {token_info}")
+            token_info = self.keycloak_openid.decode_token(
+                token,
+                key=config_well_known,
+                algorithms=["RS256"],
+                options={"verify_aud": False},
+            )
             return token_info
         except Exception as e:
-            print(f"Token verification error: {e!s}")
+            import logging
+            logging.getLogger(__name__).error(f"Token verification error: {type(e).__name__}")
             raise
 
     def refresh_token(self, refresh_token):
@@ -446,22 +451,22 @@ class KeycloakService:
             print(f"Token refresh error: {e!s}")
             raise
 
-    def logout(self, refresh_token):
+    def logout_with_admin_api(self, refresh_token):
         """
-        Log out a user by invalidating their refresh token
+        Log out a user by invalidating their refresh token via admin API.
+        Use logout() for standard OIDC logout.
         """
+        import logging
+        logger = logging.getLogger(__name__)
         try:
-            # Get the admin client config for logout
             config = self.keycloak_admin.connection.get_config()
             server_url = config["server_url"]
-            client_id = self.config.KEYCLOAK_CLIENT_ID
-            client_secret = self.config.KEYCLOAK_CLIENT_SECRET
-            realm_name = self.config.KEYCLOAK_REALM
+            client_id = self.client_id
+            client_secret = self.client_secret
+            realm_name = self.realm
 
-            # Construct the logout URL
             logout_url = f"{server_url}/realms/{realm_name}/protocol/openid-connect/logout"
 
-            # Send the logout request
             response = requests.post(
                 logout_url,
                 data={
@@ -469,66 +474,65 @@ class KeycloakService:
                     "client_secret": client_secret,
                     "refresh_token": refresh_token,
                 },
+                timeout=10,
             )
 
             if response.status_code != 204:
-                print(f"Keycloak logout response: {response.status_code} {response.text}")
+                logger.warning(f"Keycloak logout response: {response.status_code}")
 
             response.raise_for_status()
             return True
         except Exception as e:
-            print(f"Error during logout: {e!s}")
+            logger.error(f"Error during admin logout: {type(e).__name__}")
             raise
 
     def logout_from_access_token(self, access_token):
         """
         Log out a user using their access token
         """
+        import logging
+        logger = logging.getLogger(__name__)
         try:
-            # Decode the access token to get user session information
             payload = self.verify_token(access_token)
             session_id = payload.get("sid")
             user_id = payload.get("sub")
 
-            # If no session ID or user ID, we can't proceed
             if not session_id or not user_id:
-                print("No session ID or user ID in the token, can't logout")
+                logger.warning("No session ID or user ID in the token, can't logout")
                 return False
 
-            # Use admin API to logout specific session for user
             try:
-                # Try to log out all sessions for this user
                 self.keycloak_admin.logout_all_sessions(user_id)
-                print(f"Successfully logged out all sessions for user {user_id}")
+                logger.info(f"Successfully logged out all sessions for user {user_id}")
                 return True
             except Exception as e:
-                print(f"Error logging out all sessions: {e}")
+                logger.warning(f"Error logging out all sessions: {type(e).__name__}")
 
-                # If that fails, try to log out a specific session
                 try:
-                    # Need to use a direct API call since there's no method for single session logout
                     admin_url = self.keycloak_admin.connection.get_base_url()
                     admin_headers = self.keycloak_admin.connection.get_headers()
                     session_logout_url = f"{admin_url}/users/{user_id}/sessions"
 
-                    # Get all sessions for user
-                    sessions_response = requests.get(session_logout_url, headers=admin_headers)
+                    sessions_response = requests.get(
+                        session_logout_url, headers=admin_headers, timeout=10
+                    )
                     if sessions_response.status_code == 200:
                         sessions = sessions_response.json()
                         for session in sessions:
                             if session.get("id") == session_id:
-                                # Logout this specific session
                                 logout_session_url = f"{admin_url}/sessions/{session_id}"
-                                delete_response = requests.delete(logout_session_url, headers=admin_headers)
+                                delete_response = requests.delete(
+                                    logout_session_url, headers=admin_headers, timeout=10
+                                )
                                 if delete_response.status_code in (204, 200):
-                                    print(f"Successfully logged out session {session_id}")
+                                    logger.info(f"Successfully logged out session {session_id}")
                                     return True
                 except Exception as inner_e:
-                    print(f"Error in specific session logout: {inner_e}")
+                    logger.error(f"Error in specific session logout: {type(inner_e).__name__}")
 
             return False
         except Exception as e:
-            print(f"Error during logout with access token: {e!s}")
+            logger.error(f"Error during logout with access token: {type(e).__name__}")
             return False
 
     def logout(self, refresh_token):
@@ -542,7 +546,8 @@ class KeycloakService:
             self.keycloak_openid.logout(refresh_token)
             return True
         except Exception as e:
-            print(f"Logout error: {e!s}")
+            import logging
+            logging.getLogger(__name__).error(f"Logout error: {type(e).__name__}")
             raise
 
     def get_user_info_by_id(self, user_id):

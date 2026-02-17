@@ -1,37 +1,81 @@
-FROM python:3.12-slim
+# Medecins Service Dockerfile
+# Uses uv for fast Python package management
 
-WORKDIR /app
+FROM python:3.12-slim AS builder
 
-# Install system dependencies including Tesseract OCR
+# Install uv from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app/services/medecins/app
+
+# Install system dependencies for building
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl \
-    tesseract-ocr \
-    libtesseract-dev \
-    libleptonica-dev \
-    pkg-config \
     gcc \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python packages
-COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install wheel setuptools && \
-    pip install -r requirements.txt
+# Copy shared module first (for editable install)
+# Matches the relative path ../../shared from pyproject.toml
+COPY ./shared /app/services/shared
 
-# Copy application code
-COPY ./app/ .
+# Copy service pyproject.toml and install dependencies
+COPY ./medecins/app/pyproject.toml ./pyproject.toml
 
-# Environment variables
-ENV PORT=8081 \
+# Set UV configuration for builds
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+# Install dependencies only (cached layer)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-install-project
+
+# Copy service application code
+COPY ./medecins/app .
+
+# Install the project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync
+
+# Production stage
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
+# Copy the virtual environment from builder
+COPY --from=builder /app/services/medecins/app/.venv /app/.venv
+COPY --from=builder /app/services/medecins/app /app
+
+# Set ownership
+RUN chown -R appuser:appuser /app
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PORT=8081 \
     METRICS_PORT=9091 \
     PYTHONUNBUFFERED=1 \
-    PATH="/usr/local/bin:$PATH" \
     PYTHONPATH="/app:$PYTHONPATH"
-# Expose ports
-EXPOSE ${PORT}
-EXPOSE ${METRICS_PORT}
 
-# Start the service with proper logging
-CMD ["bash", "-c", "python app.py && python consumer.py"]
+# Expose ports
+EXPOSE 8081
+EXPOSE 9091
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+# Start the service
+CMD ["python", "app.py"]

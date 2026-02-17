@@ -92,8 +92,8 @@ services:
   # Authentication Service
   auth-service:
     build:
-      context: ./services/auth
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: auth/Dockerfile
     container_name: medapp-auth-service
     ports:
       - "8086:8086"
@@ -176,7 +176,7 @@ services:
 
   # etcd Service
   etcd:
-    image: bitnami/etcd:latest
+    image: quay.io/coreos/etcd:v3.5.0
     container_name: medapp-etcd
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes
@@ -433,8 +433,8 @@ services:
   # medecins Service
   medecins-service:
     build:
-      context: ./services/medecins
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: medecins/Dockerfile
     container_name: medapp-medecins-service
     ports:
       - "8081:8081"
@@ -469,8 +469,8 @@ services:
   # ordonnances Service
   ordonnances-service:
     build:
-      context: ./services/ordonnances
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: ordonnances/Dockerfile
     container_name: medapp-ordonnances-service
     ports:
       - "8082:8082"
@@ -505,8 +505,8 @@ services:
   # Patients Service
   patients-service:
     build:
-      context: ./services/patients
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: patients/Dockerfile
     container_name: medapp-patients-service
     ports:
       - "8083:8083"
@@ -541,8 +541,8 @@ services:
   # radiologues Service
   radiologues-service:
     build:
-      context: ./services/radiologues
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: radiologues/Dockerfile
     container_name: medapp-radiologues-service
     ports:
       - "8084:8084"
@@ -577,8 +577,8 @@ services:
   # Reports Service
   reports-service:
     build:
-      context: ./services/reports
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: reports/Dockerfile
     container_name: medapp-reports-service
     ports:
       - "8085:8085"
@@ -613,8 +613,8 @@ services:
   # Appointments Service
   appointments-service:
     build:
-      context: ./services/appointments
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: appointments/Dockerfile
     container_name: medapp-appointments-service
     ports:
       - "8087:8087"
@@ -732,8 +732,8 @@ services:
   # MinIO File Service - Python interface for medical file operations
   medfiles-service:
     build:
-      context: ./services/medfiles
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: medfiles/Dockerfile
     container_name: medapp-medfiles-service
     ports:
       - "8088:8088"

@@ -1,50 +1,42 @@
-import os
+"""
+Medecins Service - FastAPI Application.
+
+Handles doctor profile management and integration.
+"""
+
 import threading
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from pulmocare_shared import setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 
-from config import Config
-from decorator.health_check import health_check_middleware
+from config import get_config
 from routes.doctor_routes import router as doctor_router
 from routes.integration_routes import router as integration_router
-from services.rabbitmq_client import RabbitMQClient
-from services.redis_client import RedisClient
-from services.tracing_service import TracingService
 
-# Determine environment and load corresponding .env file
-env = os.getenv("ENV", "development")
-dotenv_file = f".env.{env}"
-if not os.path.exists(dotenv_file):
-    dotenv_file = ".env"
-load_dotenv(dotenv_path=dotenv_file)
+# Get configuration
+config = get_config()
 
 # Initialize FastAPI app
 app = FastAPI(
     title="MedApp Doctors Service",
     description="API for managing doctor profiles and authentication",
-    version="1.0.0",
+    version=config.version,
+    docs_url="/docs" if config.is_development else None,
+    redoc_url="/redoc" if config.is_development else None,
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup CORS using shared module
+setup_cors(app, config.cors_origins)
 
-# Apply health check middleware
-app = health_check_middleware(Config)(app)
+# Setup OpenTelemetry using shared module
+setup_telemetry(app, config)
 
-# Initialize services
-tracing_service = TracingService(app)
-redis_client = RedisClient(Config)
-rabbitmq_client = RabbitMQClient(Config)
+# Include health check router
+app.include_router(health_router)
 
+# Include service routers
 app.include_router(integration_router)
 app.include_router(doctor_router)
 
@@ -57,4 +49,11 @@ if __name__ == "__main__":
     consumer_thread.start()
 
     # Run the FastAPI app with uvicorn in the main thread
-    uvicorn.run("app:app", host="0.0.0.0", port=8081, reload=True, log_level="debug")
+    uvicorn.run(
+        "app:app",
+        host=config.host,
+        port=config.port,
+        reload=config.is_development,
+        log_level="debug" if config.debug else "info",
+    )
+
