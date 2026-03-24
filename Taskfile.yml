@@ -1,0 +1,59 @@
+version: '3'
+
+env:
+  PROJECT_NAME: pulmocare
+
+tasks:
+  default:
+    cmds:
+      - task -l
+    silent: true
+
+  setup:
+    desc: "Initializes the monorepo, installs dependencies for both backend and mobile apps."
+    cmds:
+      - task: setup:api
+      - task: setup:mobile
+
+  setup:api:
+    desc: "Sets up the API project."
+    dir: apps/api
+    cmds:
+      - echo "Setting up API..."
+      - # Add python env setup commands if needed. E.g., python -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+  setup:mobile:
+    desc: "Sets up the Flutter mobile app."
+    dir: apps/mobile
+    cmds:
+      - flutter pub get
+
+  dev:api:
+    desc: "Runs the backend API services (using Docker Compose)."
+    dir: apps/api
+    cmds:
+      - docker-compose up --build -d
+
+  dev:mobile:
+    desc: "Runs the Flutter application."
+    dir: apps/mobile
+    cmds:
+      - flutter run
+
+  test:api:
+    desc: "Runs backend tests."
+    dir: apps/api
+    cmds:
+      - echo "Running API tests..."
+
+  test:mobile:
+    desc: "Runs mobile tests."
+    dir: apps/mobile
+    cmds:
+      - flutter test
+
+  clean:
+    desc: "Cleans build artifacts for all projects."
+    cmds:
+      - cd apps/mobile && flutter clean
+      - cd apps/api && docker-compose down -v --remove-orphans
