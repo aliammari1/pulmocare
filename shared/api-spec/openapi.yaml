@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: Pulmocare API
+  description: Shared OpenAPI specification for Pulmocare backend microservices.
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
