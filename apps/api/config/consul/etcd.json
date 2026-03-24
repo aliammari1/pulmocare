@@ -1,0 +1,19 @@
+{
+  "service": {
+    "name": "etcd",
+    "tags": [
+      "key-value-store",
+      "configuration",
+      "apisix-dependency"
+    ],
+    "address": "etcd",
+    "port": 2379,
+    "check": {
+      "id": "etcd",
+      "name": "etcd health check",
+      "tcp": "etcd:2379",
+      "interval": "10s",
+      "timeout": "5s"
+    }
+  }
+}
