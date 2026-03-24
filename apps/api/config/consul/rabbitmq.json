@@ -1,0 +1,22 @@
+{
+  "service": {
+    "name": "rabbitmq",
+    "tags": [
+      "message-broker",
+      "queue",
+      "messaging"
+    ],
+    "address": "rabbitmq",
+    "port": 5672,
+    "meta": {
+      "management_port": "15672"
+    },
+    "check": {
+      "id": "rabbitmq",
+      "name": "RabbitMQ health check",
+      "tcp": "rabbitmq:5672",
+      "interval": "10s",
+      "timeout": "5s"
+    }
+  }
+}

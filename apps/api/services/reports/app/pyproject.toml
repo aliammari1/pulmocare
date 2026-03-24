@@ -1,0 +1,91 @@
+[project]
+name = "reports-service"
+version = "1.0.0"
+description = "PulmoCare Reports Service with AI/ML capabilities"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Shared module (editable install)
+    "pulmocare-shared",
+    
+    # AI/ML and LangChain
+    "langchain>=0.3.0",
+    "langchain-community>=0.3.0",
+    "langchain-ollama>=0.2.0",
+    "ollama>=0.4.0",
+    "nltk>=3.9.0",
+    "scikit-learn>=1.5.0",
+    
+    # Document processing
+    "opencv-python-headless>=4.8.0",
+    "pytesseract>=0.3.8",
+    "pypdf2>=2.0.0",
+    "pdfkit>=1.0.0",
+    "reportlab>=4.0.0",
+    "pillow>=10.0.0",
+    "beautifulsoup4>=4.9.3",
+    "lxml>=5.0.0",
+    
+    # Data processing
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    
+    # Additional utilities
+    "python-magic>=0.4.27",
+    "aiofiles>=24.1.0",
+    "schedule>=1.1.0",
+]
+
+[tool.uv.sources]
+pulmocare-shared = { path = "../../shared", editable = true }
+
+[dependency-groups]
+dev = [
+    "ruff>=0.5.0",
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "S",      # flake8-bandit
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T20",    # flake8-print
+    "ASYNC",  # flake8-async
+    "BLE",    # flake8-blind-except
+    "PL",     # pylint
+    "RUF",    # ruff-specific
+]
+
+ignore = [
+    "S101",     # assert allowed in tests
+    "PLR2004",  # magic value comparison
+    "S104",     # possible binding to all interfaces
+    "B008",     # function call in default argument (FastAPI Depends)
+    "S602",     # subprocess calls (needed for PDF generation)
+    "S603",     # subprocess without shell
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pulmocare_shared"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.pylint]
+max-args = 8
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

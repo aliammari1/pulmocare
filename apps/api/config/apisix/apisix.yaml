@@ -1,0 +1,545 @@
+consumers:
+  - plugins:
+      key-auth:
+        header_name: X-API-Key
+        key: ${API_KEY}
+    username: api_user
+global_rules:
+  - id: 1
+    plugins:
+      prometheus:
+        prefer_name: true
+      response-rewrite:
+        headers:
+          set:
+            Content-Security-Policy: default-src 'self'; frame-ancestors 'none'
+            Strict-Transport-Security: max-age=31536000; includeSubDomains
+            X-Content-Type-Options: nosniff
+            X-Frame-Options: DENY
+            X-XSS-Protection: 1; mode=block
+routes:
+  # Health check route for all services
+  - enable_websocket: false
+    id: health-check
+    name: service-health-checks
+    plugins:
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+    upstream:
+      nodes:
+        auth-service:8086: 1
+        medecins-service:8081: 1
+        ordonnances-service:8082: 1
+        patients-service:8083: 1
+        radiologues-service:8084: 1
+        reports-service:8085: 1
+        appointments-service:8087: 1
+        medfiles-service:8088: 1
+      type: roundrobin
+    uri: /health
+
+  - id: appointments-protected
+    name: appointments-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        appointments-service:8087: 1
+      type: roundrobin
+    uri: /api/appointments/*
+
+  # Auth service routes
+  - id: radiologue-auth-service
+    name: radiologue-auth-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        radiologues-service:8084: 1
+      type: roundrobin
+    uri: /api/auth/radiologues/*
+
+  # Auth service routes
+  - id: patient-auth-service
+    name: patient-auth-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        patients-service:8083: 1
+      type: roundrobin
+    uri: /api/auth/patients/*
+
+  # Auth service routes
+  - id: auth-service
+    name: auth-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        auth-service:8086: 1
+      type: roundrobin
+    uri: /api/auth/*
+
+  # Service-specific routes
+  - id: medecins-protected
+    name: medecins-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        medecins-service:8081: 1
+      type: roundrobin
+    uri: /api/doctors/*
+
+  - id: patients-protected
+    name: patients-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        patients-service:8083: 1
+      type: roundrobin
+    uri: /api/patients/*
+
+  - id: ordonnances-protected
+    name: ordonnances-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        ordonnances-service:8082: 1
+      type: roundrobin
+    uri: /api/ordonnances/*
+
+  - id: radiologues-protected
+    name: radiologues-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        radiologues-service:8084: 1
+      type: roundrobin
+    uri: /api/radiologues/*
+
+  - id: reports-service
+    name: reports-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        reports-service:8085: 1
+      type: roundrobin
+    uri: /api/reports/*
+
+  # Integration routes with more specific paths to avoid conflicts
+  - id: medecins-integration-routes
+    name: medecins-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        medecins-service:8081: 1
+      type: roundrobin
+    uri: /api/integration/medecins/*
+
+  - id: patients-integration-routes
+    name: patients-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        patients-service:8083: 1
+      type: roundrobin
+    uri: /api/integration/patients/*
+
+  - id: radiologues-integration-routes
+    name: radiologues-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        radiologues-service:8084: 1
+      type: roundrobin
+    uri: /api/integration/radiologues/*
+
+  - id: reports-integration-routes
+    name: reports-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        reports-service:8085: 1
+      type: roundrobin
+    uri: /api/integration/reports/*
+
+  - id: ordonnances-integration-routes
+    name: ordonnances-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        ordonnances-service:8082: 1
+      type: roundrobin
+    uri: /api/integration/ordonnances/*
+
+  - id: appointments-integration-routes
+    name: appointments-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        appointments-service:8087: 1
+      type: roundrobin
+    uri: /api/integration/appointments/*
+
+  - id: medfiles-protected
+    name: medfiles-service
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        medfiles-service:8088: 1
+      type: roundrobin
+    uri: /api/files/*
+
+  - id: medfiles-integration-routes
+    name: medfiles-integration
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        medfiles-service:8088: 1
+      type: roundrobin
+    uri: /api/integration/files/*

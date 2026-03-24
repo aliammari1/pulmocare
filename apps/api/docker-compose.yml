@@ -1,0 +1,815 @@
+name: medapp
+
+x-service-env: &service-env
+  CONSUL_HOST: "consul"
+  CONSUL_PORT: "8500"
+  MONGODB_URI: "mongodb://mongodb:27017"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  OTEL_PYTHON_LOG_CORRELATION: "true"
+  OTEL_METRICS_EXPORTER: "otlp"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_LOGS_EXPORTER: "otlp"
+  LOG_FORMAT: "json"
+  LOG_LEVEL: "DEBUG"
+  KEYCLOAK_URL: "http://keycloak:8080/auth"
+  KEYCLOAK_REALM: "pulmocare"
+  KEYCLOAK_CLIENT_ID: "pulmocare-api"
+  KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET:-pulmocare-secret}"
+  AUTH_SERVICE_URL: "http://auth-service:8086"
+  # Add MinIO configuration
+  MINIO_HOST: "minio"
+  MINIO_PORT: "9000"
+  MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-minioadmin}"
+  MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-minioadmin}"
+  MINIO_REGION: "us-east-1"
+  MINIO_SECURE: "false"
+  # Add Vault configuration
+  VAULT_ADDR: "http://vault:8200"
+  VAULT_TOKEN: "${VAULT_TOKEN:-dev-only-token}"
+
+services:
+  # Keycloak Service
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: medapp-keycloak
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KC_HEALTH_ENABLED=true
+      - KC_HTTP_RELATIVE_PATH=/
+      - KC_METRICS_ENABLED=true
+    ports:
+      - "8090:8080"
+      - "9000:9000"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import
+    command:
+      - start-dev
+      - --import-realm
+      - --health-enabled=true
+      - --metrics-enabled=true
+    networks:
+      - medapp-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000;echo -e 'GET /health/ready HTTP/1.1\r\nhost: http://localhost\r\nConnection: close\r\n\r\n' >&3;if [ $? -eq 0 ]; then echo 'Healthcheck Successful';exit 0;else echo 'Healthcheck Failed';exit 1;fi;",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Keycloak PostgreSQL Database
+  keycloak-db:
+    image: postgres:13
+    container_name: medapp-keycloak-db
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: ./services
+      dockerfile: auth/Dockerfile
+    container_name: medapp-auth-service
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8086"
+      OTEL_SERVICE_NAME: auth-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=auth-service
+      KEYCLOAK_REALM: pulmocare
+      KEYCLOAK_CLIENT_ID: pulmocare-api
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-pulmocare-secret}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/auth/app:/app
+      - ./services/auth/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Service
+  mongodb:
+    image: mongo:latest
+    container_name: medapp-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - medapp-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=medapp
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Consul Service Discovery
+  consul:
+    image: hashicorp/consul:latest
+    container_name: medapp-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    volumes:
+      - consul_data:/consul/data
+      - ./config/consul:/consul/config
+    networks:
+      - medapp-network
+    environment:
+      CONSUL_LOCAL_CONFIG: '{"leave_on_terminate": true, "skip_leave_on_interrupt": true, "rejoin_after_leave": true}'
+      CONSUL_BIND_INTERFACE: eth0
+      CONSUL_CLIENT_INTERFACE: eth0
+      CONSUL_ENABLE_SCRIPT_CHECKS: true
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: "agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -dns-port=8600"
+
+  # etcd Service
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.0
+    container_name: medapp-etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+    ports:
+      - "2379:2379"
+    networks:
+      - medapp-network
+    volumes:
+      - etcd_data:/bitnami/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # APISIX Service
+  apisix:
+    build:
+      context: ./config/apisix
+      dockerfile: Dockerfile
+    container_name: medapp-apisix
+    volumes:
+      - ./config/apisix/config.yaml:/usr/local/apisix/conf/config.yaml
+      - ./config/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml
+    environment:
+      - APISIX_STAND_ALONE=false
+      - ETCD_HOST=http://etcd:2379
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET:-pulmocare-secret}
+      - APISIX_ADMIN_KEY=edd1c9f034335f136f87ad84b625c8f1
+      # Enable health checks in the logs
+      - APISIX_ERROR_LOG_LEVEL=info
+    depends_on:
+      etcd:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      medecins-service:
+        condition: service_healthy
+      ordonnances-service:
+        condition: service_healthy
+      patients-service:
+        condition: service_healthy
+      radiologues-service:
+        condition: service_healthy
+      reports-service:
+        condition: service_healthy
+      appointments-service:
+        condition: service_healthy
+    ports:
+      - "9080:9080"
+      - "9091:9091"
+      - "9099:9090"
+      - "9443:9443"
+      - "9180:9180"
+    networks:
+      - medapp-network
+
+    # Health check for other services that depend on APISIX
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:9180/apisix/admin/server_info",
+          "-H",
+          "X-API-KEY: ${APISIX_ADMIN_KEY:-edd1c9f034335f136f87ad84b625c8f1}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # APISIX Dashboard
+  apisix-dashboard:
+    image: apache/apisix-dashboard:latest
+    container_name: medapp-apisix-dashboard
+    volumes:
+      - ./config/apisix-dashboard/conf.yaml:/usr/local/apisix-dashboard/conf/conf.yaml
+    ports:
+      - "8999:9000"
+    environment:
+      - APISIX_BASE_URL=http://apisix:9180
+      - APISIX_API_KEY=edd1c9f034335f136f87ad84b625c8f1
+    depends_on:
+      etcd:
+        condition: service_healthy
+      apisix:
+        condition: service_started
+    networks:
+      - medapp-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/user/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # RabbitMQ Service
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: medapp-rabbitmq
+    volumes:
+      - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:latest
+    container_name: medapp-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redispass}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: medapp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Tempo - Distributed Tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: medapp-tempo
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    user: root # Run as root to avoid permission issues
+    volumes:
+      - ./monitoring/tempo:/etc/tempo
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200" # tempo UI
+      - "9411:9411" # zipkin
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3200/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Loki
+  loki:
+    image: grafana/loki:latest
+    container_name: medapp-loki
+    volumes:
+      - ./monitoring/loki/loki.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: medapp-otel-collector
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    volumes:
+      - ./monitoring/otel-collector/config.yaml:/etc/otel-collector/config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "8889:8889" # Prometheus exporter
+      - "3300:13133" # Health check
+    networks:
+      - medapp-network
+    depends_on:
+      - tempo
+      - prometheus
+      - loki
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3300"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Update Grafana with additional datasources
+  grafana:
+    image: grafana/grafana:latest
+    container_name: medapp-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - medapp-network
+    depends_on:
+      - prometheus
+      - tempo
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # medecins Service
+  medecins-service:
+    build:
+      context: ./services
+      dockerfile: medecins/Dockerfile
+    container_name: medapp-medecins-service
+    ports:
+      - "8081:8081"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8081"
+      OTEL_SERVICE_NAME: medecins-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=medecins-service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/medecins/app:/app
+      - ./services/medecins/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ordonnances Service
+  ordonnances-service:
+    build:
+      context: ./services
+      dockerfile: ordonnances/Dockerfile
+    container_name: medapp-ordonnances-service
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8082"
+      OTEL_SERVICE_NAME: ordonnances-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=ordonnances-service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/ordonnances/app:/app
+      - ./services/ordonnances/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Patients Service
+  patients-service:
+    build:
+      context: ./services
+      dockerfile: patients/Dockerfile
+    container_name: medapp-patients-service
+    ports:
+      - "8083:8083"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8083"
+      OTEL_SERVICE_NAME: patients-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=patients-service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/patients/app:/app
+      - ./services/patients/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # radiologues Service
+  radiologues-service:
+    build:
+      context: ./services
+      dockerfile: radiologues/Dockerfile
+    container_name: medapp-radiologues-service
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8084"
+      OTEL_SERVICE_NAME: radiologues-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=radiologues-service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/radiologues/app:/app
+      - ./services/radiologues/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Reports Service
+  reports-service:
+    build:
+      context: ./services
+      dockerfile: reports/Dockerfile
+    container_name: medapp-reports-service
+    ports:
+      - "8085:8085"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8085"
+      OTEL_SERVICE_NAME: reports-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=reports-service
+    volumes:
+      - ./services/reports/app:/app
+      - ./services/reports/app/logs:/app/logs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Appointments Service
+  appointments-service:
+    build:
+      context: ./services
+      dockerfile: appointments/Dockerfile
+    container_name: medapp-appointments-service
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8087"
+      OTEL_SERVICE_NAME: appointments-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=appointments-service
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/appointments/app:/app
+      - ./services/appointments/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # SonarQube - Code Quality Analysis
+  sonarqube:
+    image: sonarqube:community
+    container_name: medapp-sonarqube
+    ports:
+      - "9001:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jenkins - CI/CD
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: medapp-jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - medapp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Portainer - Container Management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: medapp-portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "9002:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - medapp-network
+    healthcheck:
+      test:
+        ["CMD", "wget", "--spider", "-q", "http://localhost:9000/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MinIO - S3 Compatible Object Storage for Medical Files
+  minio:
+    image: minio/minio:latest
+    container_name: medapp-minio
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_REGION_NAME=${MINIO_REGION:-us-east-1}
+    volumes:
+      - minio_data:/data
+    networks:
+      - medapp-network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # MinIO File Service - Python interface for medical file operations
+  medfiles-service:
+    build:
+      context: ./services
+      dockerfile: medfiles/Dockerfile
+    container_name: medapp-medfiles-service
+    ports:
+      - "8088:8088"
+    environment:
+      <<: *service-env
+      ENV: production
+      PORT: "8088"
+      OTEL_SERVICE_NAME: medfiles-service
+      OTEL_RESOURCE_ATTRIBUTES: service.name=medfiles-service
+    depends_on:
+      minio:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+      consul:
+        condition: service_healthy
+    networks:
+      - medapp-network
+    volumes:
+      - ./services/medfiles/app:/app
+      - ./services/medfiles/app/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # HashiCorp Vault - Secret Management
+  vault:
+    image: hashicorp/vault:latest
+    container_name: medapp-vault
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=${VAULT_TOKEN:-dev-only-token}
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_ADDR=http://0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/data
+      - vault_logs:/vault/logs
+      - vault_config:/vault/config
+    networks:
+      - medapp-network
+    command: ["vault", "server", "-dev"]
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  medapp-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
+  etcd_data:
+  consul_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  jenkins_home:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  tempo_data:
+  portainer_data:
+  keycloak_db_data:
+  apisix_dashboard_data:
+  minio_data:
+  vault_data:
+  vault_logs:
+  vault_config:

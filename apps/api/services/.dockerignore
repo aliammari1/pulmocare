@@ -1,0 +1,53 @@
+# Python
+**/__pycache__
+**/*.py[cod]
+**/*$py.class
+**/.Python
+
+# Virtual environments
+**/.venv
+**/venv
+**/.env
+
+# IDE and editor files
+**/.idea
+**/.vscode
+**/*.swp
+**/*.swo
+
+# Ruff cache
+**/.ruff_cache
+
+# Pytest cache
+**/.pytest_cache
+
+# MyPy cache
+**/.mypy_cache
+
+# Build artifacts
+**/*.egg-info
+**/dist
+**/build
+
+# Test files
+**/*_test.py
+**/test_*.py
+**/tests/
+
+# Documentation
+**/docs
+
+# Logs
+**/*.log
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Git
+**/.git
+**/.gitignore
+
+# Backup files
+**/*.backup
+**/*.bak
