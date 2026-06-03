@@ -305,7 +305,7 @@ git push origin feature/your-amazing-feature
 ### Code Standards
 - **Flutter/Dart**: Follow [Effective Dart](https://dart.dev/guides/language/effective-dart) guidelines
 - **Python**: PEP 8 + type hints + docstrings
-- **Testing**: Minimum 80% coverage for new code
+- **Testing**: Minimum 80% coverage for new code \(This project is tested with BrowserStack\)
 - **Security**: SAST/DAST required before merge
 
 ---
