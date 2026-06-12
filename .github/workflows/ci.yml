@@ -54,15 +54,25 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
-      - name: Type-check (ty)
-        # ty is pre-1.0; keep it non-blocking until the codebase is annotated.
+      - name: Type-check (ty, blocking on typed core)
+        # Blocking for the typed core (shared/auth/patients/reports, which ship
+        # `ty` as a dev dep). Other services don't yet declare `ty`, so they run
+        # it best-effort via uvx and stay non-blocking until annotated.
+        run: uv run ty check .
+        if: ${{ matrix.service.name == 'shared' || matrix.service.name == 'auth' || matrix.service.name == 'patients' || matrix.service.name == 'reports' }}
+
+      - name: Type-check (ty, best-effort)
         continue-on-error: true
-        run: uv run ty check . || true
+        run: uvx ty check . || true
+        if: ${{ matrix.service.name != 'shared' && matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
 
       - name: Tests
-        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
-        # Services without a tests/ dir simply report "no tests ran" (exit 5),
-        # which we treat as success until tests are added.
+        # The three services with real test suites enforce a coverage floor
+        # (--cov-fail-under) so coverage is a true gate, not just a report.
+        # The rest report "no tests ran" (exit 5) and stay non-blocking.
+        run: >-
+          uv run pytest --cov --cov-report=xml --cov-report=term-missing
+          ${{ (matrix.service.name == 'auth' || matrix.service.name == 'patients' || matrix.service.name == 'reports') && '--cov-fail-under=40' || '' }}
         continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
 
       - name: Upload coverage to Codecov
