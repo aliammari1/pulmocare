@@ -44,7 +44,9 @@ class CircuitBreaker:
         # Initialize metrics for this circuit breaker
         track_circuit_breaker_state(name, "closed")
 
-        logger_service.info(f"Circuit breaker '{name}' initialized (threshold={failure_threshold}, timeout={recovery_timeout}s)")
+        logger_service.info(
+            f"Circuit breaker '{name}' initialized (threshold={failure_threshold}, timeout={recovery_timeout}s)"
+        )
 
     def __call__(self, func):
         """Decorator implementation"""

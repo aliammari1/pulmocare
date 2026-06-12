@@ -5,16 +5,15 @@ Handles medical report generation with AI/ML capabilities.
 """
 
 import threading
-import time
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
-from pulmocare_shared import setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
+from pulmocare_shared import setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from report_generator import ReportGenerator
 from routes.integration_routes import router as integration_router
 from routes.radiology_routes import router as radiology_router
@@ -162,4 +161,3 @@ if __name__ == "__main__":
         reload=config.is_development,
         log_level="debug" if config.debug else "info",
     )
-

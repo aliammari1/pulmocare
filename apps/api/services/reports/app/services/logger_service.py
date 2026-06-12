@@ -17,7 +17,7 @@ class LoggerService:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(LoggerService, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
 
             # Create logs directory if it doesn't exist
             os.makedirs(Config.LOG_DIR, exist_ok=True)
