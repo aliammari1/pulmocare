@@ -1,8 +1,11 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  // Replace with your actual API key from Google AI Studio
-  static const String apiKey = '***REMOVED-SECRET***';
+  // Supplied at build/run time via --dart-define=GEMINI_API_KEY=... or
+  // --dart-define-from-file. See apps/mobile/README.md. Falls back to an empty
+  // string when unset (the Gemini SDK call will then surface an auth error
+  // instead of leaking a hard-coded key into the binary).
+  static const String apiKey = String.fromEnvironment('GEMINI_API_KEY');
   late final GenerativeModel model;
 
   GeminiService() {

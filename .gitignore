@@ -1,8 +1,13 @@
 node_modules/
 .DS_Store
+
+# Real environment files (secrets) — never commit. Tracked .env.example and
+# the ansible *.j2 jinja templates are explicitly kept below.
 .env
 .env.*
 !.env.example
+!*.env.example
+!.env.*.j2
 build/
 dist/
 coverage/
