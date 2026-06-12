@@ -98,7 +98,7 @@ jobs:
       # Full MedRAX deps include torch/transformers (heavy + GPU). Install only
       # the LangGraph plumbing needed to exercise routing.
       - name: Install routing test deps
-        run: uv pip install --system langgraph langchain-core pytest pytest-asyncio
+        run: uv pip install --system langgraph langchain-core python-dotenv pytest pytest-asyncio
       - name: Tool-routing tests
         run: pytest tests/test_agent_routing.py -q
 
