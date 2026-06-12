@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 
 from models.radiology import RESEARCH_ONLY_DISCLAIMER, RadiologyReport
+from pulmocare_shared import genai_tool_span
 
 # MedRAX is vendored at apps/api/services/medagent. It is not a dependency of
 # the reports service's pyproject (it carries heavy ML deps + its own license);
@@ -81,12 +82,18 @@ def _narrate(findings: str | None, impression: str | None, vqa_answer: str | Non
         "findings that are not present. Do NOT give diagnoses or "
         "recommendations. Keep it under 120 words."
     )
-    message = client.messages.create(
-        model=NARRATIVE_MODEL,
-        max_tokens=512,
-        system=system,
-        messages=[{"role": "user", "content": body}],
-    )
+    # GenAI span records model id + token usage only (no prompt / output text).
+    with genai_tool_span("claude_narrative", operation="chat", model=NARRATIVE_MODEL) as span:
+        message = client.messages.create(
+            model=NARRATIVE_MODEL,
+            max_tokens=512,
+            system=system,
+            messages=[{"role": "user", "content": body}],
+        )
+        usage = getattr(message, "usage", None)
+        if usage is not None:
+            span["input_tokens"] = getattr(usage, "input_tokens", 0)
+            span["output_tokens"] = getattr(usage, "output_tokens", 0)
     return "".join(block.text for block in message.content if block.type == "text")
 
 
@@ -108,7 +115,10 @@ def generate_report(
     detail: str | None = None
 
     try:
-        report_text, meta = _load_report_tool()._run(image_path)
+        # PII-redacted GenAI span: records tool name + latency only, never the
+        # image path or the generated findings text.
+        with genai_tool_span("ChestXRayReportGeneratorTool"):
+            report_text, meta = _load_report_tool()._run(image_path)
         if meta.get("analysis_status") == "completed":
             # MedRAX formats "CHEST X-RAY REPORT\n\nFINDINGS:\n...\n\nIMPRESSION:\n..."
             findings, impression = _split_report(report_text)
@@ -121,7 +131,8 @@ def generate_report(
 
     if question:
         try:
-            vqa_answer, _ = _load_vqa_tool()._run(image_path, question)
+            with genai_tool_span("XRayVQATool"):
+                vqa_answer, _ = _load_vqa_tool()._run(image_path, question)
         except Exception as e:
             if status == "completed":
                 status = "degraded"

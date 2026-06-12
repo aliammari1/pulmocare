@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 
 from config import get_config
-from pulmocare_shared import setup_cors, setup_telemetry
+from pulmocare_shared import setup_cors, setup_observability, setup_telemetry
 from pulmocare_shared.middleware import health_router
 from report_generator import ReportGenerator
 from routes.integration_routes import router as integration_router
@@ -41,6 +41,10 @@ setup_cors(app, config.cors_origins)
 
 # Setup OpenTelemetry using shared module
 setup_telemetry(app, config)
+
+# Sentry (PHI-scrubbed) + request correlation IDs. No-op without SENTRY_DSN /
+# the optional deps, so the service still boots in minimal environments.
+setup_observability(config, app)
 
 # Include health check router
 app.include_router(health_router)

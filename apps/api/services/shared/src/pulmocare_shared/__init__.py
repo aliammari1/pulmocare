@@ -15,6 +15,12 @@ from pulmocare_shared.middleware.cors import setup_cors
 from pulmocare_shared.middleware.health import HealthCheckRouter, create_health_router
 from pulmocare_shared.middleware import health_router
 from pulmocare_shared.metrics import MetricsService, setup_metrics
+from pulmocare_shared.observability import (
+    genai_tool_span,
+    init_sentry,
+    setup_correlation_id,
+    setup_observability,
+)
 
 __version__ = "0.1.0"
 
@@ -41,4 +47,9 @@ __all__ = [
     # Metrics
     "MetricsService",
     "setup_metrics",
+    # Observability (Sentry + correlation id + GenAI spans)
+    "init_sentry",
+    "setup_correlation_id",
+    "setup_observability",
+    "genai_tool_span",
 ]
