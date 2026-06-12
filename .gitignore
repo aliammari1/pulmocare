@@ -34,6 +34,12 @@ MANIFEST
 .venv/
 venv/
 .pytest_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+
+# Docs (mkdocs)
+/site/
 
 # Flutter/Dart
 .dart_tool/

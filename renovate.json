@@ -1,0 +1,53 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":dependencyDashboard",
+    "schedule:weekly"
+  ],
+  "timezone": "Africa/Tunis",
+  "prHourlyLimit": 4,
+  "labels": ["dependencies"],
+  "pep621": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions bumps",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "pinDigests": true
+    },
+    {
+      "description": "Group OpenTelemetry packages (versions move together)",
+      "matchPackageNames": ["/^opentelemetry-/"],
+      "groupName": "opentelemetry"
+    },
+    {
+      "description": "Group LangChain / LangGraph (MedRAX agent)",
+      "matchPackageNames": ["/^langchain/", "/^langgraph/"],
+      "groupName": "langchain"
+    },
+    {
+      "description": "Pin heavy ML deps (torch/transformers) -- bump deliberately",
+      "matchPackageNames": ["torch", "torchvision", "transformers"],
+      "enabled": false
+    },
+    {
+      "description": "Automerge dev tooling patch/minor",
+      "matchDepTypes": ["dependency-groups", "devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Docker images: digest pin",
+      "matchDatasources": ["docker"],
+      "pinDigests": true
+    }
+  ]
+}
