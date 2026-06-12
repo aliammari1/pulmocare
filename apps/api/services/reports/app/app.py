@@ -17,6 +17,7 @@ from pulmocare_shared.middleware import health_router
 from config import get_config
 from report_generator import ReportGenerator
 from routes.integration_routes import router as integration_router
+from routes.radiology_routes import router as radiology_router
 from services.mongodb_client import MongoDBClient
 from services.rabbitmq_client import RabbitMQClient
 from services.redis_client import RedisClient
@@ -142,6 +143,8 @@ async def export_report(
 # Register routes
 app.include_router(api, prefix="/api/reports")
 app.include_router(integration_router)
+# AI radiology-report endpoint (MedRAX, research-only)
+app.include_router(radiology_router)
 
 # Import the consumer module and threading
 from consumer import main as consumer_main

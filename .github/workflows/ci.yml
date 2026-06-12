@@ -63,7 +63,7 @@ jobs:
         run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
         # Services without a tests/ dir simply report "no tests ran" (exit 5),
         # which we treat as success until tests are added.
-        continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' }}
+        continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
 
       - name: Upload coverage to Codecov
         if: always()

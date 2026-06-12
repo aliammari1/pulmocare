@@ -1,0 +1,36 @@
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude:
+    # On PRs always; on issue comments only when "@claude" is mentioned.
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Claude Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: >-
+            Review this PR for a medical-imaging platform. Pay special attention
+            to PHI (protected health information) handling in the patients and
+            medfiles services and anywhere patient identifiers, attributes,
+            medical history, or images are logged, cached, sent to RabbitMQ, or
+            returned in responses. Flag: PHI written to logs/print statements,
+            PHI in error messages, missing authorization checks on patient data,
+            and any AI/MedRAX output returned without the RESEARCH-ONLY banner.
