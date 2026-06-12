@@ -63,8 +63,36 @@
 3. **Set up environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your non-secret configuration
    ```
+
+   API keys are **not** kept in `.env` and are **never committed**:
+
+   - **Gemini API key** is read via Dart's compile-time environment. Pass it
+     with `--dart-define` (or a JSON file via `--dart-define-from-file`):
+
+     ```bash
+     flutter run --dart-define=GEMINI_API_KEY=your_gemini_key
+     # or, keeping it out of your shell history (file is gitignored):
+     #   echo '{ "GEMINI_API_KEY": "your_gemini_key" }' > dart_defines.json
+     flutter run --dart-define-from-file=dart_defines.json
+     ```
+
+     The code reads it as `String.fromEnvironment('GEMINI_API_KEY')`
+     (see `lib/services/gemini_service.dart`); when unset it defaults to an
+     empty string and the SDK surfaces an auth error rather than shipping a
+     hard-coded key.
+
+   - **Google Maps API key (Android)** is injected from the gitignored
+     `android/local.properties`:
+
+     ```properties
+     MAPS_API_KEY=your_google_maps_key
+     ```
+
+     `android/app/build.gradle.kts` reads it (falling back to the
+     `MAPS_API_KEY` env var, then `""`) and wires it into the
+     `${MAPS_API_KEY}` placeholder in `AndroidManifest.xml`.
 
 4. **Generate code (if needed)**
    ```bash

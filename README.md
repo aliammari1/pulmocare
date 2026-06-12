@@ -1,354 +1,226 @@
-# 🏥 Pulmocare
+<!-- Banner: generate assets/banner.png from BANNER.md (brandkit / imagegen). -->
+<!-- Until generated, the line below 404s gracefully; commit assets/banner.png to fix. -->
+![PulmoCare — research-only chest X-ray reasoning platform](assets/banner.png)
 
-> **Advanced Medical Imaging Analysis & Clinical Report Management Platform**
+# PulmoCare
 
-[![Status](https://img.shields.io/badge/Status-🚧%20IN%20PROGRESS-orange?style=flat-square)]()
-[![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=flat-square&logo=python)](https://python.org)
-[![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569b?style=flat-square&logo=flutter)](https://flutter.dev)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square&logo=docker)](https://docker.com)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-Compatible-326ce5?style=flat-square&logo=kubernetes)](https://kubernetes.io)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+> **Open-source, self-hostable chest-X-ray AI agent** — built on
+> [**MedRAX**](https://github.com/bowang-lab/MedRAX) (ICML 2025) — packaged as a
+> **FastAPI microservice mesh + Flutter** client. **RESEARCH ONLY.**
 
-## 🌟 Overview
+[![CI](https://img.shields.io/badge/CI-uv%20%2B%20ruff%20%2B%20pytest-blue?style=flat-square)](.github/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT%20(first--party)-green?style=flat-square)](LICENSE)
+[![MedRAX](https://img.shields.io/badge/agent-MedRAX%20(Apache--2.0)-orange?style=flat-square)](apps/api/services/medagent/LICENSE)
+[![docs: mkdocs-material](https://img.shields.io/badge/docs-mkdocs--material-1098f7?style=flat-square)](mkdocs.yml)
+[![Open in HF Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-HF%20ZeroGPU%20Space-yellow?style=flat-square)](deploy/hf-space/)
+[![Open in Colab](https://img.shields.io/badge/reproduce-Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](deploy/colab/reproduce_chestagentbench.ipynb)
+[![Star this repo](https://img.shields.io/github/stars/aliammari1/pulmocare?style=flat-square&logo=github&label=Star)](https://github.com/aliammari1/pulmocare)
 
-Pulmocare is a **comprehensive healthcare platform** combining cutting-edge **medical imaging analysis** with a **universal medical report management application**. This monorepo unites a powerful Python microservices backend with a cross-platform Flutter client ecosystem to deliver intelligent healthcare workflows at scale.
+## ▶ Try the live X-ray agent — no install
 
-### ✨ What You Get
+> **[Open in 🤗 Hugging Face Spaces](deploy/hf-space/)** ·
+> **[Reproduce in Colab](deploy/colab/reproduce_chestagentbench.ipynb)**
 
-- 🖼️ **Medical AI Backend**: X-ray analysis, disease detection, DICOM support, microservices architecture
-- 📱 **Universal Client**: iOS, Android, Web, Windows, macOS, Linux—all from one codebase
-- 🧠 **Clinical Intelligence**: AI text recognition, voice-to-text, digital signatures, language translation
-- 🔒 **Healthcare-Grade Security**: HIPAA compliance, JWT auth, end-to-end encryption, audit trails
-- 📊 **Enterprise Infrastructure**: Kubernetes-ready, monitoring stack, CI/CD pipelines, disaster recovery
+The headline demo is a **Hugging Face ZeroGPU Gradio Space** wrapping MedRAX's
+own agent UI: upload a chest X-ray, watch the LangGraph agent route across its
+classification / VQA / report-generation tools, and read a structured,
+research-only report. No local GPU, no setup.
 
----
+<!-- Demo GIF: drop a recording at assets/demo.gif (see assets/README.md). Until
+     then this 404s gracefully. -->
+![PulmoCare live X-ray agent demo](assets/demo.gif)
 
-## 🚨 Project Status: **IN DEVELOPMENT**
+If this is useful for your research, **[⭐ star the repo](https://github.com/aliammari1/pulmocare)**
+— it helps others find a self-hostable, reproducible MedRAX deployment.
 
-This is an **actively evolving project**. 
-- APIs and feature sets are subject to change
-- Infrastructure automation is being hardened
-- Integration between backend and client is ongoing
-- Security compliance reviews in progress
-
----
-
-## 🎯 Core Features
-
-### 🔬 Medical Intelligence Suite
-
-| Feature | Backend | Frontend |
-|---------|---------|----------|
-| **AI Text Recognition** | OCR pipeline via TensorFlow | Google ML Kit integration |
-| **Speech-to-Text** | WebSocket-based processing | Native voice input with multilingual support |
-| **Disease Detection** | Pneumonia, COVID-19, conditions | Real-time analysis visualization |
-| **Digital Signatures** | Validation & storage | Biometric & pen capture |
-| **Language Support** | Translation workflows | Detection & auto-translate |
-| **DICOM Handling** | Full DICOM parsing & storage | Image preview & annotation |
-
-### 📊 Clinical Workflow Management
-
-- ✅ **Patient Records**: Comprehensive medical profiles with history tracking
-- ✅ **Medical Reports**: Create, edit, sign, share, and archive clinical documents
-- ✅ **Appointment Scheduling**: Integrated calendar with notifications  
-- ✅ **Prescription Management**: Digital prescription workflows
-- ✅ **Real-time Sync**: Data synchronization across all devices
-- ✅ **Offline-First**: Work anywhere—automatic sync when reconnected
-- ✅ **Audit Logging**: Complete activity trails for compliance
+> [!CAUTION]
+> **RESEARCH ONLY — NOT FOR CLINICAL USE.** PulmoCare and the bundled MedRAX
+> agent are for research, education, and engineering demonstration **only**.
+> This is **not a medical device**, has not been cleared by the FDA/EMA or any
+> regulator, and **must not** be used for any clinical, diagnostic, or treatment
+> decision for real patients. AI-generated output is unvalidated and may be
+> incorrect. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 ---
 
-## 🏗️ Technology Stack
+## What this actually is
 
-### Backend: Medical AI Platform
-```
-Python 3.9+ | FastAPI | PostgreSQL | Redis | MongoDB
-TensorFlow | PyTorch | OpenCV | Scikit-learn
-Docker | Kubernetes | Jenkins | Prometheus | Grafana
-RabbitMQ | Apache Kafka | gRPC | WebSocket
-```
+PulmoCare is a polyglot monorepo built around an **observable FastAPI
+microservice mesh**. Everything below is wired in
+[`apps/api/docker-compose.yml`](apps/api/docker-compose.yml) and is the real,
+runnable system — not aspiration:
 
-**Key Services:**
-- API Gateway + Service Discovery
-- Authentication & Authorization (JWT + Keycloak)
-- Medical Imaging Processing (DICOM, X-ray analysis)
-- AI/ML Model Inference
-- Patient Data Management
-- Report Generation Engine
-- Real-time Notifications
+| Concern | Component |
+|---|---|
+| Identity / SSO | **Keycloak** (+ Postgres) |
+| Secrets | **Vault** |
+| Service discovery | **Consul**, etcd |
+| API gateway | **Apache APISIX** (+ dashboard) |
+| Messaging | **RabbitMQ** |
+| Cache | **Redis** |
+| Data / object store | **MongoDB**, **MinIO** |
+| Tracing / metrics / logs | **OpenTelemetry Collector** → **Prometheus**, Tempo, Loki, **Grafana** |
+| Quality / CI | SonarQube, Jenkins, Portainer |
 
-### Frontend: Cross-Platform Client
-```
-Flutter 3.0+ | Dart 3.0+
-Provider | BLoC | GetX
-Hive | SharedPreferences  
-Dio | Google ML Kit | Firebase
+Application services (independent `uv` projects under
+`apps/api/services/<svc>/app`): **auth**, **patients**, **appointments**,
+**medecins**, **medfiles**, **ordonnances**, **radiologues**, **reports** — plus
+**`medagent`**, a vendored MedRAX LangGraph agent.
 
-Platforms: iOS | Android | Web | Windows | macOS | Linux
-```
+The Flutter client lives under [`apps/mobile`](apps/mobile).
 
-**Key Capabilities:**
-- Material Design + Cupertino widgets
-- Offline-first data synchronization
-- Biometric authentication (Face ID, Touch ID, fingerprint)
-- Camera integration for document scanning
-- Digital signature capture
-- Real-time notifications
+> [!NOTE]
+> **Honest status.** The Kubernetes manifests (`apps/api/k8s`) and Ansible
+> playbooks (`apps/api/ansible`) are **aspirational** — use `docker compose` for
+> development. Several services and the Flutter app are works in progress.
 
-### Infrastructure & DevOps
-```
-Containerization: Docker
-Orchestration: Docker Compose | Kubernetes
-CI/CD: Jenkins | GitHub Actions
-Monitoring: Prometheus | Grafana | Loki | Tempo
-Configuration: Ansible | Terraform
-Security: HIPAA | GDPR | AES-256 encryption | TLS 1.3
+## Architecture
+
+```mermaid
+flowchart LR
+  App[Flutter app] --> GW[APISIX gateway]
+  GW --> Auth[auth / Keycloak]
+  GW --> Patients[patients]
+  GW --> Reports[reports + AI]
+  GW --> Agent[medagent / MedRAX]
+  Patients -. verify token .-> Auth
+  Auth & Patients & Reports & Agent -- OTel --> OTEL[Collector] --> Prom[Prometheus] --> Graf[Grafana]
 ```
 
----
+More detail (service mesh + the MedRAX tool graph) in [`docs/`](docs/).
 
-## 📁 Monorepo Structure
-
-```
-pulmocare/
-├── apps/
-│   ├── api/                           # 🌍 Backend Microservices
-│   │   ├── services/
-│   │   │   ├── api-gateway/
-│   │   │   ├── auth-service/
-│   │   │   ├── imaging-service/
-│   │   │   ├── ai-service/
-│   │   │   ├── patient-service/
-│   │   │   ├── report-service/
-│   │   │   └── notification-service/
-│   │   ├── monitoring/                # Prometheus, Grafana, Loki
-│   │   ├── k8s/                       # Kubernetes manifests
-│   │   ├── ansible/                   # Infrastructure automation
-│   │   ├── docker-compose.yml
-│   │   └── Makefile
-│   │
-│   └── mobile/                        # 📦 Flutter Application
-│       ├── lib/
-│       │   ├── screens/               # Auth, Dashboard, Patients, Reports, Settings
-│       │   ├── services/              # API, ML Kit, Storage, Notifications
-│       │   ├── providers/             # State management
-│       │   ├── models/                # Patient, Report, Appointment
-│       │   ├── widgets/               # UI components
-│       │   ├── theme/                 # Design system
-│       │   └── main.dart
-│       ├── android/ | ios/ | web/ | windows/ | macos/ | linux/
-│       ├── test/                      # Unit, widget, integration tests
-│       └── pubspec.yaml
-│
-├── shared/
-│   ├── api-spec/
-│   │   └── openapi.yaml               # REST API specification
-│   ├── config/                        # Environment templates
-│   └── docs/                          # Shared documentation
-│
-├── scripts/                           # Automation & CI/CD
-├── docker-compose.yaml                # Root orchestration
-├── Taskfile.yml                       # Task runner
-└── README.md
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Docker** & Docker Compose
-- **Python** 3.9+
-- **Flutter** 3.0+ — [Install](https://flutter.dev/docs/get-started/install)
-- **Dart** 3.0+
-- **Task** — [Install](https://taskfile.dev/installation)
-- **Git**
-
-### Installation
+## Quickstart
 
 ```bash
-# Clone & navigate
-git clone https://github.com/aliammari1/pulmocare.git
-cd pulmocare
+# Full stack (Keycloak, Vault, Consul, APISIX, RabbitMQ, OTel, ...)
+cd apps/api
+docker compose up -d        # real orchestration lives here
 
-# Bootstrap everything
-task setup
+# Develop a single service (toolchain: uv + ruff)
+cd apps/api/services/auth/app
+uv sync --dev
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
 ```
 
-### Run in Development
+## AI feature — structured radiology reports (research only)
+
+The **reports** service exposes MedRAX's report-generation and VQA tools as a
+structured endpoint:
+
+```
+POST /api/reports/ai/radiology-report
+GET  /api/reports/ai/disclaimer
+```
+
+It returns structured `findings` / `impression` (and optional `xray_vqa`
+answer), plus an optional plain-language narrative generated by Claude
+(`claude-haiku-4-5`). **Every response carries the RESEARCH-ONLY banner** and is
+intended for clinician review/edit, never for clinical use. MedRAX model weights
+load lazily; with no weights the endpoint degrades gracefully instead of
+failing. See [`docs/medrax.md`](docs/medrax.md).
+
+## MedRAX attribution
+
+`apps/api/services/medagent` is a vendored copy of **MedRAX**
+([bowang-lab/MedRAX](https://github.com/bowang-lab/MedRAX), ICML 2025,
+[arXiv:2502.02673](https://arxiv.org/abs/2502.02673)), redistributed under the
+**Apache License 2.0** (kept intact at `apps/api/services/medagent/LICENSE`).
+First-party PulmoCare code is **MIT** ([`LICENSE`](LICENSE)). See
+[`NOTICE`](NOTICE) and [`CITATION.cff`](CITATION.cff).
+
+## Demo & hosting
+
+The headline demo is a **Hugging Face ZeroGPU Gradio Space** wrapping MedRAX's
+own `interface.py` (`create_demo`). A ready-to-push scaffold lives at
+[`deploy/hf-space/`](deploy/hf-space/) (`app.py` + `requirements.txt` + the Space
+`README.md` with `sdk: gradio` / `hardware: zero-gpu` front-matter). It loads the
+agent, wraps GPU tool calls in `@spaces.GPU`, and shows the RESEARCH-ONLY banner.
+
+- **ML demo** → HF ZeroGPU Space (Gradio-only; *using* ZeroGPU is free, *hosting*
+  needs HF PRO).
+- **API mesh** → a free container host. Note (2026): **Fly.io's free tier is
+  gone** and **Koyeb dropped free web compute**; **Render** still offers an
+  always-free Docker web service (750 hr/month, spins down after 15 min idle) —
+  good for one demo service, not the full multi-sidecar mesh.
+- **Docs** → Cloudflare Pages (mkdocs build). Workers run JS/WASM, not
+  long-running Python, so the FastAPI mesh is **not** a Workers fit.
+
+Full steps, secrets, and cited 2026 sources: [`deploy/README.md`](deploy/README.md).
+(Live deploys are gated behind accounts/tokens; the scaffolds are ready.)
+
+## Reproducibility & community
+
+- **MedRAX / ChestAgentBench** reproduction notebook stub:
+  [`deploy/colab/reproduce_chestagentbench.ipynb`](deploy/colab/reproduce_chestagentbench.ipynb)
+  (points at the upstream benchmark; no weights committed here).
+- Suggested **GitHub topics**: `medical-imaging`, `chest-xray`, `langgraph`,
+  `medrax`, `fastapi`, `microservices`, `flutter`, `radiology`, `research-only`,
+  `observability`.
+- Submission targets: the MedRAX ICML reproducibility track and
+  **Awesome-Healthcare-Foundation-Models** (as a downstream integration), with
+  the RESEARCH-ONLY disclaimer kept prominent.
+- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) ·
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · [`SECURITY.md`](SECURITY.md).
+
+## Engineering decisions
+
+- **License scoping, not blanket MIT.** MedRAX is vendored under Apache-2.0 with
+  citation obligations; relicensing it would be wrong. First-party code is MIT;
+  the agent keeps its license + a `NOTICE`/`CITATION.cff`.
+- **uv + ruff, no black/pip.** Every service is an isolated `uv` project; CI runs
+  a real per-service matrix (`uv sync` → `ruff check`/`format --check` → `ty` →
+  `pytest`) with no `|| echo` failure-swallowing.
+- **Test the agent's routing, not its weights.** MedRAX tool-routing is tested
+  with a scripted model + mocked tools — no GPU/weights in CI. testcontainers
+  and schemathesis are scheduled/manual CI jobs.
+- **Cloudflare Pages for docs only.** The FastAPI mesh + ML + Keycloak/Vault are
+  container/k8s workloads, not a Workers fit; only the mkdocs site deploys to CF
+  Pages (gated on secrets). The live ML demo goes to a HF Space.
+- **PHI-aware AI review.** A `claude-code-action` workflow flags PHI handling in
+  patients/medfiles and any AI output missing the research banner.
+- **Observability that respects PHI.** Sentry (FastAPI) runs with
+  `send_default_pii=False` and a `before_send` scrubber that strips request
+  bodies, cookies, headers and PHI-shaped fields; OTel **GenAI spans** trace the
+  MedRAX agent recording **only** tool names, token counts and latency (never
+  image paths, prompts or outputs); `asgi-correlation-id` + structlog share one
+  request id across logs, traces and Sentry (see
+  `apps/api/services/shared/src/pulmocare_shared/observability.py`).
+- **Rate-limited AI routes.** The APISIX gateway applies Redis-backed
+  `limit-count` + `limit-req` to `/api/reports/ai/*` so the expensive GPU/LLM
+  endpoints can't be hammered (`apps/api/config/apisix/apisix.yaml`).
+
+## Documentation
+
+mkdocs-material site (Mermaid diagrams, MedRAX tool graph). Build locally:
 
 ```bash
-# Terminal 1: Start backend services
-task dev:api
-# 🌍 API @ http://localhost:8000
-# 📊 Grafana @ http://localhost:3000
-
-# Terminal 2: Start Flutter app
-task dev:mobile
-# 📱 App running with hot-reload
+pip install -r docs/requirements.txt
+mkdocs serve
 ```
 
-### Build for Production
+## License
 
-```bash
-# Backend Docker image
-cd apps/api && docker build -t pulmocare-api:latest .
+- First-party code: **MIT** — [`LICENSE`](LICENSE).
+- `apps/api/services/medagent` (MedRAX): **Apache-2.0** — kept intact.
+- Model weights / datasets: their own licenses; not distributed here.
 
-# Mobile APK (Android)
-cd apps/mobile && flutter build apk --release
+**RESEARCH ONLY — not a medical device.**
 
-# Mobile IPA (iOS)
-flutter build ios --release
+## Related projects
 
-# Web
-flutter build web --release
+Part of a wider open-source portfolio by [@aliammari1](https://github.com/aliammari1):
 
-# Desktop (Windows, macOS, Linux)
-flutter build windows --release
-flutter build macos --release
-flutter build linux --release
-```
+- **[readrealm](https://github.com/aliammari1/readrealm)** — open-source AI
+  book-chat (one backend → Android / iOS / Flutter).
+- **[JobPrep](https://github.com/aliammari1/JobPrep)** — open-source, BYOK,
+  self-hostable AI interview-prep platform.
+- **[github-traffic-analytics](https://github.com/aliammari1/github-traffic-analytics)**
+  — keep your GitHub repo traffic past the 14-day window.
 
----
+Built with **[MedRAX](https://github.com/bowang-lab/MedRAX)** (ICML 2025) — if
+PulmoCare is useful, please cite MedRAX too (see [`CITATION.cff`](CITATION.cff)).
 
-## 📖 Documentation
+## Author
 
-| Document | Purpose |
-|----------|---------|
-| [Backend README](./apps/api/README.md) | Microservices architecture, AI/ML pipelines, deployment |
-| [Mobile README](./apps/mobile/README.md) | Flutter app structure, state management, build guides |
-| [OpenAPI Spec](./shared/api-spec/openapi.yaml) | REST API contracts |
-| [K8s Guide](./apps/api/k8s/README.md) | Production Kubernetes deployment |
-| [Ansible Playbooks](./apps/api/ansible/playbooks/) | Infrastructure as Code |
-
----
-
-## 🛠️ Task Commands
-
-```bash
-task setup              # Install all dependencies
-task dev:api            # Start backend services
-task dev:mobile         # Launch Flutter app
-task test:api           # Backend tests
-task test:mobile        # Mobile tests
-task clean              # Clean artifacts & containers
-```
-
-See `Taskfile.yml` for all available commands.
-
----
-
-## 🔒 Security & Compliance
-
-### Healthcare Standards
-- ✅ **HIPAA**: Patient data protection standards
-- ✅ **GDPR**: European data protection regulations  
-- ✅ **CCPA**: California privacy compliance
-- ✅ **Audit Logging**: Complete activity trails
-- ✅ **Data Encryption**: AES-256 at rest, TLS 1.3 in transit
-
-### Application Security
-- 🔐 JWT-based authentication with role-based access
-- 🔐 Biometric authentication (Face ID, Touch ID, fingerprint)
-- 🔐 Encrypted local storage (Hive, Secure Storage)
-- 🔐 API rate limiting & request validation
-- 🔐 Secrets management via environment & vault
-
----
-
-## 📊 Performance Targets
-
-| Metric | Target | Status |
-|--------|--------|--------|
-| **API Response Time** | < 100ms (p95) | 🎯 |
-| **X-ray Analysis** | < 2 seconds | 🎯 |
-| **Diagnostic Accuracy** | > 95% | ✅ |
-| **App Bundle Size** | ~ 150MB (Android) | 📦 |
-| **System Uptime** | 99.9% SLA | 📋 |
-| **Concurrent Users** | 10,000+ | 🚀 |
-
----
-
-## 🗺️ Roadmap
-
-| Phase | Timeline | Goals |
-|-------|----------|-------|
-| **Phase 1** | 🚧 Now | Monorepo consolidation, backend/frontend integration |
-| **Phase 2** | 📋 Q2 2024 | Advanced AI diagnostics, telemedicine video, wearables |
-| **Phase 3** | 📋 Q4 2024 | Predictive analytics, AR/VR visualization, IoT integration |
-| **Phase 4** | 📋 2025 | Blockchain health records, global network, multi-tenant |
-
----
-
-## 🤝 Contributing
-
-We welcome contributions from the healthcare & software engineering communities!
-
-```bash
-# Fork & clone
-git clone https://github.com/aliammari1/pulmocare.git
-cd pulmocare
-
-# Create feature branch
-git checkout -b feature/your-amazing-feature
-
-# Develop & test
-flutter pub get
-flutter analyze && flutter test
-
-# Commit & push
-git commit -m "feat: describe your change"
-git push origin feature/your-amazing-feature
-```
-
-### Code Standards
-- **Flutter/Dart**: Follow [Effective Dart](https://dart.dev/guides/language/effective-dart) guidelines
-- **Python**: PEP 8 + type hints + docstrings
-- **Testing**: Minimum 80% coverage for new code \(This project is tested with BrowserStack\)
-- **Security**: SAST/DAST required before merge
-
----
-
-## 📄 License
-
-MIT License — See [LICENSE](LICENSE) file for details.
-
-```
-Copyright (c) 2024 Ali Ammari
-Permission is hereby granted, free of charge, ...
-```
-
----
-
-## 👤 Author
-
-**Ali Ammari** — Lead Developer & Solutions Architect
-
-- 🌐 [aliammari.netlify.app](https://www.aliammair.com)
-- 🔗 [GitHub: @aliammari1](https://github.com/aliammari1)
-- 💼 [LinkedIn: Ali Ammari](https://linkedin.com/in/aliammari1)
-- 📧 [contact@aliammari.com](mailto:contact@aliammari.com)
-
----
-
-## 📞 Support & Resources
-
-- 📖 [Documentation](./shared/docs/)
-- 🐛 [GitHub Issues](https://github.com/aliammari1/pulmocare/issues)
-- 💬 [GitHub Discussions](https://github.com/aliammari1/pulmocare/discussions)
-- 🆘 [Email Support](mailto:contact@aliammari.com)
-
----
-
-<div align="center">
-
-### 🏥 Revolutionizing Healthcare with Precision, Speed & Intelligence
-
-**Building the Future of Medical Imaging & Clinical Workflows**
-
-Made with ❤️ for healthcare professionals by [Ali Ammari](https://github.com/aliammari1)
-
-⭐ **If this project helps you, please star it!** ⭐
-
-</div>
+**Ali Ammari** — [@aliammari1](https://github.com/aliammari1)

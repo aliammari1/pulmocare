@@ -1,0 +1,6 @@
+{
+  ".": "0.1.0",
+  "apps/api/services/auth/app": "1.0.0",
+  "apps/api/services/patients/app": "1.0.0",
+  "apps/mobile": "0.1.0"
+}

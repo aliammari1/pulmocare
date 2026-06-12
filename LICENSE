@@ -19,3 +19,33 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------------------------------------------------------------------------------
+
+SCOPE OF THIS LICENSE
+
+The MIT license above applies ONLY to the first-party PulmoCare code authored
+for this repository (the FastAPI microservices under `apps/api/services/*`
+excluding `medagent`, the Flutter application under `apps/mobile`, shared
+libraries, infrastructure, CI, and documentation).
+
+It does NOT apply to the vendored third-party agent in
+`apps/api/services/medagent`, which is a copy of MedRAX (bowang-lab/MedRAX)
+distributed under the Apache License 2.0. That component retains its own
+license (`apps/api/services/medagent/LICENSE`) and its own copyright. See the
+top-level `NOTICE` file for attribution details. Pretrained model weights and
+external datasets referenced by MedRAX (e.g. CheXagent, TorchXRayVision,
+LLaVA-Med, MIMIC-CXR, CheXpert) are governed by their own separate licenses
+and data-use agreements and are NOT covered by this license.
+
+-------------------------------------------------------------------------------
+
+RESEARCH ONLY -- NOT FOR CLINICAL USE
+
+PulmoCare and the bundled MedRAX agent are provided for research, education,
+and engineering-demonstration purposes ONLY. This software is NOT a medical
+device, has NOT been cleared or approved by the FDA, EMA, or any other
+regulatory body, and MUST NOT be used to make, support, or inform any clinical,
+diagnostic, or treatment decision for real patients. Any AI-generated output
+(including radiology reports and visual question answering) is unvalidated and
+may be incorrect. Use at your own risk.

@@ -282,6 +282,61 @@ routes:
       type: roundrobin
     uri: /api/radiologues/*
 
+  # AI radiology routes (MedRAX, research-only): heavy GPU/LLM work, so they
+  # carry a stricter Redis-backed rate limit than the rest of the mesh. Higher
+  # priority + more specific URI ensures these match before /api/reports/*.
+  - id: reports-ai-protected
+    name: reports-ai-service
+    priority: 10
+    plugins:
+      cors:
+        allow_headers: Authorization,Content-Type,Accept
+        allow_methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+        expose_headers: X-Request-Id
+        max_age: 3600
+      prometheus:
+        enable: true
+      request-id:
+        enable: true
+        header_name: X-Request-Id
+      # Sliding-window quota shared across APISIX nodes via Redis.
+      limit-count:
+        count: 30
+        time_window: 60
+        rejected_code: 429
+        rejected_msg: "AI rate limit exceeded (research demo). Try again shortly."
+        key_type: var
+        key: remote_addr
+        policy: redis
+        redis_host: redis
+        redis_port: 6379
+        redis_password: ${REDIS_PASSWORD}
+        redis_database: 1
+        redis_timeout: 1000
+      # Leaky-bucket smoothing to absorb bursts on the expensive AI endpoints.
+      limit-req:
+        rate: 1
+        burst: 3
+        rejected_code: 429
+        rejected_msg: "AI request rate too high (research demo)."
+        key_type: var
+        key: remote_addr
+    upstream:
+      checks:
+        active:
+          healthy:
+            interval: 5
+            successes: 2
+          http_path: /health
+          type: http
+          unhealthy:
+            http_failures: 3
+            interval: 3
+      nodes:
+        reports-service:8085: 1
+      type: roundrobin
+    uri: /api/reports/ai/*
+
   - id: reports-service
     name: reports-service
     plugins:

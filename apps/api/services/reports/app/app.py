@@ -5,18 +5,18 @@ Handles medical report generation with AI/ML capabilities.
 """
 
 import threading
-import time
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
-from pulmocare_shared import setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
+from pulmocare_shared import setup_cors, setup_observability, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from report_generator import ReportGenerator
 from routes.integration_routes import router as integration_router
+from routes.radiology_routes import router as radiology_router
 from services.mongodb_client import MongoDBClient
 from services.rabbitmq_client import RabbitMQClient
 from services.redis_client import RedisClient
@@ -41,6 +41,10 @@ setup_cors(app, config.cors_origins)
 
 # Setup OpenTelemetry using shared module
 setup_telemetry(app, config)
+
+# Sentry (PHI-scrubbed) + request correlation IDs. No-op without SENTRY_DSN /
+# the optional deps, so the service still boots in minimal environments.
+setup_observability(config, app)
 
 # Include health check router
 app.include_router(health_router)
@@ -142,6 +146,8 @@ async def export_report(
 # Register routes
 app.include_router(api, prefix="/api/reports")
 app.include_router(integration_router)
+# AI radiology-report endpoint (MedRAX, research-only)
+app.include_router(radiology_router)
 
 # Import the consumer module and threading
 from consumer import main as consumer_main
@@ -159,4 +165,3 @@ if __name__ == "__main__":
         reload=config.is_development,
         log_level="debug" if config.debug else "info",
     )
-

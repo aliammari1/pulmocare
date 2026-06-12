@@ -1,0 +1,65 @@
+site_name: PulmoCare
+site_description: >-
+  Research-only medical-imaging microservice platform integrating the MedRAX
+  chest X-ray reasoning agent. NOT a medical device.
+site_author: Ali Ammari
+repo_url: https://github.com/aliammari1/pulmocare
+repo_name: aliammari1/pulmocare
+copyright: >-
+  Copyright &copy; 2023-2025 Ali Ammari — RESEARCH ONLY, NOT FOR CLINICAL USE.
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+
+# NOTE: When building the full aggregated site in CI, install the optional
+# plugins listed in docs/requirements.txt (mkdocs-monorepo-plugin,
+# mkdocstrings[python], mkdocs-mermaid2-plugin) and they will be picked up.
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - MedRAX agent: medrax.md
+  - Development: development.md
+  - License & disclaimer: license.md

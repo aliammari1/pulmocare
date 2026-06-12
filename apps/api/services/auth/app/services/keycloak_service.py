@@ -215,7 +215,9 @@ class KeycloakService:
                 )
 
                 if test_response.status_code != 200:
-                    print(f"Service account token validation failed: {test_response.status_code} - {test_response.text}")
+                    print(
+                        f"Service account token validation failed: {test_response.status_code} - {test_response.text}"
+                    )
                     raise Exception(f"Invalid service account token: HTTP {test_response.status_code}")
                 else:
                     print("Service account token validated successfully")
@@ -327,7 +329,9 @@ class KeycloakService:
                         )
 
                         if role_info_response.status_code != 200:
-                            print(f"Error fetching role info: {role_info_response.status_code} - {role_info_response.text}")
+                            print(
+                                f"Error fetching role info: {role_info_response.status_code} - {role_info_response.text}"
+                            )
                             raise Exception(f"Role not found: {role_name}")
 
                         role_info = role_info_response.json()
@@ -349,7 +353,9 @@ class KeycloakService:
                         if response.status_code in [200, 201, 204]:
                             print(f"Role {role_name} assigned using direct API call")
                         else:
-                            print(f"Failed to assign role using direct API: HTTP {response.status_code} - {response.text}")
+                            print(
+                                f"Failed to assign role using direct API: HTTP {response.status_code} - {response.text}"
+                            )
                     else:
                         print("Could not get admin token for direct role assignment")
                 except Exception as direct_e:
@@ -427,6 +433,7 @@ class KeycloakService:
             return token_info
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).error(f"Token verification error: {type(e).__name__}")
             raise
 
@@ -457,6 +464,7 @@ class KeycloakService:
         Use logout() for standard OIDC logout.
         """
         import logging
+
         logger = logging.getLogger(__name__)
         try:
             config = self.keycloak_admin.connection.get_config()
@@ -491,6 +499,7 @@ class KeycloakService:
         Log out a user using their access token
         """
         import logging
+
         logger = logging.getLogger(__name__)
         try:
             payload = self.verify_token(access_token)
@@ -513,17 +522,13 @@ class KeycloakService:
                     admin_headers = self.keycloak_admin.connection.get_headers()
                     session_logout_url = f"{admin_url}/users/{user_id}/sessions"
 
-                    sessions_response = requests.get(
-                        session_logout_url, headers=admin_headers, timeout=10
-                    )
+                    sessions_response = requests.get(session_logout_url, headers=admin_headers, timeout=10)
                     if sessions_response.status_code == 200:
                         sessions = sessions_response.json()
                         for session in sessions:
                             if session.get("id") == session_id:
                                 logout_session_url = f"{admin_url}/sessions/{session_id}"
-                                delete_response = requests.delete(
-                                    logout_session_url, headers=admin_headers, timeout=10
-                                )
+                                delete_response = requests.delete(logout_session_url, headers=admin_headers, timeout=10)
                                 if delete_response.status_code in (204, 200):
                                     logger.info(f"Successfully logged out session {session_id}")
                                     return True
@@ -547,6 +552,7 @@ class KeycloakService:
             return True
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).error(f"Logout error: {type(e).__name__}")
             raise
 
@@ -645,15 +651,25 @@ class KeycloakService:
             if "social_security_number" in user_data:
                 attributes["social_security_number"] = [user_data["social_security_number"]]
             if "medical_history" in user_data:
-                attributes["medical_history"] = user_data["medical_history"] if isinstance(user_data["medical_history"], list) else [user_data["medical_history"]]
+                attributes["medical_history"] = (
+                    user_data["medical_history"]
+                    if isinstance(user_data["medical_history"], list)
+                    else [user_data["medical_history"]]
+                )
             if "allergies" in user_data:
-                attributes["allergies"] = user_data["allergies"] if isinstance(user_data["allergies"], list) else [user_data["allergies"]]
+                attributes["allergies"] = (
+                    user_data["allergies"] if isinstance(user_data["allergies"], list) else [user_data["allergies"]]
+                )
             if "height" in user_data:
                 attributes["height"] = [str(user_data["height"])]
             if "weight" in user_data:
                 attributes["weight"] = [str(user_data["weight"])]
             if "medical_files" in user_data:
-                attributes["medical_files"] = user_data["medical_files"] if isinstance(user_data["medical_files"], list) else [user_data["medical_files"]]
+                attributes["medical_files"] = (
+                    user_data["medical_files"]
+                    if isinstance(user_data["medical_files"], list)
+                    else [user_data["medical_files"]]
+                )
 
             if attributes:
                 update_data["attributes"] = attributes
@@ -801,7 +817,9 @@ class KeycloakService:
                         try:
                             admin_token = self.get_admin_token()
                             if admin_token:
-                                role_url = f"{self.keycloak_url}/admin/realms/{self.realm}/users/{user_id}/role-mappings/realm"
+                                role_url = (
+                                    f"{self.keycloak_url}/admin/realms/{self.realm}/users/{user_id}/role-mappings/realm"
+                                )
                                 role_payload = [
                                     {
                                         "name": role_name,
@@ -822,7 +840,9 @@ class KeycloakService:
                                     print(f"Role {role_name} assigned to {user_name} using direct API call")
                                     updated_users += 1
                                 else:
-                                    print(f"Failed to assign role using direct API: HTTP {response.status_code} - {response.text}")
+                                    print(
+                                        f"Failed to assign role using direct API: HTTP {response.status_code} - {response.text}"
+                                    )
                             else:
                                 print("Could not get admin token for direct role assignment")
                         except Exception as direct_e:

@@ -1,0 +1,53 @@
+name: Integration tests
+
+# These jobs need real backing services (Postgres/Mongo/RabbitMQ/Redis) via
+# testcontainers and OpenAPI fuzzing via schemathesis. They only make sense on
+# CI runners with Docker, so they do NOT run on every push by default.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  testcontainers:
+    name: testcontainers (auth, patients)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: auth, dir: apps/api/services/auth/app }
+          - { name: patients, dir: apps/api/services/patients/app }
+    defaults:
+      run:
+        working-directory: ${{ matrix.service.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --dev
+      - name: Install testcontainers
+        run: uv pip install testcontainers
+      - name: Run integration-marked tests
+        run: uv run pytest -m integration -q
+        # No integration-marked tests yet; this is the wiring for when they land.
+        continue-on-error: true
+
+  schemathesis:
+    name: schemathesis (OpenAPI fuzz)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install schemathesis
+        run: uv pip install --system schemathesis
+      # Boot a service and fuzz its generated OpenAPI. Placeholder until a
+      # service is started in CI with seeded data.
+      - name: Schemathesis (placeholder)
+        run: echo "schemathesis run is wired here; boot a service + run 'st run'"
