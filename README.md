@@ -4,9 +4,9 @@
 
 # PulmoCare
 
-> Research-only medical-imaging platform: a FastAPI microservice mesh + a
-> cross-platform Flutter client, integrating the **MedRAX** chest X-ray
-> reasoning agent.
+> **Open-source, self-hostable chest-X-ray AI agent** — built on
+> [**MedRAX**](https://github.com/bowang-lab/MedRAX) (ICML 2025) — packaged as a
+> **FastAPI microservice mesh + Flutter** client. **RESEARCH ONLY.**
 
 [![CI](https://img.shields.io/badge/CI-uv%20%2B%20ruff%20%2B%20pytest-blue?style=flat-square)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT%20(first--party)-green?style=flat-square)](LICENSE)
@@ -14,6 +14,24 @@
 [![docs: mkdocs-material](https://img.shields.io/badge/docs-mkdocs--material-1098f7?style=flat-square)](mkdocs.yml)
 [![Open in HF Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-HF%20ZeroGPU%20Space-yellow?style=flat-square)](deploy/hf-space/)
 [![Open in Colab](https://img.shields.io/badge/reproduce-Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](deploy/colab/reproduce_chestagentbench.ipynb)
+[![Star this repo](https://img.shields.io/github/stars/aliammari1/pulmocare?style=flat-square&logo=github&label=Star)](https://github.com/aliammari1/pulmocare)
+
+## ▶ Try the live X-ray agent — no install
+
+> **[Open in 🤗 Hugging Face Spaces](deploy/hf-space/)** ·
+> **[Reproduce in Colab](deploy/colab/reproduce_chestagentbench.ipynb)**
+
+The headline demo is a **Hugging Face ZeroGPU Gradio Space** wrapping MedRAX's
+own agent UI: upload a chest X-ray, watch the LangGraph agent route across its
+classification / VQA / report-generation tools, and read a structured,
+research-only report. No local GPU, no setup.
+
+<!-- Demo GIF: drop a recording at assets/demo.gif (see assets/README.md). Until
+     then this 404s gracefully. -->
+![PulmoCare live X-ray agent demo](assets/demo.gif)
+
+If this is useful for your research, **[⭐ star the repo](https://github.com/aliammari1/pulmocare)**
+— it helps others find a self-hostable, reproducible MedRAX deployment.
 
 > [!CAUTION]
 > **RESEARCH ONLY — NOT FOR CLINICAL USE.** PulmoCare and the bundled MedRAX
@@ -161,6 +179,16 @@ Full steps, secrets, and cited 2026 sources: [`deploy/README.md`](deploy/README.
   Pages (gated on secrets). The live ML demo goes to a HF Space.
 - **PHI-aware AI review.** A `claude-code-action` workflow flags PHI handling in
   patients/medfiles and any AI output missing the research banner.
+- **Observability that respects PHI.** Sentry (FastAPI) runs with
+  `send_default_pii=False` and a `before_send` scrubber that strips request
+  bodies, cookies, headers and PHI-shaped fields; OTel **GenAI spans** trace the
+  MedRAX agent recording **only** tool names, token counts and latency (never
+  image paths, prompts or outputs); `asgi-correlation-id` + structlog share one
+  request id across logs, traces and Sentry (see
+  `apps/api/services/shared/src/pulmocare_shared/observability.py`).
+- **Rate-limited AI routes.** The APISIX gateway applies Redis-backed
+  `limit-count` + `limit-req` to `/api/reports/ai/*` so the expensive GPU/LLM
+  endpoints can't be hammered (`apps/api/config/apisix/apisix.yaml`).
 
 ## Documentation
 
@@ -178,6 +206,20 @@ mkdocs serve
 - Model weights / datasets: their own licenses; not distributed here.
 
 **RESEARCH ONLY — not a medical device.**
+
+## Related projects
+
+Part of a wider open-source portfolio by [@aliammari1](https://github.com/aliammari1):
+
+- **[readrealm](https://github.com/aliammari1/readrealm)** — open-source AI
+  book-chat (one backend → Android / iOS / Flutter).
+- **[JobPrep](https://github.com/aliammari1/JobPrep)** — open-source, BYOK,
+  self-hostable AI interview-prep platform.
+- **[github-traffic-analytics](https://github.com/aliammari1/github-traffic-analytics)**
+  — keep your GitHub repo traffic past the 14-day window.
+
+Built with **[MedRAX](https://github.com/bowang-lab/MedRAX)** (ICML 2025) — if
+PulmoCare is useful, please cite MedRAX too (see [`CITATION.cff`](CITATION.cff)).
 
 ## Author
 

@@ -9,5 +9,8 @@ See [`../BANNER.md`](../BANNER.md) for the single image-gen prompt (clinical
 - `banner.png` — 1280×640 social-preview card (the README already references it)
 - `banner-hero.png` — wide README hero (~1600×500), optional
 - `mark.svg` — the lung-node mark (mono + color), optional
+- `demo.gif` — short screen recording of the HF Space agent run (upload X-ray →
+  tool routing → research-only report). Referenced by the README "▶ Try the live
+  X-ray agent" hero; record from the deployed Space (`deploy/hf-space/`).
 
-These are **deferred** (image generation is gated behind the user).
+These are **deferred** (image/recording generation is gated behind the user).
