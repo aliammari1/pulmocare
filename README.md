@@ -1,4 +1,6 @@
-<!-- TODO: add a clinical "control-room" hero banner (see BANNER.md + assets/) -->
+<!-- Banner: generate assets/banner.png from BANNER.md (brandkit / imagegen). -->
+<!-- Until generated, the line below 404s gracefully; commit assets/banner.png to fix. -->
+![PulmoCare — research-only chest X-ray reasoning platform](assets/banner.png)
 
 # PulmoCare
 
@@ -10,6 +12,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT%20(first--party)-green?style=flat-square)](LICENSE)
 [![MedRAX](https://img.shields.io/badge/agent-MedRAX%20(Apache--2.0)-orange?style=flat-square)](apps/api/services/medagent/LICENSE)
 [![docs: mkdocs-material](https://img.shields.io/badge/docs-mkdocs--material-1098f7?style=flat-square)](mkdocs.yml)
+[![Open in HF Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Demo-HF%20ZeroGPU%20Space-yellow?style=flat-square)](deploy/hf-space/)
+[![Open in Colab](https://img.shields.io/badge/reproduce-Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](deploy/colab/reproduce_chestagentbench.ipynb)
 
 > [!CAUTION]
 > **RESEARCH ONLY — NOT FOR CLINICAL USE.** PulmoCare and the bundled MedRAX
@@ -107,12 +111,39 @@ failing. See [`docs/medrax.md`](docs/medrax.md).
 First-party PulmoCare code is **MIT** ([`LICENSE`](LICENSE)). See
 [`NOTICE`](NOTICE) and [`CITATION.cff`](CITATION.cff).
 
-## Demo plan — Hugging Face Gradio Space
+## Demo & hosting
 
-MedRAX already ships `apps/api/services/medagent/interface.py` (Gradio) and a
-demo GIF under `apps/api/services/medagent/assets/`. The planned public demo is a
-**Hugging Face ZeroGPU Gradio Space** wrapping `interface.py`, with the
-RESEARCH-ONLY banner shown prominently. (Deferred — needs a HF account/token.)
+The headline demo is a **Hugging Face ZeroGPU Gradio Space** wrapping MedRAX's
+own `interface.py` (`create_demo`). A ready-to-push scaffold lives at
+[`deploy/hf-space/`](deploy/hf-space/) (`app.py` + `requirements.txt` + the Space
+`README.md` with `sdk: gradio` / `hardware: zero-gpu` front-matter). It loads the
+agent, wraps GPU tool calls in `@spaces.GPU`, and shows the RESEARCH-ONLY banner.
+
+- **ML demo** → HF ZeroGPU Space (Gradio-only; *using* ZeroGPU is free, *hosting*
+  needs HF PRO).
+- **API mesh** → a free container host. Note (2026): **Fly.io's free tier is
+  gone** and **Koyeb dropped free web compute**; **Render** still offers an
+  always-free Docker web service (750 hr/month, spins down after 15 min idle) —
+  good for one demo service, not the full multi-sidecar mesh.
+- **Docs** → Cloudflare Pages (mkdocs build). Workers run JS/WASM, not
+  long-running Python, so the FastAPI mesh is **not** a Workers fit.
+
+Full steps, secrets, and cited 2026 sources: [`deploy/README.md`](deploy/README.md).
+(Live deploys are gated behind accounts/tokens; the scaffolds are ready.)
+
+## Reproducibility & community
+
+- **MedRAX / ChestAgentBench** reproduction notebook stub:
+  [`deploy/colab/reproduce_chestagentbench.ipynb`](deploy/colab/reproduce_chestagentbench.ipynb)
+  (points at the upstream benchmark; no weights committed here).
+- Suggested **GitHub topics**: `medical-imaging`, `chest-xray`, `langgraph`,
+  `medrax`, `fastapi`, `microservices`, `flutter`, `radiology`, `research-only`,
+  `observability`.
+- Submission targets: the MedRAX ICML reproducibility track and
+  **Awesome-Healthcare-Foundation-Models** (as a downstream integration), with
+  the RESEARCH-ONLY disclaimer kept prominent.
+- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) ·
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) · [`SECURITY.md`](SECURITY.md).
 
 ## Engineering decisions
 
