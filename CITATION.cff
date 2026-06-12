@@ -1,0 +1,63 @@
+cff-version: 1.2.0
+message: >-
+  PulmoCare vendors the MedRAX agent. If you use this software in academic work,
+  please cite the MedRAX paper (below) in addition to (optionally) this
+  repository.
+title: "PulmoCare: a medical-imaging microservice platform integrating the MedRAX agent"
+type: software
+authors:
+  - family-names: Ammari
+    given-names: Ali
+    alias: aliammari1
+repository-code: "https://github.com/aliammari1/pulmocare"
+license: MIT
+abstract: >-
+  PulmoCare is a research-only medical-imaging platform built as a FastAPI
+  microservice mesh (Keycloak, Vault, Consul, APISIX, RabbitMQ, OpenTelemetry,
+  Prometheus) with a cross-platform Flutter client. It vendors MedRAX
+  (bowang-lab/MedRAX, ICML 2025), a LangGraph chest X-ray reasoning agent, and
+  exposes its report-generation tools through a structured radiology-report API.
+  NOT a medical device; not for clinical use.
+references:
+  - type: article
+    title: "MedRAX: Medical Reasoning Agent for Chest X-ray"
+    authors:
+      - family-names: Fallahpour
+        given-names: Adibvafa
+      - family-names: Ma
+        given-names: Jun
+      - family-names: Munim
+        given-names: Alif
+      - family-names: Lyu
+        given-names: Hongwei
+      - family-names: Wang
+        given-names: Bo
+    year: 2025
+    collection-title: "Proceedings of the 42nd International Conference on Machine Learning (ICML)"
+    identifiers:
+      - type: other
+        value: "arXiv:2502.02673"
+        description: arXiv preprint
+    url: "https://arxiv.org/abs/2502.02673"
+    repository-code: "https://github.com/bowang-lab/MedRAX"
+    license: Apache-2.0
+preferred-citation:
+  type: article
+  title: "MedRAX: Medical Reasoning Agent for Chest X-ray"
+  authors:
+    - family-names: Fallahpour
+      given-names: Adibvafa
+    - family-names: Ma
+      given-names: Jun
+    - family-names: Munim
+      given-names: Alif
+    - family-names: Lyu
+      given-names: Hongwei
+    - family-names: Wang
+      given-names: Bo
+  year: 2025
+  collection-title: "Proceedings of the 42nd International Conference on Machine Learning (ICML)"
+  url: "https://arxiv.org/abs/2502.02673"
+  identifiers:
+    - type: other
+      value: "arXiv:2502.02673"

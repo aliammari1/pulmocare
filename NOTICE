@@ -1,0 +1,52 @@
+PulmoCare
+Copyright (c) 2023-2025 Ali Ammari
+
+This product includes first-party software licensed under the MIT License
+(see the top-level LICENSE file).
+
+================================================================================
+THIRD-PARTY / VENDORED COMPONENTS
+================================================================================
+
+MedRAX (vendored at apps/api/services/medagent)
+-----------------------------------------------
+This repository vendors a copy of MedRAX, a medical reasoning agent for chest
+X-ray interpretation built on LangGraph.
+
+  Project:  MedRAX
+  Source:   https://github.com/bowang-lab/MedRAX
+  Authors:  Adibvafa Fallahpour, Jun Ma, Alif Munim, Hongwei Lyu,
+            Bo Wang, et al. (Bowang Lab, University of Toronto / Vector Institute)
+  Paper:    "MedRAX: Medical Reasoning Agent for Chest X-ray"
+            ICML 2025. arXiv:2502.02673
+  License:  Apache License 2.0
+            (retained verbatim at apps/api/services/medagent/LICENSE)
+
+The MedRAX source under apps/api/services/medagent/ is the property of its
+original authors and is redistributed here under the Apache License 2.0. The
+PulmoCare MIT license does NOT relicense this component. See CITATION.cff for
+the recommended academic citation.
+
+MedRAX in turn integrates and/or invokes additional third-party models and
+libraries, each governed by its own license and (where applicable) data-use
+agreement, including but not limited to:
+
+  - LLaVA / LLaVA-Med           (model weights, separate license)
+  - CheXagent / CheXbench       (Stanford AIMI, separate terms)
+  - TorchXRayVision             (Apache-2.0)
+  - MAIRA-2 / report models     (IAMJB chexpert-mimic-cxr baselines, HF Hub)
+  - MIMIC-CXR, CheXpert         (datasets, restricted PhysioNet / Stanford DUAs)
+  - LangChain / LangGraph       (MIT)
+  - Hugging Face Transformers   (Apache-2.0)
+
+None of the above model weights or datasets are distributed with this
+repository. Users are responsible for obtaining them under their respective
+licenses and for complying with all applicable data-use agreements.
+
+================================================================================
+RESEARCH ONLY -- NOT FOR CLINICAL USE
+================================================================================
+
+This software is provided for research and educational purposes only. It is not
+a medical device and must not be used for clinical diagnosis or treatment. See
+LICENSE and README.md for the full disclaimer.
