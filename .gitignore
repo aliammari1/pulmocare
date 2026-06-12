@@ -54,3 +54,11 @@ app-core-*.tgz
 .vscode/
 *.swp
 *.iml
+
+# Internal growth/marketing notes (not for public)
+GROWTH.md
+BANNER.md
+SUBMITTING_TO_AWESOME.md
+launch-kit.md
+star-strategy.md
+modernization-backlog.md
