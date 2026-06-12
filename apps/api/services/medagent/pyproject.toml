@@ -67,10 +67,13 @@ exclude = ["med_env*", "demo*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
     "ruff>=0.14.13",
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
 ]
 
 [tool.ruff]

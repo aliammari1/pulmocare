@@ -17,32 +17,32 @@ class LoggerService:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(LoggerService, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
 
             # Create logs directory if it doesn't exist
-            os.makedirs(Config.LOG_DIR, exist_ok=True)
+            os.makedirs(Config.log_dir, exist_ok=True)
 
             # Ensure the log file path exists
-            log_file_dir = os.path.dirname(Config.LOG_FILE)
+            log_file_dir = os.path.dirname(Config.log_file)
             if log_file_dir:
                 os.makedirs(log_file_dir, exist_ok=True)
 
             # Initialize logger
-            cls._instance.logger = logging.getLogger(Config.SERVICE_NAME)
-            cls._instance.logger.setLevel(Config.LOG_LEVEL)
+            cls._instance.logger = logging.getLogger(Config.service_name)
+            cls._instance.logger.setLevel(Config.log_level)
 
             # Create formatters and handlers
-            formatter = logging.Formatter(Config.LOG_FORMAT)
+            formatter = logging.Formatter(Config.log_format)
 
             try:
                 # File Handler
                 file_handler = RotatingFileHandler(
-                    Config.LOG_FILE,
-                    maxBytes=Config.LOG_MAX_SIZE,
-                    backupCount=Config.LOG_BACKUP_COUNT,
+                    Config.log_file,
+                    maxBytes=Config.log_max_size,
+                    backupCount=Config.log_backup_count,
                 )
                 file_handler.setFormatter(formatter)
-                file_handler.setLevel(Config.LOG_LEVEL)
+                file_handler.setLevel(Config.log_level)
                 cls._instance.logger.addHandler(file_handler)
             except Exception as e:
                 print(f"Failed to create file handler: {e!s}. Using console logging only.")
@@ -50,7 +50,7 @@ class LoggerService:
             # Console Handler
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
-            console_handler.setLevel(Config.LOG_LEVEL)
+            console_handler.setLevel(Config.log_level)
 
             # Add handlers to logger
             cls._instance.logger.addHandler(console_handler)
@@ -69,7 +69,7 @@ class LoggerService:
             # Create a Resource to identify the service
             resource = Resource.create(
                 {
-                    "service.name": Config.SERVICE_NAME,
+                    "service.name": Config.service_name,
                     "service.instance.id": socket.gethostname(),
                 }
             )
@@ -82,7 +82,7 @@ class LoggerService:
 
             # Create the exporter and processor
             exporter = OTLPLogExporter(
-                endpoint=f"http://{'localhost' if Config.ENV == 'development' else 'otel-collector'}:4317",
+                endpoint=f"http://{'localhost' if Config.env == 'development' else 'otel-collector'}:4317",
                 insecure=True,
             )
             logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
@@ -91,7 +91,7 @@ class LoggerService:
             otel_handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
             self.logger.addHandler(otel_handler)
 
-            self.logger.info(f"OpenTelemetry logging initialized for {Config.SERVICE_NAME}")
+            self.logger.info(f"OpenTelemetry logging initialized for {Config.service_name}")
         except Exception as e:
             # Log to standard handlers if OTEL setup fails
             self.logger.error(f"Failed to initialize OpenTelemetry logging: {e!s}")
@@ -103,7 +103,7 @@ class LoggerService:
         try:
             # Create a separate logger for file storage operations
             file_storage_logger = logging.getLogger("file_storage")
-            file_storage_logger.setLevel(Config.LOG_LEVEL)
+            file_storage_logger.setLevel(Config.log_level)
 
             # Ensure handlers aren't duplicated
             if not file_storage_logger.handlers:

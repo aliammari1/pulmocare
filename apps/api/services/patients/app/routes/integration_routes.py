@@ -101,7 +101,10 @@ async def request_external_data(
         request_sent = rabbitmq_client.publish_external_data_request(request_data)
 
         if request_sent:
-            return MessageResponse(message=f"Data request for {data_type} submitted successfully. " + "You will be notified when the data is available.")
+            return MessageResponse(
+                message=f"Data request for {data_type} submitted successfully. "
+                + "You will be notified when the data is available."
+            )
         else:
             raise HTTPException(status_code=500, detail="Failed to submit data request")
     except Exception as e:

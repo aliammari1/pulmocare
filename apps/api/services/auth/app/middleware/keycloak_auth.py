@@ -47,7 +47,9 @@ class KeycloakMiddleware:
 
         # Well-known endpoints
         self.well_known_url = f"{self.keycloak_url}/realms/{self.realm}/.well-known/openid-configuration"
-        self.token_introspection_url = f"{self.keycloak_url}/realms/{self.realm}/protocol/openid-connect/token/introspect"
+        self.token_introspection_url = (
+            f"{self.keycloak_url}/realms/{self.realm}/protocol/openid-connect/token/introspect"
+        )
 
         print(f"Keycloak middleware initialized for realm {self.realm} with URL {self.keycloak_url}")
 

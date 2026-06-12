@@ -156,7 +156,9 @@ async def register(request: RegisterRequest):
             "is_verified": (str(request.is_verified).lower() if request.is_verified is not None else "false"),
             "verification_details": (request.verification_details if request.verification_details else None),
             # Add new patient fields - handle both frontend and backend field naming
-            "date_of_birth": request.date_of_birth or request.date_of_birth if hasattr(request, "date_of_birth") else "",
+            "date_of_birth": request.date_of_birth or request.date_of_birth
+            if hasattr(request, "date_of_birth")
+            else "",
             "blood_type": request.blood_type or request.blood_type if hasattr(request, "blood_type") else "",
             "social_security_number": (request.social_security_number if request.social_security_number else ""),
             "medical_history": (
@@ -169,9 +171,15 @@ async def register(request: RegisterRequest):
                 )
             ),
             "allergies": request.allergies if request.allergies else [],
-            "height": str(request.height or request.height) if hasattr(request, "height") and request.height is not None else "",
-            "weight": str(request.weight or request.weight) if hasattr(request, "weight") and request.weight is not None else "",
-            "medical_files": request.medical_files if hasattr(request, "medical_files") and request.medical_files else [],
+            "height": str(request.height or request.height)
+            if hasattr(request, "height") and request.height is not None
+            else "",
+            "weight": str(request.weight or request.weight)
+            if hasattr(request, "weight") and request.weight is not None
+            else "",
+            "medical_files": request.medical_files
+            if hasattr(request, "medical_files") and request.medical_files
+            else [],
         }
 
         try:
