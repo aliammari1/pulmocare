@@ -27,6 +27,16 @@ class AppointmentsConfig(BaseConfig):
     medecins_service_port: int = Field(default=8081, description="Medecins service port")
     patients_service_host: str = Field(default="patients-service", description="Patients service host")
     patients_service_port: int = Field(default=8083, description="Patients service port")
+    ordonnances_service_host: str = Field(
+        default="ordonnances-service",
+        description="Ordonnances service host",
+    )
+    ordonnances_service_port: int = Field(default=8082, description="Ordonnances service port")
+    radiologues_service_host: str = Field(
+        default="radiologues-service",
+        description="Radiologues service host",
+    )
+    radiologues_service_port: int = Field(default=8084, description="Radiologues service port")
 
     request_timeout: float = Field(default=10.0, description="HTTP request timeout in seconds")
 
