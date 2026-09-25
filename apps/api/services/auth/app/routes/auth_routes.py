@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, status
 
 from middleware.keycloak_auth import get_current_user
@@ -9,6 +11,25 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 # Initialize Keycloak service
 keycloak_service = KeycloakService()
+
+
+def _realm_roles(user_info: dict) -> list[str]:
+    return [str(role) for role in user_info.get("realm_access", {}).get("roles", [])]
+
+
+def _primary_role(user_info: dict) -> Role | None:
+    roles = set(_realm_roles(user_info))
+    for role in (Role.ADMIN, Role.DOCTOR, Role.RADIOLOGIST, Role.PATIENT):
+        if role.value in roles:
+            return role
+    return None
+
+
+def _split_name(name: str) -> tuple[str, str]:
+    parts = name.strip().split()
+    if not parts:
+        return "", ""
+    return parts[0], " ".join(parts[1:])
 
 
 @router.post(
@@ -147,12 +168,13 @@ async def register(request: RegisterRequest):
         print(f"Registration attempt for user: {request.email}")
 
         # Prepare user data for registration
+        first_name, last_name = _split_name(request.name)
         user_data = {
             "email": request.email,
             "username": request.username or request.email,
             "password": request.password,
-            "firstName": (request.name if request.name else ""),
-            "lastName": (request.name if request.name else ""),
+            "firstName": first_name,
+            "lastName": last_name,
             "phone": (request.phone if request.phone else ""),
             "specialty": request.specialty if request.specialty else "",
             "address": request.address if request.address else "",
@@ -471,11 +493,10 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
         # Replace attributes with formatted version
         user_data["attributes"] = formatted_attributes
 
-        # Add roles information
-        user_data["roles"] = user_info.get("roles", [])
-
-        # Add role information
-        user_data["role"] = user_info.get("primary_role")
+        # Add normalized role information from the verified JWT.
+        user_data["roles"] = _realm_roles(user_info)
+        primary_role = _primary_role(user_info)
+        user_data["role"] = primary_role.value if primary_role else None
 
         return user_data
 
