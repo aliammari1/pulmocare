@@ -143,7 +143,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
         patientName: _patientName.text,
         medecinId: providerId,
         doctorName: auth.displayName ?? auth.userEmail ?? 'Doctor',
-        clinic: _clinic.text,
+        clinique: _clinic.text,
         specialite: _specialty.text,
         diagnosis: _diagnosis.text,
         instructions: _instructions.text,
@@ -235,7 +235,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
             const SizedBox(height: 14),
             _SectionCard(
               title: 'Clinical context',
-              icon: Icons.clinical_notes_outlined,
+              icon: Icons.note_alt_outlined,
               child: Column(
                 children: [
                   TextFormField(
