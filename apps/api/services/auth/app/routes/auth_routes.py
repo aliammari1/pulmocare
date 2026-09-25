@@ -358,10 +358,7 @@ async def get_users_by_role(
     may not enumerate other users.
     """
     requester_roles = user_info.get("realm_access", {}).get("roles", [])
-    if not any(
-        allowed in requester_roles
-        for allowed in (Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value)
-    ):
+    if not any(allowed in requester_roles for allowed in (Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clinical staff role required",
@@ -380,6 +377,9 @@ async def get_users_by_role(
                     realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
                     has_role = role_name in {item.get("name") for item in realm_roles}
                 except Exception:
+                    pass
+
+                if not has_role:
                     # Fall back to the explicit role attribute for older accounts.
                     attributes = user.get("attributes", {})
                     attribute_role = attributes.get("role")
