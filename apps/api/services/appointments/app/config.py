@@ -28,6 +28,8 @@ class AppointmentsConfig(BaseConfig):
     patients_service_host: str = Field(default="patients-service", description="Patients service host")
     patients_service_port: int = Field(default=8083, description="Patients service port")
 
+    request_timeout: float = Field(default=10.0, description="HTTP request timeout in seconds")
+
     # Appointment-specific settings
     appointment_slot_duration: int = Field(default=30, description="Appointment slot duration in minutes")
     max_appointments_per_day: int = Field(default=20, description="Max appointments per doctor per day")
