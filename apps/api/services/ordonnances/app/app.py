@@ -20,7 +20,7 @@ from models.ordonnance import (
     OrdonnanceList,
     OrdonnanceUpdate,
 )
-from routes.integration_routes import get_current_doctor
+from routes.integration_routes import get_current_doctor, get_current_user
 from routes.integration_routes import router as integration_router
 from services.logger_service import logger_service
 from services.mongodb_client import MongoDBClient
@@ -62,6 +62,22 @@ rabbitmq_client = RabbitMQClient(Config)
 
 # MongoDB collections
 ordonnances_collection = mongodb_client.db.ordonnances
+
+
+def _roles(user_info: dict) -> set[str]:
+    return {str(role) for role in user_info.get("roles", [])}
+
+
+def _can_read_prescription(prescription: dict, user_info: dict) -> bool:
+    roles = _roles(user_info)
+    user_id = str(user_info.get("user_id", ""))
+    if "admin" in roles:
+        return True
+    if "doctor" in roles and str(prescription.get("doctor_id", "")) == user_id:
+        return True
+    if "patient" in roles and str(prescription.get("patient_id", "")) == user_id:
+        return True
+    return False
 
 
 @app.post(
@@ -111,14 +127,29 @@ async def get_ordonnances(
     doctor_id: str | None = None,
     limit: int = 100,
     skip: int = 0,
+    user_info: dict = Depends(get_current_user),
 ):
     try:
-        # Build query based on parameters
-        query = {}
-        if patient_id:
-            query["patient_id"] = patient_id
-        if doctor_id:
-            query["doctor_id"] = doctor_id
+        roles = _roles(user_info)
+        user_id = str(user_info.get("user_id", ""))
+
+        if "admin" in roles:
+            query = {}
+            if patient_id:
+                query["patient_id"] = patient_id
+            if doctor_id:
+                query["doctor_id"] = doctor_id
+        elif "doctor" in roles:
+            query = {"doctor_id": user_id}
+            if patient_id:
+                query["patient_id"] = patient_id
+        elif "patient" in roles:
+            query = {"patient_id": user_id}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Clinical account role required",
+            )
 
         # Get count for pagination
         total = ordonnances_collection.count_documents(query)
@@ -146,7 +177,10 @@ async def get_ordonnances(
     response_model=OrdonnanceInDB,
     responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
-async def get_ordonnance(ordonnance_id: str):
+async def get_ordonnance(
+    ordonnance_id: str,
+    user_info: dict = Depends(get_current_user),
+):
     try:
         # Validate ID format
         if not ObjectId.is_valid(ordonnance_id):
@@ -157,8 +191,12 @@ async def get_ordonnance(ordonnance_id: str):
 
         if not ordonnance_data:
             raise HTTPException(status_code=404, detail="Prescription not found")
+        if not _can_read_prescription(ordonnance_data, user_info):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this prescription",
+            )
 
-        # Convert to Pydantic model
         return Ordonnance.from_dict(ordonnance_data).to_pydantic()
 
     except HTTPException:
@@ -189,9 +227,15 @@ async def update_ordonnance(
         if not ordonnance_data:
             raise HTTPException(status_code=404, detail="Prescription not found")
 
-        # Check if the doctor is the owner
-        if ordonnance_data.get("doctor_id") != user_info.get("user_id"):
-            raise HTTPException(status_code=403, detail="You can only update your own prescriptions")
+        # Check if the doctor is the owner (admins may manage all records).
+        if (
+            ordonnance_data.get("doctor_id") != user_info.get("user_id")
+            and "admin" not in _roles(user_info)
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You can only update your own prescriptions",
+            )
 
         # Prepare update data
         update_fields = {}
@@ -232,9 +276,15 @@ async def delete_ordonnance(ordonnance_id: str, user_info: dict = Depends(get_cu
         if not ordonnance_data:
             raise HTTPException(status_code=404, detail="Prescription not found")
 
-        # Check if the doctor is the owner
-        if ordonnance_data.get("doctor_id") != user_info.get("user_id"):
-            raise HTTPException(status_code=403, detail="You can only delete your own prescriptions")
+        # Check if the doctor is the owner (admins may manage all records).
+        if (
+            ordonnance_data.get("doctor_id") != user_info.get("user_id")
+            and "admin" not in _roles(user_info)
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You can only delete your own prescriptions",
+            )
 
         # Delete the document
         result = ordonnances_collection.delete_one({"_id": ObjectId(ordonnance_id)})
@@ -255,7 +305,10 @@ async def delete_ordonnance(ordonnance_id: str, user_info: dict = Depends(get_cu
     "/api/generate-pdf/{ordonnance_id}",
     responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
-async def generate_pdf(ordonnance_id: str):
+async def generate_pdf(
+    ordonnance_id: str,
+    user_info: dict = Depends(get_current_user),
+):
     try:
         # Import FPDF at function level to avoid global import issues
         from fpdf import FPDF
@@ -269,6 +322,11 @@ async def generate_pdf(ordonnance_id: str):
 
         if not ordonnance_data:
             raise HTTPException(status_code=404, detail="Prescription not found")
+        if not _can_read_prescription(ordonnance_data, user_info):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this prescription",
+            )
 
         # Create PDF
         pdf_path = f"prescription_{ordonnance_id}.pdf"
