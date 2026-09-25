@@ -479,6 +479,64 @@ async def get_patient_contact(
         )
 
 
+@router.get("/providers/{provider_id}")
+async def get_provider_directory_entry(
+    provider_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return one minimal provider-directory entry to an authenticated user."""
+    del user_info
+    try:
+        user = keycloak_service.keycloak_admin.get_user(provider_id)
+        if not user or not user.get("enabled", True):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Provider not found",
+            )
+
+        realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
+            provider_id
+        )
+        roles = {item.get("name") for item in realm_roles}
+        if Role.DOCTOR.value in roles:
+            provider_role = Role.DOCTOR.value
+        elif Role.RADIOLOGIST.value in roles:
+            provider_role = Role.RADIOLOGIST.value
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Provider not found",
+            )
+
+        attributes = user.get("attributes", {}) or {}
+        display_name = " ".join(
+            part
+            for part in (
+                str(user.get("firstName") or "").strip(),
+                str(user.get("lastName") or "").strip(),
+            )
+            if part
+        ).strip()
+        if not display_name:
+            display_name = str(user.get("username") or "Clinical provider")
+
+        return {
+            "id": provider_id,
+            "name": display_name,
+            "provider_type": provider_role,
+            "specialty": _first_keycloak_attribute(attributes, "specialty"),
+            "hospital": _first_keycloak_attribute(attributes, "hospital"),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.info("Provider directory lookup failed")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Provider not found",
+        ) from exc
+
+
 @router.get("/providers")
 async def get_provider_directory(
     provider_type: Role | None = None,
