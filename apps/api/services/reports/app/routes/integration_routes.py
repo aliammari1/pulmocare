@@ -45,7 +45,10 @@ async def analyze_report(
         raise
     except Exception:
         logger_service.exception("Error queueing report analysis")
-        raise HTTPException(status_code=500, detail="Unable to queue report analysis")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to queue report analysis",
+        )
 
 
 @router.get("/report-analysis/{report_id}")
@@ -60,7 +63,10 @@ async def get_report_analysis(
             {"report_id": report_id}
         )
         if not analysis:
-            raise HTTPException(status_code=404, detail="Report analysis not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Report analysis not found",
+            )
 
         analysis["_id"] = str(analysis["_id"])
         return analysis
@@ -68,7 +74,10 @@ async def get_report_analysis(
         raise
     except Exception:
         logger_service.exception("Error retrieving report analysis")
-        raise HTTPException(status_code=500, detail="Unable to retrieve report analysis")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to retrieve report analysis",
+        )
 
 
 @router.post(
@@ -89,7 +98,10 @@ async def create_analysis_summary(
         if not report_service.get_report_by_id(report_id)
     ]
     if missing:
-        raise HTTPException(status_code=404, detail="One or more reports were not found")
+        raise HTTPException(
+            status_code=404,
+            detail="One or more reports were not found",
+        )
 
     try:
         job_id = report_service.queue_summary_generation(
@@ -107,4 +119,7 @@ async def create_analysis_summary(
         raise
     except Exception:
         logger_service.exception("Error queueing summary generation")
-        raise HTTPException(status_code=500, detail="Unable to queue summary generation")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to queue summary generation",
+        )
