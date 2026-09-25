@@ -1,151 +1,156 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import 'package:provider/provider.dart';
-import '../services/auth_view_model.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:convert';
+import 'package:provider/provider.dart';
+
+import '../services/auth_view_model.dart';
+import '../theme/app_theme.dart';
 
 class VerificationAlert extends StatelessWidget {
-  final bool isVerified;
-
   const VerificationAlert({super.key, required this.isVerified});
+
+  final bool isVerified;
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthViewModel>();
+    final details = auth.currentDoctor?.verificationDetails;
+    final status = details?['status']?.toString().toLowerCase();
+
     if (isVerified) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.green,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: const [
-            Icon(
-              Icons.verified_user,
-              color: Colors.green,
-              size: 24,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Verified Medical Professional',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ),
-          ],
+      return _VerificationCard(
+        icon: Icons.verified_rounded,
+        title: 'Professional account verified',
+        message:
+            'Your clinical credentials have been reviewed and approved by PulmoCare administration.',
+        tone: Colors.green,
+      );
+    }
+
+    if (status == 'pending') {
+      return _VerificationCard(
+        icon: Icons.hourglass_top_rounded,
+        title: 'Verification under review',
+        message:
+            'Your credential document was submitted successfully. An administrator still needs to review it.',
+        tone: Colors.orange,
+        action: TextButton.icon(
+          onPressed: auth.isBusy ? null : () => _pickAndSubmit(context),
+          icon: const Icon(Icons.upload_file_rounded),
+          label: const Text('Replace document'),
         ),
       );
     }
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.orange,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.orange,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Your profile needs verification',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Please upload your medical diploma or professional license to verify your account.',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => _handleVerification(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.turquoise,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Upload Verification Document'),
-          ),
-        ],
+
+    final rejected = status == 'rejected';
+    return _VerificationCard(
+      icon: rejected
+          ? Icons.report_gmailerrorred_rounded
+          : Icons.verified_user_outlined,
+      title: rejected
+          ? 'Verification needs attention'
+          : 'Verify your professional account',
+      message: rejected
+          ? 'Your previous submission was not approved. Upload a clear photo of your medical diploma or professional license to submit it again.'
+          : 'Upload a clear photo of your medical diploma or professional license. Verification is completed only after administrator review.',
+      tone: rejected ? Theme.of(context).colorScheme.error : AppTheme.primary,
+      action: FilledButton.icon(
+        onPressed: auth.isBusy ? null : () => _pickAndSubmit(context),
+        icon: auth.isBusy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.upload_file_rounded),
+        label: Text(rejected ? 'Submit another document' : 'Upload document'),
       ),
     );
   }
 
-  Future<void> _handleVerification(BuildContext context) async {
+  Future<void> _pickAndSubmit(BuildContext context) async {
     final picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+      maxWidth: 2200,
+    );
+    if (image == null || !context.mounted) return;
 
-    if (image != null) {
-      try {
-        final bytes = await image.readAsBytes();
-        final base64Image = base64Encode(bytes);
+    final auth = context.read<AuthViewModel>();
+    final ok = await auth.submitVerificationDocument(
+      filePath: image.path,
+      filename: image.name,
+    );
+    if (!context.mounted) return;
 
-        // Show loading dialog
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => const Center(
-            child: CircularProgressIndicator(color: AppTheme.turquoise),
-          ),
-        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Verification document submitted for review.'
+              : auth.errorMessage,
+        ),
+      ),
+    );
+  }
+}
 
-        await context.read<AuthViewModel>().verifyDoctor(base64Image);
+class _VerificationCard extends StatelessWidget {
+  const _VerificationCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.tone,
+    this.action,
+  });
 
-        // Close loading dialog
-        Navigator.pop(context);
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color tone;
+  final Widget? action;
 
-        // Show success/error message
-        final error = context.read<AuthViewModel>().errorMessage;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              error.isEmpty
-                  ? 'Verification successful!'
-                  : 'Verification failed: $error',
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: tone.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: tone),
             ),
-            backgroundColor: error.isEmpty ? Colors.green : Colors.red,
-          ),
-        );
-      } catch (e) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          height: 1.4,
+                        ),
+                  ),
+                  if (action != null) ...[
+                    const SizedBox(height: 12),
+                    Align(alignment: Alignment.centerLeft, child: action!),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
