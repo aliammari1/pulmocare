@@ -377,7 +377,7 @@ async def get_users_by_role(
                     realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
                     has_role = role_name in {item.get("name") for item in realm_roles}
                 except Exception:
-                    pass
+                    print("Unable to inspect user realm roles; checking role attribute")
 
                 if not has_role:
                     # Fall back to the explicit role attribute for older accounts.
