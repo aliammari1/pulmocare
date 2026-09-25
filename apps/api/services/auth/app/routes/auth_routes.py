@@ -444,6 +444,96 @@ async def get_users_by_role(
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
+@router.get("/providers")
+async def get_provider_directory(
+    provider_type: Role | None = None,
+    first: int = Query(0, ge=0),
+    max: int = Query(50, ge=1, le=100),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return a minimal authenticated directory of clinical providers."""
+    del user_info
+
+    if provider_type not in (None, Role.DOCTOR, Role.RADIOLOGIST):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="provider_type must be doctor or radiologist",
+        )
+
+    requested_roles = (
+        {provider_type.value}
+        if provider_type is not None
+        else {Role.DOCTOR.value, Role.RADIOLOGIST.value}
+    )
+
+    try:
+        users = keycloak_service.keycloak_admin.get_users({})
+        providers = []
+        for user in users:
+            user_id = user.get("id")
+            if not user_id or not user.get("enabled", True):
+                continue
+
+            try:
+                realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
+                    user_id
+                )
+                roles = {item.get("name") for item in realm_roles}
+            except Exception:
+                roles = set()
+                attribute_role = (user.get("attributes", {}) or {}).get("role")
+                if isinstance(attribute_role, list):
+                    roles.update(str(value) for value in attribute_role)
+                elif attribute_role:
+                    roles.add(str(attribute_role))
+
+            matched_roles = requested_roles & roles
+            if not matched_roles:
+                continue
+
+            provider_role = (
+                Role.DOCTOR.value
+                if Role.DOCTOR.value in matched_roles
+                else Role.RADIOLOGIST.value
+            )
+            attributes = user.get("attributes", {}) or {}
+
+            def first_attribute(name: str) -> str:
+                value = attributes.get(name)
+                if isinstance(value, list):
+                    return str(value[0]) if value else ""
+                return str(value) if value is not None else ""
+
+            display_name = " ".join(
+                part
+                for part in (
+                    str(user.get("firstName") or "").strip(),
+                    str(user.get("lastName") or "").strip(),
+                )
+                if part
+            ).strip()
+            if not display_name:
+                display_name = str(user.get("username") or "Clinical provider")
+
+            providers.append(
+                {
+                    "id": user_id,
+                    "name": display_name,
+                    "provider_type": provider_role,
+                    "specialty": first_attribute("specialty"),
+                    "hospital": first_attribute("hospital"),
+                }
+            )
+
+        providers.sort(key=lambda item: item["name"].lower())
+        return providers[first : first + max]
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve provider directory",
+        )
+
+
 @router.get(
     "/profile",
     responses={
