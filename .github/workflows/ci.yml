@@ -52,7 +52,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Ruff format check
-        run: uv run ruff format --check .
+        run: uv run ruff format --check --diff .
 
       - name: Type-check (ty, blocking on typed core)
         # Blocking for the typed core (shared/auth/patients/reports, which ship
