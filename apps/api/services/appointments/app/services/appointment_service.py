@@ -71,11 +71,25 @@ class AppointmentService:
                 logger_service.error(f"Provider {appointment_data.provider_id} not found")
                 raise Exception(f"Provider {appointment_data.provider_id} not found")
 
-            # Validate that the patient exists
-            patient_exists = await self.patient_service.verify_patient_exists(appointment_data.patient_id, auth_header)
+            # A patient creating an appointment for themselves is already
+            # verified by the route dependency. Other workflows still validate
+            # the patient through the patients service.
+            roles = {str(role) for role in current_user.get("roles", [])}
+            requester_id = str(current_user.get("user_id", ""))
+            patient_exists = (
+                "patient" in roles
+                and appointment_data.patient_id == requester_id
+            )
             if not patient_exists:
-                logger_service.error(f"Patient {appointment_data.patient_id} not found")
-                raise Exception(f"Patient {appointment_data.patient_id} not found")
+                patient_exists = await self.patient_service.verify_patient_exists(
+                    appointment_data.patient_id,
+                    auth_header,
+                )
+            if not patient_exists:
+                logger_service.error(
+                    f"Patient {appointment_data.patient_id} not found"
+                )
+                raise ValueError("Patient not found")
 
             # Create a new appointment object
             appointment = Appointment(
