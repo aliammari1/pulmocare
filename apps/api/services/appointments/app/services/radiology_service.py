@@ -21,16 +21,16 @@ class RadiologyService:
         self.cache_service = CacheService()
         self.circuit_breaker = CircuitBreaker(
             name="radiology_service",
-            failure_threshold=self.config.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recovery_timeout=self.config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+            failure_threshold=self.config.circuit_breaker_failure_threshold,
+            recovery_timeout=self.config.circuit_breaker_recovery_timeout,
         )
         self.api_base_url = self._get_service_url()
 
     def _get_service_url(self) -> str:
         """Get the URL for the radiology service from configuration or service discovery"""
         # In development, use the configured URL
-        if self.config.ENV == "development":
-            return f"http://{self.config.RADIOLOGUES_SERVICE_HOST}:{self.config.RADIOLOGUES_SERVICE_PORT}"
+        if self.config.env == "development":
+            return f"http://{self.config.radiologues_service_host}:{self.config.radiologues_service_port}"
 
         # In production, could use service discovery
         # return self._get_service_url_from_consul("radiologues-service")
