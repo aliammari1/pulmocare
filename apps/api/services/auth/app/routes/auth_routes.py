@@ -505,3 +505,66 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
     except Exception as e:
         print(f"Get profile error: {e!s}")
         raise HTTPException(status_code=500, detail=f"Failed to get profile: {e!s}")
+
+
+@router.put("/profile", response_model=MessageResponse)
+async def update_profile(
+    request: ProfileUpdateRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+
+    update_data: dict[str, object] = {}
+    if request.name is not None:
+        first_name, last_name = _split_name(request.name)
+        update_data["firstName"] = first_name
+        update_data["lastName"] = last_name
+    if request.phone is not None:
+        update_data["phone"] = request.phone.strip()
+    if request.address is not None:
+        update_data["address"] = request.address.strip()
+    if request.profile_image is not None:
+        update_data["profile_image"] = request.profile_image
+
+    role = _primary_role(user_info)
+    if request.specialty is not None:
+        if role not in (Role.DOCTOR, Role.RADIOLOGIST, Role.ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only clinical staff can set a specialty",
+            )
+        update_data["specialty"] = request.specialty.strip()
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No profile changes supplied")
+
+    try:
+        keycloak_service.update_user(user_id, update_data)
+        return {"message": "Profile updated successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+
+@router.put("/profile/signature", response_model=MessageResponse)
+async def update_signature(
+    request: SignatureUpdateRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    role = _primary_role(user_info)
+    if role not in (Role.DOCTOR, Role.RADIOLOGIST, Role.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A clinical staff role is required to store a signature",
+        )
+
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+
+    try:
+        keycloak_service.update_user(user_id, {"signature": request.signature})
+        return {"message": "Signature updated successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update signature")
