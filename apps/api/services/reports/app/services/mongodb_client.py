@@ -30,7 +30,9 @@ class MongoDBClient:
                     minPoolSize=self.config.mongodb_min_pool_size,
                     maxIdleTimeMS=self.config.mongodb_max_idle_time_ms,
                     connectTimeoutMS=self.config.mongodb_connect_timeout_ms,
-                    serverSelectionTimeoutMS=self.config.mongodb_server_selection_timeout_ms,
+                    serverSelectionTimeoutMS=(
+                        self.config.mongodb_server_selection_timeout_ms
+                    ),
                 )
                 self.db = self.client[self.config.mongodb_database]
 
