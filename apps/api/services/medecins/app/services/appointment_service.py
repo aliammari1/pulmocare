@@ -61,7 +61,9 @@ class AppointmentService:
 
                 # Verify that this appointment belongs to the specified doctor
                 if appointment.get("doctor_id") != doctor_id:
-                    logger_service.warning(f"Doctor {doctor_id} attempted to access appointment {appointment_id} belonging to another doctor")
+                    logger_service.warning(
+                        f"Doctor {doctor_id} attempted to access appointment {appointment_id} belonging to another doctor"
+                    )
                     return None
 
                 return appointment
@@ -117,7 +119,9 @@ class AppointmentService:
         """
         Accept an appointment
         """
-        return await self.update_appointment_status(appointment_id=appointment_id, doctor_id=doctor_id, new_status="accepted")
+        return await self.update_appointment_status(
+            appointment_id=appointment_id, doctor_id=doctor_id, new_status="accepted"
+        )
 
     async def reject_appointment(self, appointment_id: str, doctor_id: str, reason: str | None = None) -> dict | None:
         """

@@ -35,9 +35,13 @@ class MinioService:
     async def create_bucket(self, bucket_name: str) -> bool:
         """Create a bucket if it doesn't exist"""
         try:
-            exists = await asyncio.get_event_loop().run_in_executor(self.executor, lambda: self.client.bucket_exists(bucket_name))
+            exists = await asyncio.get_event_loop().run_in_executor(
+                self.executor, lambda: self.client.bucket_exists(bucket_name)
+            )
             if not exists:
-                await asyncio.get_event_loop().run_in_executor(self.executor, lambda: self.client.make_bucket(bucket_name))
+                await asyncio.get_event_loop().run_in_executor(
+                    self.executor, lambda: self.client.make_bucket(bucket_name)
+                )
                 logger.info(f"Created bucket: {bucket_name}")
             return True
         except S3Error as e:
@@ -148,7 +152,9 @@ class MinioService:
         """Get information about a specific file"""
         try:
             # Get object stats
-            stat = await asyncio.get_event_loop().run_in_executor(self.executor, lambda: self.client.stat_object(bucket_name, object_name))
+            stat = await asyncio.get_event_loop().run_in_executor(
+                self.executor, lambda: self.client.stat_object(bucket_name, object_name)
+            )
 
             # Create presigned URL for temporary access
             presigned_url = await asyncio.get_event_loop().run_in_executor(
@@ -262,10 +268,14 @@ class MinioService:
                         filename = stat.metadata.get("filename", item.object_name.split("/")[-1])
 
                         # Generate streaming URL instead of download URL
-                        streaming_url = await self.generate_streaming_url(bucket_name, item.object_name, expires=download_expiry)
+                        streaming_url = await self.generate_streaming_url(
+                            bucket_name, item.object_name, expires=download_expiry
+                        )
 
                         # Generate regular download URL as well for direct downloads
-                        download_url = await self.generate_presigned_url(bucket_name, item.object_name, expires=download_expiry)
+                        download_url = await self.generate_presigned_url(
+                            bucket_name, item.object_name, expires=download_expiry
+                        )
 
                         # Add file info to results with streaming URL as the download URL
                         files.append(
@@ -285,7 +295,9 @@ class MinioService:
                         logger.warning(f"Error getting metadata for {item.object_name}: {e!s}")
 
                         # Generate basic streaming URL instead of download URL
-                        streaming_url = await self.generate_streaming_url(bucket_name, item.object_name, expires=download_expiry)
+                        streaming_url = await self.generate_streaming_url(
+                            bucket_name, item.object_name, expires=download_expiry
+                        )
 
                         # Add file with limited info, using streaming URL
                         files.append(
@@ -340,7 +352,9 @@ class MinioService:
         """
         try:
             # Get current object info
-            stat = await asyncio.get_event_loop().run_in_executor(self.executor, lambda: self.client.stat_object(bucket_name, object_name))
+            stat = await asyncio.get_event_loop().run_in_executor(
+                self.executor, lambda: self.client.stat_object(bucket_name, object_name)
+            )
 
             # Merge existing metadata with new metadata
             current_metadata = stat.metadata
@@ -387,7 +401,9 @@ class MinioService:
                 self.executor,
                 lambda: self.client.get_presigned_url("GET", bucket_name, object_name, expires=expires_delta),
             )
-            print(f"Presigned URL: {self.client.get_presigned_url('GET', bucket_name, object_name, expires=expires_delta)}")
+            print(
+                f"Presigned URL: {self.client.get_presigned_url('GET', bucket_name, object_name, expires=expires_delta)}"
+            )
             logger.info(f"Generated presigned URL for {bucket_name}/{object_name} " + f"with expiry {expires} seconds")
 
             return url

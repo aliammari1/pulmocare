@@ -56,4 +56,3 @@ if __name__ == "__main__":
         reload=config.is_development,
         log_level="debug" if config.debug else "info",
     )
-

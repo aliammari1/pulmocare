@@ -232,6 +232,7 @@ async def download_shared_object(encoded_url: str):
 
         # Validate URL to prevent open redirect attacks
         from urllib.parse import urlparse
+
         parsed = urlparse(original_url)
         allowed_hosts = {
             os.getenv("MINIO_HOST", "minio"),

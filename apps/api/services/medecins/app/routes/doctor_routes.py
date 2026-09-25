@@ -402,7 +402,11 @@ async def get_verification_status(
 
         # Extract verification information from attributes
         attributes = doctor_info.get("attributes", {})
-        is_verified = attributes.get("is_verified", ["false"])[0] if isinstance(attributes.get("is_verified", []), list) else attributes.get("is_verified", "false")
+        is_verified = (
+            attributes.get("is_verified", ["false"])[0]
+            if isinstance(attributes.get("is_verified", []), list)
+            else attributes.get("is_verified", "false")
+        )
         verification_details = attributes.get("verification_details", {})
 
         if isinstance(verification_details, list) and verification_details:
@@ -457,7 +461,11 @@ async def get_doctor_signature(
 
         # Get signature from attributes
         attributes = doctor_info.get("attributes", {})
-        signature = attributes.get("signature", [""])[0] if isinstance(attributes.get("signature", []), list) else attributes.get("signature", "")
+        signature = (
+            attributes.get("signature", [""])[0]
+            if isinstance(attributes.get("signature", []), list)
+            else attributes.get("signature", "")
+        )
 
         if not signature:
             return Response(content="No signature found", status_code=404)
@@ -772,7 +780,11 @@ async def get_all_doctors(
 
             # Check if we need to filter by verification status
             attributes = user_data.get("attributes", {})
-            is_verified = attributes.get("is_verified", ["false"])[0] == "true" if isinstance(attributes.get("is_verified", []), list) else attributes.get("is_verified", "false") == "true"
+            is_verified = (
+                attributes.get("is_verified", ["false"])[0] == "true"
+                if isinstance(attributes.get("is_verified", []), list)
+                else attributes.get("is_verified", "false") == "true"
+            )
 
             # Skip if we only want verified doctors and this one isn't
             if verified_only and not is_verified:

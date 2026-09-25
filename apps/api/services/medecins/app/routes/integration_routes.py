@@ -84,7 +84,9 @@ async def get_patient_history(patient_id: str, user_info: dict = Depends(get_cur
 
         # Get prescriptions from prescription service
         prescription_service = PrescriptionService()
-        prescriptions = await prescription_service.get_prescriptions_for_patient(patient_id=patient_id, doctor_id=doctor_id)
+        prescriptions = await prescription_service.get_prescriptions_for_patient(
+            patient_id=patient_id, doctor_id=doctor_id
+        )
 
         # Format the prescriptions
         formatted_prescriptions = []
@@ -100,7 +102,9 @@ async def get_patient_history(patient_id: str, user_info: dict = Depends(get_cur
 
         # Get radiology reports from radiology service
         radiology_service = RadiologyService()
-        radiology_reports = await radiology_service.get_doctor_radiology_reports(doctor_id=doctor_id, patient_id=patient_id)
+        radiology_reports = await radiology_service.get_doctor_radiology_reports(
+            doctor_id=doctor_id, patient_id=patient_id
+        )
 
         # Format the radiology reports
         formatted_reports = []
@@ -172,7 +176,9 @@ async def notify_patient(
             "timestamp": timestamp,
         }
 
-        result = rabbitmq_client.notify_patient_medical_update(patient_id=patient_id, update_type=update_type, data=data)
+        result = rabbitmq_client.notify_patient_medical_update(
+            patient_id=patient_id, update_type=update_type, data=data
+        )
 
         if result:
             return MessageResponse(message="Patient notification sent successfully")
@@ -207,7 +213,9 @@ async def get_doctor_prescriptions(
         prescription_service = PrescriptionService()
 
         # Get prescriptions from the prescriptions service
-        prescriptions = await prescription_service.get_doctor_prescriptions(doctor_id=doctor_id, status=status, page=page, limit=limit)
+        prescriptions = await prescription_service.get_doctor_prescriptions(
+            doctor_id=doctor_id, status=status, page=page, limit=limit
+        )
 
         return prescriptions
     except Exception as e:
@@ -234,7 +242,9 @@ async def get_prescription_details(prescription_id: str, user_info: dict = Depen
         prescription_service = PrescriptionService()
 
         # Get prescription details
-        prescription = await prescription_service.get_prescription_details(prescription_id=prescription_id, doctor_id=doctor_id)
+        prescription = await prescription_service.get_prescription_details(
+            prescription_id=prescription_id, doctor_id=doctor_id
+        )
 
         if not prescription:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription not found")
@@ -266,7 +276,9 @@ async def renew_prescription(prescription_id: str, user_info: dict = Depends(get
         prescription_service = PrescriptionService()
 
         # Renew the prescription
-        new_prescription = await prescription_service.renew_prescription(prescription_id=prescription_id, doctor_id=doctor_id)
+        new_prescription = await prescription_service.renew_prescription(
+            prescription_id=prescription_id, doctor_id=doctor_id
+        )
 
         if not new_prescription:
             raise HTTPException(
@@ -305,7 +317,9 @@ async def cancel_prescription(
         prescription_service = PrescriptionService()
 
         # Cancel the prescription
-        success = await prescription_service.cancel_prescription(prescription_id=prescription_id, doctor_id=doctor_id, reason=reason)
+        success = await prescription_service.cancel_prescription(
+            prescription_id=prescription_id, doctor_id=doctor_id, reason=reason
+        )
 
         if not success:
             raise HTTPException(
@@ -344,7 +358,9 @@ async def get_doctor_appointments(
         appointment_service = AppointmentService()
 
         # Get appointments
-        appointments = await appointment_service.get_doctor_appointments(doctor_id=doctor_id, status=status, page=page, limit=limit)
+        appointments = await appointment_service.get_doctor_appointments(
+            doctor_id=doctor_id, status=status, page=page, limit=limit
+        )
 
         return appointments
     except Exception as e:
@@ -374,7 +390,9 @@ async def get_appointment_details(appointment_id: str, user_info: dict = Depends
         appointment_service = AppointmentService()
 
         # Get appointment details
-        appointment = await appointment_service.get_appointment_details(appointment_id=appointment_id, doctor_id=doctor_id)
+        appointment = await appointment_service.get_appointment_details(
+            appointment_id=appointment_id, doctor_id=doctor_id
+        )
 
         if not appointment:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found")
@@ -406,7 +424,9 @@ async def accept_appointment(appointment_id: str, user_info: dict = Depends(get_
         appointment_service = AppointmentService()
 
         # Accept the appointment
-        updated_appointment = await appointment_service.update_appointment_status(appointment_id=appointment_id, doctor_id=doctor_id, new_status="accepted")
+        updated_appointment = await appointment_service.update_appointment_status(
+            appointment_id=appointment_id, doctor_id=doctor_id, new_status="accepted"
+        )
 
         if not updated_appointment:
             raise HTTPException(
@@ -614,7 +634,9 @@ async def get_doctor_radiology_reports(
         radiology_service = RadiologyService()
 
         # Get radiology reports from the radiology service
-        reports = await radiology_service.get_doctor_radiology_reports(doctor_id=doctor_id, status=status, page=page, limit=limit)
+        reports = await radiology_service.get_doctor_radiology_reports(
+            doctor_id=doctor_id, status=status, page=page, limit=limit
+        )
 
         return reports
     except Exception as e:
@@ -678,7 +700,9 @@ async def get_radiology_report_details(report_id: str, user_info: dict = Depends
     response_model=RadiologyExaminationResponse,
     responses={400: {"model": MessageResponse}, 500: {"model": MessageResponse}},
 )
-async def request_radiology_examination(request: RadiologyExaminationRequest, user_info: dict = Depends(get_current_user)):
+async def request_radiology_examination(
+    request: RadiologyExaminationRequest, user_info: dict = Depends(get_current_user)
+):
     """
     Request a radiology examination for a patient
     """
@@ -738,7 +762,9 @@ async def cancel_appointment(
         appointment_service = AppointmentService()
 
         # Cancel the appointment
-        updated_appointment = await appointment_service.cancel_appointment(appointment_id=appointment_id, doctor_id=doctor_id, reason=reason)
+        updated_appointment = await appointment_service.cancel_appointment(
+            appointment_id=appointment_id, doctor_id=doctor_id, reason=reason
+        )
 
         if not updated_appointment:
             raise HTTPException(
@@ -828,7 +854,9 @@ async def add_appointment_notes(
         appointment_service = AppointmentService()
 
         # Add notes to the appointment
-        updated_appointment = await appointment_service.add_appointment_notes(appointment_id=appointment_id, doctor_id=doctor_id, notes=notes)
+        updated_appointment = await appointment_service.add_appointment_notes(
+            appointment_id=appointment_id, doctor_id=doctor_id, notes=notes
+        )
 
         if not updated_appointment:
             raise HTTPException(
@@ -870,7 +898,9 @@ async def complete_appointment(
         appointment_service = AppointmentService()
 
         # Complete the appointment
-        updated_appointment = await appointment_service.complete_appointment(appointment_id=appointment_id, doctor_id=doctor_id, notes=notes)
+        updated_appointment = await appointment_service.complete_appointment(
+            appointment_id=appointment_id, doctor_id=doctor_id, notes=notes
+        )
 
         if not updated_appointment:
             raise HTTPException(
@@ -1018,7 +1048,9 @@ async def get_doctor_appointments_direct(
         appointment_service = AppointmentService()
 
         # Get appointments from the appointment service
-        appointments = await appointment_service.get_doctor_appointments(doctor_id=doctor_id, status=status, page=page, limit=limit)
+        appointments = await appointment_service.get_doctor_appointments(
+            doctor_id=doctor_id, status=status, page=page, limit=limit
+        )
 
         return appointments
     except HTTPException:

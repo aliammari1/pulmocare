@@ -34,8 +34,7 @@ class MedFilesConfig(BaseConfig):
     # File handling settings
     max_upload_size: int = Field(default=100 * 1024 * 1024, description="Max upload size (100MB)")
     allowed_extensions: list[str] = Field(
-        default=["dcm", "dicom", "pdf", "jpg", "jpeg", "png", "doc", "docx"],
-        description="Allowed file extensions"
+        default=["dcm", "dicom", "pdf", "jpg", "jpeg", "png", "doc", "docx"], description="Allowed file extensions"
     )
 
     # DICOM processing settings

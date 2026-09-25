@@ -61,4 +61,3 @@ if __name__ == "__main__":
         port=config.port,
         log_level="debug" if config.debug else "info",
     )
-

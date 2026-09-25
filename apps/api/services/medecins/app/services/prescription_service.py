@@ -149,7 +149,9 @@ class PrescriptionService:
 
                         # Verify that the prescription belongs to the doctor
                         if prescription.get("doctor_id") != doctor_id:
-                            logger_service.warning(f"Doctor {doctor_id} attempted to access prescription {prescription_id} belonging to doctor {prescription.get('doctor_id')}")
+                            logger_service.warning(
+                                f"Doctor {doctor_id} attempted to access prescription {prescription_id} belonging to doctor {prescription.get('doctor_id')}"
+                            )
                             return None
 
                         self.cache_service.set(
@@ -167,7 +169,9 @@ class PrescriptionService:
 
                         # Log the error
                         error_text = await response.text()
-                        logger_service.error(f"Error getting prescription details: HTTP {response.status}, {error_text}")
+                        logger_service.error(
+                            f"Error getting prescription details: HTTP {response.status}, {error_text}"
+                        )
 
                         return None
 
@@ -188,7 +192,9 @@ class PrescriptionService:
         """
         try:
             # Get the original prescription first to verify ownership
-            original_prescription = await self.get_prescription_details(prescription_id=prescription_id, doctor_id=doctor_id)
+            original_prescription = await self.get_prescription_details(
+                prescription_id=prescription_id, doctor_id=doctor_id
+            )
 
             if not original_prescription:
                 logger_service.warning(f"Prescription {prescription_id} not found or not accessible")
@@ -250,7 +256,9 @@ class PrescriptionService:
         """
         try:
             # Get the original prescription first to verify ownership
-            original_prescription = await self.get_prescription_details(prescription_id=prescription_id, doctor_id=doctor_id)
+            original_prescription = await self.get_prescription_details(
+                prescription_id=prescription_id, doctor_id=doctor_id
+            )
 
             if not original_prescription:
                 logger_service.warning(f"Prescription {prescription_id} not found or not accessible")

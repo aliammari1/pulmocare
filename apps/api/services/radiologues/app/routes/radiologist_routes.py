@@ -521,7 +521,9 @@ async def get_radiology_report_from_service(report_id: str, token: str | None = 
         return None
 
 
-async def create_radiology_report_in_service(report_data: dict, radiologue_id: str, radiologue_name: str, token: str) -> dict | None:
+async def create_radiology_report_in_service(
+    report_data: dict, radiologue_id: str, radiologue_name: str, token: str
+) -> dict | None:
     """
     Create a new radiology report in the reports service
 
