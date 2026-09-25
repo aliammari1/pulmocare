@@ -33,7 +33,7 @@ async def get_current_user(
         async with httpx.AsyncClient(timeout=10.0) as client:
             # Send request to auth service for token verification
             response = await client.post(
-                f"{Config.AUTH_SERVICE_URL}/api/auth/token/verify",
+                f"{Config.auth_service_url}/api/auth/token/verify",
                 json={"token": token},
             )
 
@@ -75,7 +75,7 @@ async def get_current_user(
         logger_service.error(f"Authentication error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication error: {e!s}",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
