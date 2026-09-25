@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_view_model.dart';
+import '../models/patient_directory_entry.dart';
+import '../widgets/patient_picker_dialog.dart';
 import 'reports/report_detail_screen.dart';
 import 'handwriting_screen.dart';
 import 'voice_dictation_screen.dart';
@@ -57,6 +59,19 @@ class _CreateReportScreenState extends State<CreateReportScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _generatedId = 'MR-${_uuid.v4().substring(0, 8).toUpperCase()}';
+  }
+
+  Future<void> _selectPatient() async {
+    final patient = await showDialog<PatientDirectoryEntry>(
+      context: context,
+      builder: (_) => const PatientPickerDialog(),
+    );
+    if (patient == null || !mounted) return;
+
+    setState(() {
+      _patientIdController.text = patient.id;
+      _patientNameController.text = patient.name;
+    });
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -657,11 +672,25 @@ class _CreateReportScreenState extends State<CreateReportScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: _selectPatient,
+                icon: const Icon(Icons.person_search_rounded),
+                label: Text(
+                  _patientIdController.text.isEmpty
+                      ? 'Select patient'
+                      : 'Change patient',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _patientNameController,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Patient Name',
                       border: OutlineInputBorder(),
@@ -679,11 +708,16 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 Expanded(
                   child: TextFormField(
                     controller: _patientIdController,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Patient ID',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.badge),
                     ),
+                    validator: (value) =>
+                        (value?.trim().isEmpty ?? true)
+                            ? 'Select a patient'
+                            : null,
                   ),
                 ),
               ],
