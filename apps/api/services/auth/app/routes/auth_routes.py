@@ -57,7 +57,7 @@ async def login(request: LoginRequest):
             # Use KeycloakService for login
             result = keycloak_service.login(request.email, request.password)
             return result
-        except Exception as e:
+        except Exception:
             logger.info("Login rejected by identity provider")
 
             # Provide user-friendly error message
@@ -82,7 +82,7 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
         try:
             # Verify token and get payload
             payload = keycloak_service.verify_token(token)
-    
+
             # Get all realm roles from the token
             all_realm_roles = payload.get("realm_access", {}).get("roles", [])
 
@@ -141,7 +141,7 @@ async def refresh_token(request: RefreshTokenRequest):
         result = keycloak_service.refresh_token(request.refresh_token)
         return result
 
-    except Exception as e:
+    except Exception:
         logger.info("Token refresh failed")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
@@ -236,7 +236,7 @@ async def register(request: RegisterRequest):
                     "refresh_token": login_result["refresh_token"],
                     "expires_in": login_result["expires_in"],
                 }
-            except Exception as e:
+            except Exception:
                 logger.info("Automatic login after registration failed")
                 # Still return success without tokens
                 return {"message": "User registered successfully", "user_id": user_id}
@@ -281,20 +281,20 @@ async def logout(request: LogoutRequest | None = None, authorization: str = Head
             try:
                 # Attempt to use the access token to help with logout
                 keycloak_service.logout_from_access_token(token)
-            except Exception as e:
+            except Exception:
                 logger.info("Access-token logout was not completed")
 
         # Use KeycloakService for logout if we have a refresh token
         if refresh_token:
             try:
                 keycloak_service.logout(refresh_token)
-            except Exception as e:
+            except Exception:
                 logger.info("Refresh-token logout was not completed")
 
         # Always return success to client regardless of backend result
         return {"message": "Logged out successfully"}
 
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected logout failure")
         # Return success even if we couldn't process the request properly
         # This is to ensure the client can continue with their logout flow
@@ -311,7 +311,7 @@ async def forgot_password(request: ForgotPasswordRequest):
         # Use KeycloakService for password reset
         keycloak_service.request_password_reset(request.email)
         return {"message": "Password reset email sent successfully"}
-    except Exception as e:
+    except Exception:
         logger.info("Password-reset request was not completed")
         # For security, always return the same message regardless of outcome
         return {"message": "If your email is registered, you will receive a password reset link"}
@@ -346,7 +346,7 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
             # This would require implementing a method in KeycloakService to get user roles
             # For now, we'll use the roles from the token
             user_data["roles"] = user_info.get("realm_access", {}).get("roles", [])
-        except Exception as e:
+        except Exception:
             logger.info("Unable to read user roles from identity provider")
             user_data["roles"] = []
 
@@ -438,7 +438,7 @@ async def get_users_by_role(
         ]
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Unable to retrieve user directory")
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
