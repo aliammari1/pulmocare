@@ -44,12 +44,12 @@ print_step() {
 show_banner() {
     echo -e "${BLUE}"
     cat << "EOF"
- __  __          _    _                  ____            _     _              
-|  \/  | ___  __| |  / \   _ __  _ __   |  _ \ ___  __ _(_)___| |_ _ __ _   _ 
+ __  __          _    _                  ____            _     _
+|  \/  | ___  __| |  / \   _ __  _ __   |  _ \ ___  __ _(_)___| |_ _ __ _   _
 | |\/| |/ _ \/ _` | / _ \ | '_ \| '_ \  | |_) / _ \/ _` | / __| __| '__| | | |
 | |  | |  __/ (_| |/ ___ \| |_) | |_) | |  _ <  __/ (_| | \__ \ |_| |  | |_| |
 |_|  |_|\___|\__,_/_/   \_\ .__/| .__/  |_| \_\___|\__, |_|___/\__|_|   \__, |
-                          |_|   |_|                |___/                |___/ 
+                          |_|   |_|                |___/                |___/
 EOF
     echo -e "${NC}"
     echo "Enterprise Container Registry Setup"
@@ -60,9 +60,9 @@ EOF
 # Function to check system requirements
 check_requirements() {
     print_header "Checking system requirements..."
-    
+
     local requirements_met=true
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         print_error "Docker is not installed"
@@ -71,7 +71,7 @@ check_requirements() {
         local docker_version=$(docker --version | cut -d' ' -f3 | cut -d',' -f1)
         print_status "Docker version: $docker_version"
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null; then
         print_error "Docker Compose is not installed"
@@ -80,7 +80,7 @@ check_requirements() {
         local compose_version=$(docker-compose --version | cut -d' ' -f3 | cut -d',' -f1)
         print_status "Docker Compose version: $compose_version"
     fi
-    
+
     # Check Kubernetes
     if ! command -v kubectl &> /dev/null; then
         print_warning "kubectl is not installed - Kubernetes features will be disabled"
@@ -88,7 +88,7 @@ check_requirements() {
         local kubectl_version=$(kubectl version --client --short 2>/dev/null | cut -d' ' -f3)
         print_status "kubectl version: $kubectl_version"
     fi
-    
+
     # Check available disk space
     local available_space=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
     if [[ $available_space -lt 10 ]]; then
@@ -96,7 +96,7 @@ check_requirements() {
     else
         print_status "Available disk space: ${available_space}GB"
     fi
-    
+
     # Check available memory
     local available_memory=$(free -g | awk 'NR==2{print $7}')
     if [[ $available_memory -lt 2 ]]; then
@@ -104,19 +104,19 @@ check_requirements() {
     else
         print_status "Available memory: ${available_memory}GB"
     fi
-    
+
     if [[ "$requirements_met" == "false" ]]; then
         print_error "System requirements not met. Please install missing components."
         exit 1
     fi
-    
+
     print_status "System requirements check passed"
 }
 
 # Function to create directory structure
 create_directories() {
     print_step "Creating directory structure..."
-    
+
     local base_dir="$(pwd)"
     local dirs=(
         "certs"
@@ -127,7 +127,7 @@ create_directories() {
         "config"
         "scripts"
     )
-    
+
     for dir in "${dirs[@]}"; do
         mkdir -p "$dir"
         print_status "Created directory: $dir"
@@ -137,67 +137,67 @@ create_directories() {
 # Function to generate SSL certificates
 generate_certificates() {
     print_step "Generating SSL certificates..."
-    
+
     local certs_dir="certs"
-    
+
     # Generate CA private key
     openssl genrsa -out "$certs_dir/ca.key" 4096
-    
+
     # Generate CA certificate
     openssl req -new -x509 -days 365 -key "$certs_dir/ca.key" -out "$certs_dir/ca.crt" \
         -subj "/C=US/ST=CA/L=San Francisco/O=MedApp/OU=IT/CN=MedApp-CA"
-    
+
     # Generate server private key
     openssl genrsa -out "$certs_dir/domain.key" 4096
-    
+
     # Generate certificate signing request
     openssl req -new -key "$certs_dir/domain.key" -out "$certs_dir/domain.csr" \
         -subj "/C=US/ST=CA/L=San Francisco/O=MedApp/OU=IT/CN=registry.medapp.local"
-    
+
     # Generate server certificate
     openssl x509 -req -days 365 -in "$certs_dir/domain.csr" -CA "$certs_dir/ca.crt" \
         -CAkey "$certs_dir/ca.key" -CAcreateserial -out "$certs_dir/domain.crt"
-    
+
     # Generate client certificates for authentication
     openssl genrsa -out "$certs_dir/client.key" 4096
     openssl req -new -key "$certs_dir/client.key" -out "$certs_dir/client.csr" \
         -subj "/C=US/ST=CA/L=San Francisco/O=MedApp/OU=IT/CN=medapp-client"
     openssl x509 -req -days 365 -in "$certs_dir/client.csr" -CA "$certs_dir/ca.crt" \
         -CAkey "$certs_dir/ca.key" -CAcreateserial -out "$certs_dir/client.crt"
-    
+
     # Set proper permissions
     chmod 600 "$certs_dir"/*.key
     chmod 644 "$certs_dir"/*.crt
-    
+
     print_status "SSL certificates generated successfully"
 }
 
 # Function to setup authentication
 setup_authentication() {
     print_step "Setting up authentication..."
-    
+
     local auth_dir="auth"
-    
+
     # Create htpasswd file
     docker run --rm --entrypoint htpasswd registry:latest \
         -Bbn "medapp" "medapp123!" > "$auth_dir/htpasswd"
-    
+
     # Add additional users
     docker run --rm --entrypoint htpasswd registry:latest \
         -Bbn "admin" "admin123!" >> "$auth_dir/htpasswd"
-    
+
     docker run --rm --entrypoint htpasswd registry:latest \
         -Bbn "readonly" "readonly123!" >> "$auth_dir/htpasswd"
-    
+
     print_status "Authentication configured with multiple users"
 }
 
 # Function to create registry configuration
 create_registry_config() {
     print_step "Creating registry configuration..."
-    
+
     local config_file="config/registry-config.yml"
-    
+
     cat > "$config_file" << EOF
 version: 0.1
 log:
@@ -253,14 +253,14 @@ proxy:
   username: $DOCKER_HUB_USERNAME
   password: $DOCKER_HUB_PASSWORD
 EOF
-    
+
     print_status "Registry configuration created"
 }
 
 # Function to deploy registry stack
 deploy_registry_stack() {
     print_step "Deploying registry stack..."
-    
+
     case "$REGISTRY_TYPE" in
         "local")
             deploy_local_registry
@@ -281,7 +281,7 @@ deploy_registry_stack() {
 # Function to deploy local registry
 deploy_local_registry() {
     print_status "Deploying local registry..."
-    
+
     # Create Docker Compose file for local registry
     cat > docker-compose.local.yml << EOF
 version: '3.8'
@@ -311,7 +311,7 @@ networks:
   registry-network:
     driver: bridge
 EOF
-    
+
     docker-compose -f docker-compose.local.yml up -d
     print_status "Local registry deployed"
 }
@@ -319,19 +319,19 @@ EOF
 # Function to deploy Harbor registry
 deploy_harbor_registry() {
     print_status "Deploying Harbor registry..."
-    
+
     # Use existing Harbor configuration
     cd harbor
     docker-compose up -d
     cd ..
-    
+
     print_status "Harbor registry deployed"
 }
 
 # Function to deploy full stack
 deploy_full_stack() {
     print_status "Deploying full registry stack..."
-    
+
     docker-compose up -d
     print_status "Full registry stack deployed"
 }
@@ -340,13 +340,13 @@ deploy_full_stack() {
 setup_monitoring() {
     if [[ "$INSTALL_MONITORING" == "true" ]]; then
         print_step "Setting up monitoring..."
-        
+
         # Create Grafana dashboards
         create_grafana_dashboards
-        
+
         # Configure Prometheus alerts
         create_prometheus_alerts
-        
+
         print_status "Monitoring setup completed"
     fi
 }
@@ -355,7 +355,7 @@ setup_monitoring() {
 create_grafana_dashboards() {
     local dashboard_dir="config/grafana/dashboards"
     mkdir -p "$dashboard_dir"
-    
+
     # Create registry dashboard
     cat > "$dashboard_dir/registry-dashboard.json" << 'EOF'
 {
@@ -414,7 +414,7 @@ create_grafana_dashboards() {
   }
 }
 EOF
-    
+
     print_status "Grafana dashboards created"
 }
 
@@ -460,7 +460,7 @@ groups:
       summary: "Registry certificate expiring soon"
       description: "Registry certificate expires in {{ $value }} days."
 EOF
-    
+
     print_status "Prometheus alerts configured"
 }
 
@@ -468,16 +468,16 @@ EOF
 setup_security() {
     if [[ "$INSTALL_SECURITY" == "true" ]]; then
         print_step "Setting up security scanning..."
-        
+
         # Install Trivy
         if ! command -v trivy &> /dev/null; then
             print_status "Installing Trivy..."
             curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
         fi
-        
+
         # Create security scanning configuration
         create_security_config
-        
+
         print_status "Security scanning setup completed"
     fi
 }
@@ -509,14 +509,14 @@ skip-files:
   - "*.md"
   - "*.txt"
 EOF
-    
+
     print_status "Security configuration created"
 }
 
 # Function to create maintenance scripts
 create_maintenance_scripts() {
     print_step "Creating maintenance scripts..."
-    
+
     # Create backup script
     cat > scripts/backup.sh << 'EOF'
 #!/bin/bash
@@ -535,7 +535,7 @@ tar -czf "$BACKUP_DIR/$BACKUP_FILE" \
 
 echo "Backup created: $BACKUP_DIR/$BACKUP_FILE"
 EOF
-    
+
     # Create cleanup script
     cat > scripts/cleanup.sh << 'EOF'
 #!/bin/bash
@@ -552,7 +552,7 @@ docker system prune -f --volumes
 
 echo "Cleanup completed"
 EOF
-    
+
     # Create health check script
     cat > scripts/health-check.sh << 'EOF'
 #!/bin/bash
@@ -569,7 +569,7 @@ else
     exit 1
 fi
 EOF
-    
+
     chmod +x scripts/*.sh
     print_status "Maintenance scripts created"
 }
@@ -577,29 +577,29 @@ EOF
 # Function to test the deployment
 test_deployment() {
     print_step "Testing deployment..."
-    
+
     local registry_url="registry.medapp.local:5000"
     local max_attempts=30
     local attempt=1
-    
+
     print_status "Waiting for registry to be ready..."
-    
+
     while [[ $attempt -le $max_attempts ]]; do
         if curl -k -s -o /dev/null -w "%{http_code}" "https://$registry_url/v2/" | grep -q "200\|401"; then
             print_status "Registry is responding"
             break
         fi
-        
+
         print_status "Attempt $attempt/$max_attempts - waiting for registry..."
         sleep 10
         ((attempt++))
     done
-    
+
     if [[ $attempt -gt $max_attempts ]]; then
         print_error "Registry failed to start within timeout"
         return 1
     fi
-    
+
     # Test authentication
     print_status "Testing authentication..."
     if echo "medapp123!" | docker login "$registry_url" -u medapp --password-stdin; then
@@ -609,39 +609,39 @@ test_deployment() {
         print_error "Authentication test failed"
         return 1
     fi
-    
+
     # Test push/pull
     print_status "Testing push/pull operations..."
     docker pull hello-world:latest
     docker tag hello-world:latest "$registry_url/test/hello-world:latest"
-    
+
     if docker push "$registry_url/test/hello-world:latest"; then
         print_status "Push test passed"
-        
+
         # Clean up test image
         docker rmi "$registry_url/test/hello-world:latest" || true
         docker rmi hello-world:latest || true
-        
+
         print_status "Pull/push test completed successfully"
     else
         print_error "Push test failed"
         return 1
     fi
-    
+
     print_status "All tests passed!"
 }
 
 # Function to display setup summary
 show_setup_summary() {
     print_header "Setup Summary"
-    
+
     echo "Registry Type: $REGISTRY_TYPE"
     echo "Project Name: $PROJECT_NAME"
     echo "Environment: $ENVIRONMENT"
     echo "Monitoring: $INSTALL_MONITORING"
     echo "Security: $INSTALL_SECURITY"
     echo
-    
+
     case "$REGISTRY_TYPE" in
         "local")
             echo "Registry URL: https://registry.medapp.local:5000"
@@ -659,7 +659,7 @@ show_setup_summary() {
             echo "Grafana: http://localhost:3001 (admin/grafana123!)"
             ;;
     esac
-    
+
     echo
     echo "Default Credentials:"
     echo "  Registry: medapp / medapp123!"
@@ -679,7 +679,7 @@ show_setup_summary() {
 # Main setup function
 main() {
     show_banner
-    
+
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -721,13 +721,13 @@ main() {
                 ;;
         esac
     done
-    
+
     print_status "Starting MedApp Registry Setup"
     print_status "Registry Type: $REGISTRY_TYPE"
     print_status "Project Name: $PROJECT_NAME"
     print_status "Environment: $ENVIRONMENT"
     echo
-    
+
     # Run setup steps
     check_requirements
     create_directories
@@ -738,7 +738,7 @@ main() {
     setup_monitoring
     setup_security
     create_maintenance_scripts
-    
+
     # Test the deployment
     if test_deployment; then
         print_status "✅ Registry setup completed successfully!"

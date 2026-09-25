@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 def setup_tracing(service_name: str):
     """Configure OpenTelemetry tracing for the application."""
-    
+
     if not Config.ENABLE_TRACING:
         logger.info("Tracing disabled")
         return
-    
+
     try:
         # Create resource with service information
         resource = Resource.create({
@@ -28,28 +28,28 @@ def setup_tracing(service_name: str):
             "service.instance.id": f"{service_name}-{Config.ENV}",
             "deployment.environment": Config.ENV,
         })
-        
+
         # Set up trace provider
         trace_provider = TracerProvider(resource=resource)
         trace.set_tracer_provider(trace_provider)
-        
+
         # Configure OTLP exporter
         otlp_exporter = OTLPSpanExporter(
             endpoint=Config.OTEL_EXPORTER_OTLP_ENDPOINT,
             headers={}
         )
-        
+
         # Add batch span processor
         span_processor = BatchSpanProcessor(otlp_exporter)
         trace_provider.add_span_processor(span_processor)
-        
+
         # Auto-instrument libraries
         RequestsInstrumentor().instrument()
         URLLib3Instrumentor().instrument()
-        
+
         logger.info(f"OpenTelemetry tracing configured for {service_name}")
         logger.info(f"OTLP endpoint: {Config.OTEL_EXPORTER_OTLP_ENDPOINT}")
-        
+
     except Exception as e:
         logger.error(f"Failed to configure tracing: {e}")
         logger.warning("Continuing without tracing...")

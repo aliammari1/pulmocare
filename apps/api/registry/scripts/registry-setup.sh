@@ -36,19 +36,19 @@ print_header() {
 # Function to check prerequisites
 check_prerequisites() {
     print_header "Checking prerequisites..."
-    
+
     local missing_tools=()
-    
+
     # Check for Docker
     if ! command -v docker &> /dev/null; then
         missing_tools+=("docker")
     fi
-    
+
     # Check for kubectl
     if ! command -v kubectl &> /dev/null; then
         missing_tools+=("kubectl")
     fi
-    
+
     # Check for specific tools based on registry type
     case "$REGISTRY_TYPE" in
         "acr")
@@ -67,38 +67,38 @@ check_prerequisites() {
             fi
             ;;
     esac
-    
+
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         print_error "Missing required tools: ${missing_tools[*]}"
         print_status "Please install the missing tools and run again"
         exit 1
     fi
-    
+
     print_status "All prerequisites satisfied"
 }
 
 # Function to setup local registry with security
 setup_local_registry() {
     print_header "Setting up local registry..."
-    
+
     local registry_dir="/tmp/registry"
     local certs_dir="$registry_dir/certs"
     local auth_dir="$registry_dir/auth"
     local data_dir="$registry_dir/data"
-    
+
     # Create directories
     mkdir -p "$certs_dir" "$auth_dir" "$data_dir"
-    
+
     # Generate self-signed certificate
     print_status "Generating SSL certificate..."
     openssl req -newkey rsa:4096 -nodes -sha256 -keyout "$certs_dir/domain.key" \
         -x509 -days 365 -out "$certs_dir/domain.crt" -subj "/CN=registry.medapp.local"
-    
+
     # Create htpasswd file for authentication
     print_status "Setting up authentication..."
     docker run --rm --entrypoint htpasswd registry:2 \
         -Bbn "medapp" "medapp123!" > "$auth_dir/htpasswd"
-    
+
     # Deploy registry using Kubernetes
     kubectl apply -f - <<EOF
 apiVersion: v1
@@ -206,12 +206,12 @@ spec:
     targetPort: 5000
   type: NodePort
 EOF
-    
+
     print_status "Local registry deployed successfully"
     print_status "Registry URL: https://registry.medapp.local:5000"
     print_status "Username: medapp"
     print_status "Password: medapp123!"
-    
+
     # Add to /etc/hosts
     print_warning "Add the following to your /etc/hosts file:"
     echo "127.0.0.1 registry.medapp.local"
@@ -220,47 +220,47 @@ EOF
 # Function to setup Harbor registry
 setup_harbor_registry() {
     print_header "Setting up Harbor registry..."
-    
+
     local harbor_dir="$(dirname "$0")/../harbor"
-    
+
     if [[ ! -f "$harbor_dir/docker-compose.yml" ]]; then
         print_error "Harbor docker-compose.yml not found"
         exit 1
     fi
-    
+
     cd "$harbor_dir"
-    
+
     # Generate certificates
     print_status "Generating Harbor certificates..."
     mkdir -p certs
-    
+
     # Create CA private key
     openssl genrsa -out certs/ca.key 4096
-    
+
     # Create CA certificate
     openssl req -new -x509 -days 365 -key certs/ca.key -out certs/ca.crt \
         -subj "/CN=Harbor-CA"
-    
+
     # Create server private key
     openssl genrsa -out certs/harbor.key 4096
-    
+
     # Create certificate signing request
     openssl req -new -key certs/harbor.key -out certs/harbor.csr \
         -subj "/CN=harbor.medapp.local"
-    
+
     # Create server certificate
     openssl x509 -req -days 365 -in certs/harbor.csr -CA certs/ca.crt \
         -CAkey certs/ca.key -CAcreateserial -out certs/harbor.crt
-    
+
     # Start Harbor
     print_status "Starting Harbor..."
     docker-compose up -d
-    
+
     # Wait for Harbor to be ready
     print_status "Waiting for Harbor to be ready..."
     local max_attempts=60
     local attempt=1
-    
+
     while [[ $attempt -le $max_attempts ]]; do
         if curl -k -s -o /dev/null -w "%{http_code}" https://harbor.medapp.local | grep -q "200\|302"; then
             break
@@ -269,16 +269,16 @@ setup_harbor_registry() {
         sleep 10
         ((attempt++))
     done
-    
+
     if [[ $attempt -gt $max_attempts ]]; then
         print_error "Harbor failed to start within timeout"
         exit 1
     fi
-    
+
     # Create project
     print_status "Creating Harbor project..."
     create_harbor_project
-    
+
     print_status "Harbor registry deployed successfully"
     print_status "Harbor URL: https://harbor.medapp.local"
     print_status "Username: admin"
@@ -301,7 +301,7 @@ create_harbor_project() {
 }
 EOF
 )
-    
+
     curl -k -X POST \
         -H "Content-Type: application/json" \
         -u "admin:HarborAdmin123!" \
@@ -312,23 +312,23 @@ EOF
 # Function to setup cloud registry (ACR example)
 setup_acr_registry() {
     print_header "Setting up Azure Container Registry..."
-    
+
     local resource_group="${ACR_RESOURCE_GROUP:-medapp-rg}"
     local registry_name="${ACR_NAME:-medappregistry}"
     local location="${ACR_LOCATION:-eastus}"
-    
+
     # Check if logged in to Azure
     if ! az account show &> /dev/null; then
         print_status "Logging in to Azure..."
         az login
     fi
-    
+
     # Create resource group if it doesn't exist
     if ! az group show --name "$resource_group" &> /dev/null; then
         print_status "Creating resource group..."
         az group create --name "$resource_group" --location "$location"
     fi
-    
+
     # Create ACR
     print_status "Creating Azure Container Registry..."
     az acr create \
@@ -336,17 +336,17 @@ setup_acr_registry() {
         --name "$registry_name" \
         --sku Standard \
         --admin-enabled true
-    
+
     # Get credentials
     local acr_server=$(az acr show --name "$registry_name" --resource-group "$resource_group" --query loginServer -o tsv)
     local acr_username=$(az acr credential show --name "$registry_name" --resource-group "$resource_group" --query username -o tsv)
     local acr_password=$(az acr credential show --name "$registry_name" --resource-group "$resource_group" --query passwords[0].value -o tsv)
-    
+
     print_status "ACR created successfully"
     print_status "Registry URL: $acr_server"
     print_status "Username: $acr_username"
     print_status "Password: $acr_password"
-    
+
     # Create Kubernetes secret
     create_registry_secret "$acr_server" "$acr_username" "$acr_password"
 }
@@ -357,33 +357,33 @@ create_registry_secret() {
     local username=$2
     local password=$3
     local secret_name="${PROJECT_NAME}-registry-secret"
-    
+
     print_status "Creating Kubernetes registry secret..."
-    
+
     kubectl create secret docker-registry "$secret_name" \
         --docker-server="$registry_url" \
         --docker-username="$username" \
         --docker-password="$password" \
         --namespace="$PROJECT_NAME" \
         --dry-run=client -o yaml | kubectl apply -f -
-    
+
     print_status "Registry secret created: $secret_name"
 }
 
 # Function to configure Docker daemon for insecure registries
 configure_docker_daemon() {
     local registry_url=$1
-    
+
     print_header "Configuring Docker daemon for registry: $registry_url"
-    
+
     local daemon_config="/etc/docker/daemon.json"
     local backup_config="/etc/docker/daemon.json.backup"
-    
+
     # Backup existing config
     if [[ -f "$daemon_config" ]]; then
         sudo cp "$daemon_config" "$backup_config"
     fi
-    
+
     # Create or update daemon.json
     local config_content=$(cat <<EOF
 {
@@ -397,13 +397,13 @@ configure_docker_daemon() {
 }
 EOF
 )
-    
+
     echo "$config_content" | sudo tee "$daemon_config" > /dev/null
-    
+
     # Restart Docker daemon
     print_status "Restarting Docker daemon..."
     sudo systemctl restart docker
-    
+
     print_status "Docker daemon configured successfully"
 }
 
@@ -412,20 +412,20 @@ test_registry() {
     local registry_url=$1
     local username=$2
     local password=$3
-    
+
     print_header "Testing registry connectivity: $registry_url"
-    
+
     # Login to registry
     if [[ -n "$username" && -n "$password" ]]; then
         echo "$password" | docker login "$registry_url" -u "$username" --password-stdin
     fi
-    
+
     # Push a test image
     local test_image="$registry_url/test:latest"
-    
+
     docker pull hello-world:latest
     docker tag hello-world:latest "$test_image"
-    
+
     if docker push "$test_image"; then
         print_status "Registry test successful"
         docker rmi "$test_image" || true
@@ -439,7 +439,7 @@ test_registry() {
 # Function to display setup summary
 show_setup_summary() {
     print_header "Setup Summary"
-    
+
     case "$REGISTRY_TYPE" in
         "local")
             echo "Registry Type: Local Registry"
@@ -458,7 +458,7 @@ show_setup_summary() {
             echo "Registry URL: $ACR_NAME.azurecr.io"
             ;;
     esac
-    
+
     echo ""
     echo "Next steps:"
     echo "1. Update your build scripts with the registry URL"
@@ -470,11 +470,11 @@ show_setup_summary() {
 # Main function
 main() {
     local action=${1:-"setup"}
-    
+
     case "$action" in
         "setup")
             check_prerequisites
-            
+
             case "$REGISTRY_TYPE" in
                 "local")
                     setup_local_registry
@@ -491,7 +491,7 @@ main() {
                     exit 1
                     ;;
             esac
-            
+
             show_setup_summary
             ;;
         "test")

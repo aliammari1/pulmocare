@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     # Shared module (editable install)
     "pulmocare-shared",
-    
+
     # Service-specific dependencies
     "pillow>=10.0.0",
     "fpdf>=1.7.2",

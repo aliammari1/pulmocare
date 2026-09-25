@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     # Shared module (editable install)
     "pulmocare-shared",
-    
+
     # Service-specific dependencies
     "pillow>=10.0.0",
     "reportlab>=4.0.0",

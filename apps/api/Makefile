@@ -2,7 +2,7 @@
 # This Makefile provides convenient commands for managing microservices
 
 # Default variables
-SERVICE_NAME ?= 
+SERVICE_NAME ?=
 DOCKER_REGISTRY ?= your-registry
 DOCKER_TAG ?= latest
 ANSIBLE_DIR = ansible

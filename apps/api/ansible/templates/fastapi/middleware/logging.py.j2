@@ -8,28 +8,28 @@ from config import Config
 
 def setup_logging():
     """Configure logging for the application."""
-    
+
     # Create logs directory if it doesn't exist
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, Config.LOG_LEVEL.upper()))
-    
+
     # Remove existing handlers
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Create formatter
     formatter = logging.Formatter(Config.LOG_FORMAT)
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, Config.LOG_LEVEL.upper()))
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
-    
+
     # File handler with rotation
     file_handler = RotatingFileHandler(
         filename=log_dir / f"{Config.SERVICE_NAME}.log",
@@ -39,7 +39,7 @@ def setup_logging():
     file_handler.setLevel(getattr(logging, Config.LOG_LEVEL.upper()))
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
-    
+
     # Error file handler
     error_handler = RotatingFileHandler(
         filename=log_dir / f"{Config.SERVICE_NAME}-errors.log",
@@ -49,12 +49,12 @@ def setup_logging():
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
     root_logger.addHandler(error_handler)
-    
+
     # Configure specific logger levels
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
     logging.getLogger("fastapi").setLevel(logging.INFO)
-    
+
     # Suppress verbose third-party loggers in production
     if not Config.DEBUG:
         logging.getLogger("urllib3").setLevel(logging.WARNING)

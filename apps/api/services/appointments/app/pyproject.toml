@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     # Shared module (editable install)
     "pulmocare-shared",
-    
+
     # Service-specific dependencies
     "python-dateutil>=2.9.0",
     "email-validator>=2.3.0",

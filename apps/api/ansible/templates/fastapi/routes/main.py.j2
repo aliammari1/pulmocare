@@ -42,7 +42,7 @@ async def list_{{ service_name }}(
 ) -> {{ service_name | title }}ListResponse:
     """
     List {{ service_name }} items with pagination and filtering.
-    
+
     - **page**: Page number (starts from 1)
     - **per_page**: Number of items per page (1-100)
     - **search**: Search term to filter by name or description
@@ -51,29 +51,29 @@ async def list_{{ service_name }}(
     try:
         # Filter items
         filtered_items = _{{ service_name }}_storage.copy()
-        
+
         if active_only:
             filtered_items = [item for item in filtered_items if item.is_active]
-        
+
         if search:
             search_lower = search.lower()
             filtered_items = [
                 item for item in filtered_items
-                if (search_lower in item.name.lower() or 
+                if (search_lower in item.name.lower() or
                     (item.description and search_lower in item.description.lower()))
             ]
-        
+
         # Pagination
         total = len(filtered_items)
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
         items = filtered_items[start_idx:end_idx]
-        
+
         # Calculate pagination metadata
         total_pages = (total + per_page - 1) // per_page
         has_prev = page > 1
         has_next = page < total_pages
-        
+
         meta = PaginationMeta(
             page=page,
             per_page=per_page,
@@ -82,9 +82,9 @@ async def list_{{ service_name }}(
             has_prev=has_prev,
             has_next=has_next
         )
-        
+
         return {{ service_name | title }}ListResponse(data=items, meta=meta)
-        
+
     except Exception as e:
         logger.error(f"Error listing {{ service_name }}: {e}")
         raise HTTPException(
@@ -99,13 +99,13 @@ async def create_{{ service_name }}(
 ) -> {{ service_name | title }}Response:
     """
     Create a new {{ service_name }} item.
-    
+
     - **name**: {{ service_name | title }} name (required)
     - **description**: {{ service_name | title }} description (optional)
     """
     try:
         from datetime import datetime
-        
+
         # Create new {{ service_name }}
         new_{{ service_name }} = {{ service_name | title }}(
             id=str(uuid4()),
@@ -115,17 +115,17 @@ async def create_{{ service_name }}(
             updated_at=datetime.now(),
             is_active=True
         )
-        
+
         # Add to storage
         _{{ service_name }}_storage.append(new_{{ service_name }})
-        
+
         logger.info(f"Created {{ service_name }}: {new_{{ service_name }}.id}")
-        
+
         return {{ service_name | title }}Response(
             message="{{ service_name | title }} created successfully",
             data=new_{{ service_name }}
         )
-        
+
     except Exception as e:
         logger.error(f"Error creating {{ service_name }}: {e}")
         raise HTTPException(
@@ -138,23 +138,23 @@ async def create_{{ service_name }}(
 async def get_{{ service_name }}({{ service_name }}_id: str) -> {{ service_name | title }}Response:
     """
     Get a specific {{ service_name }} by ID.
-    
+
     - **{{ service_name }}_id**: The ID of the {{ service_name }} to retrieve
     """
     try:
         {{ service_name }}_item = get_{{ service_name }}_by_id({{ service_name }}_id)
-        
+
         if not {{ service_name }}_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{{ service_name | title }} with ID {{{ service_name }}_id} not found"
             )
-        
+
         return {{ service_name | title }}Response(
             message="{{ service_name | title }} retrieved successfully",
             data={{ service_name }}_item
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -172,7 +172,7 @@ async def update_{{ service_name }}(
 ) -> {{ service_name | title }}Response:
     """
     Update a specific {{ service_name }} by ID.
-    
+
     - **{{ service_name }}_id**: The ID of the {{ service_name }} to update
     - **name**: Updated {{ service_name }} name (optional)
     - **description**: Updated {{ service_name }} description (optional)
@@ -180,29 +180,29 @@ async def update_{{ service_name }}(
     """
     try:
         {{ service_name }}_item = get_{{ service_name }}_by_id({{ service_name }}_id)
-        
+
         if not {{ service_name }}_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{{ service_name | title }} with ID {{{ service_name }}_id} not found"
             )
-        
+
         # Update fields if provided
         update_data = {{ service_name }}_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr({{ service_name }}_item, field, value)
-        
+
         # Update timestamp
         from datetime import datetime
         {{ service_name }}_item.updated_at = datetime.now()
-        
+
         logger.info(f"Updated {{ service_name }}: {{{ service_name }}_id}")
-        
+
         return {{ service_name | title }}Response(
             message="{{ service_name | title }} updated successfully",
             data={{ service_name }}_item
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -217,27 +217,27 @@ async def update_{{ service_name }}(
 async def delete_{{ service_name }}({{ service_name }}_id: str) -> BaseResponse:
     """
     Delete a specific {{ service_name }} by ID.
-    
+
     - **{{ service_name }}_id**: The ID of the {{ service_name }} to delete
     """
     try:
         {{ service_name }}_item = get_{{ service_name }}_by_id({{ service_name }}_id)
-        
+
         if not {{ service_name }}_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{{ service_name | title }} with ID {{{ service_name }}_id} not found"
             )
-        
+
         # Remove from storage
         _{{ service_name }}_storage.remove({{ service_name }}_item)
-        
+
         logger.info(f"Deleted {{ service_name }}: {{{ service_name }}_id}")
-        
+
         return BaseResponse(
             message="{{ service_name | title }} deleted successfully"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -252,29 +252,29 @@ async def delete_{{ service_name }}({{ service_name }}_id: str) -> BaseResponse:
 async def activate_{{ service_name }}({{ service_name }}_id: str) -> {{ service_name | title }}Response:
     """
     Activate a specific {{ service_name }} by ID.
-    
+
     - **{{ service_name }}_id**: The ID of the {{ service_name }} to activate
     """
     try:
         {{ service_name }}_item = get_{{ service_name }}_by_id({{ service_name }}_id)
-        
+
         if not {{ service_name }}_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{{ service_name | title }} with ID {{{ service_name }}_id} not found"
             )
-        
+
         {{ service_name }}_item.is_active = True
         from datetime import datetime
         {{ service_name }}_item.updated_at = datetime.now()
-        
+
         logger.info(f"Activated {{ service_name }}: {{{ service_name }}_id}")
-        
+
         return {{ service_name | title }}Response(
             message="{{ service_name | title }} activated successfully",
             data={{ service_name }}_item
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -289,29 +289,29 @@ async def activate_{{ service_name }}({{ service_name }}_id: str) -> {{ service_
 async def deactivate_{{ service_name }}({{ service_name }}_id: str) -> {{ service_name | title }}Response:
     """
     Deactivate a specific {{ service_name }} by ID.
-    
+
     - **{{ service_name }}_id**: The ID of the {{ service_name }} to deactivate
     """
     try:
         {{ service_name }}_item = get_{{ service_name }}_by_id({{ service_name }}_id)
-        
+
         if not {{ service_name }}_item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{{ service_name | title }} with ID {{{ service_name }}_id} not found"
             )
-        
+
         {{ service_name }}_item.is_active = False
         from datetime import datetime
         {{ service_name }}_item.updated_at = datetime.now()
-        
+
         logger.info(f"Deactivated {{ service_name }}: {{{ service_name }}_id}")
-        
+
         return {{ service_name | title }}Response(
             message="{{ service_name | title }} deactivated successfully",
             data={{ service_name }}_item
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:

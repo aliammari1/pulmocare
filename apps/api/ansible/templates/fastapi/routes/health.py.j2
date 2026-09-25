@@ -77,12 +77,12 @@ async def check_consul_health() -> bool:
 async def health_check() -> HealthCheckResponse:
     """
     Health check endpoint.
-    
+
     Returns the health status of the service and its dependencies.
     """
     dependencies = {}
     overall_status = "healthy"
-    
+
     try:
         # Check database
         if Config.MONGODB_HOST:
@@ -90,35 +90,35 @@ async def health_check() -> HealthCheckResponse:
             dependencies["database"] = "healthy" if db_healthy else "unhealthy"
             if not db_healthy:
                 overall_status = "degraded"
-        
+
         # Check Redis
         if Config.ENABLE_CACHING and Config.REDIS_HOST:
             redis_healthy = await check_redis_health()
             dependencies["redis"] = "healthy" if redis_healthy else "unhealthy"
             if not redis_healthy:
                 overall_status = "degraded"
-        
+
         # Check RabbitMQ
         if Config.RABBITMQ_HOST:
             rabbitmq_healthy = await check_rabbitmq_health()
             dependencies["rabbitmq"] = "healthy" if rabbitmq_healthy else "unhealthy"
             if not rabbitmq_healthy:
                 overall_status = "degraded"
-        
+
         # Check Consul
         if Config.CONSUL_HOST:
             consul_healthy = await check_consul_health()
             dependencies["consul"] = "healthy" if consul_healthy else "unhealthy"
             if not consul_healthy:
                 overall_status = "degraded"
-        
+
         return HealthCheckResponse(
             status=overall_status,
             service=Config.SERVICE_NAME,
             version="1.0.0",
             dependencies=dependencies if dependencies else None
         )
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return HealthCheckResponse(
@@ -133,7 +133,7 @@ async def health_check() -> HealthCheckResponse:
 async def liveness_check():
     """
     Kubernetes liveness probe endpoint.
-    
+
     Returns 200 if the service is running.
     """
     return {"status": "alive", "service": Config.SERVICE_NAME}
@@ -143,19 +143,19 @@ async def liveness_check():
 async def readiness_check():
     """
     Kubernetes readiness probe endpoint.
-    
+
     Returns 200 if the service is ready to accept requests.
     """
     try:
         # Perform basic dependency checks
         checks = []
-        
+
         if Config.MONGODB_HOST:
             checks.append(check_database_health())
-        
+
         if Config.ENABLE_CACHING and Config.REDIS_HOST:
             checks.append(check_redis_health())
-        
+
         # Run checks concurrently
         if checks:
             results = await asyncio.gather(*checks, return_exceptions=True)
@@ -164,9 +164,9 @@ async def readiness_check():
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Service dependencies not ready"
                 )
-        
+
         return {"status": "ready", "service": Config.SERVICE_NAME}
-        
+
     except HTTPException:
         raise
     except Exception as e:

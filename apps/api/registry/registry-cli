@@ -42,12 +42,12 @@ print_command() {
 show_banner() {
     echo -e "${BLUE}"
     cat << "EOF"
- ____            _     _              ____ _     ___ 
+ ____            _     _              ____ _     ___
 |  _ \ ___  __ _(_)___| |_ _ __ _   _ / ___| |   |_ _|
-| |_) / _ \/ _` | / __| __| '__| | | | |   | |    | | 
-|  _ <  __/ (_| | \__ \ |_| |  | |_| | |___| |___ | | 
+| |_) / _ \/ _` | / __| __| '__| | | | |   | |    | |
+|  _ <  __/ (_| | \__ \ |_| |  | |_| | |___| |___ | |
 |_| \_\___|\__, |_|___/\__|_|   \__, |\____|_____|___|
-           |___/                |___/                 
+           |___/                |___/
 EOF
     echo -e "${NC}"
     echo "MedApp Container Registry Management CLI"
@@ -123,7 +123,7 @@ EOF
 # Function to show detailed command help
 show_command_help() {
     local command=$1
-    
+
     case "$command" in
         "setup")
             cat << EOF
@@ -207,7 +207,7 @@ execute_command() {
     local command=$1
     local subcommand=$2
     shift 2
-    
+
     case "$command" in
         "setup")
             case "$subcommand" in
@@ -338,15 +338,15 @@ execute_command() {
 # Function to check prerequisites
 check_prerequisites() {
     local missing_tools=()
-    
+
     if ! command -v docker &> /dev/null; then
         missing_tools+=("docker")
     fi
-    
+
     if ! command -v kubectl &> /dev/null; then
         missing_tools+=("kubectl")
     fi
-    
+
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         print_error "Missing required tools: ${missing_tools[*]}"
         print_status "Please install the missing tools and run again"
@@ -359,7 +359,7 @@ show_interactive_menu() {
     while true; do
         clear
         show_banner
-        
+
         echo "Select an option:"
         echo "1. Setup Registry"
         echo "2. Build Images"
@@ -371,9 +371,9 @@ show_interactive_menu() {
         echo "8. Help"
         echo "9. Exit"
         echo
-        
+
         read -p "Enter your choice (1-9): " choice
-        
+
         case $choice in
             1)
                 echo
@@ -384,7 +384,7 @@ show_interactive_menu() {
                 echo "4. Test Registry"
                 echo
                 read -p "Select setup type (1-4): " setup_choice
-                
+
                 case $setup_choice in
                     1) execute_command "setup" "local" ;;
                     2) execute_command "setup" "harbor" ;;
@@ -411,7 +411,7 @@ show_interactive_menu() {
                 echo "4. Tag Statistics"
                 echo
                 read -p "Select option (1-4): " tag_choice
-                
+
                 case $tag_choice in
                     1)
                         read -p "Enter service name: " service
@@ -446,7 +446,7 @@ show_interactive_menu() {
                 echo "3. Update Deployment"
                 echo
                 read -p "Select deployment (1-3): " deploy_choice
-                
+
                 case $deploy_choice in
                     1) execute_command "deploy" "local-stack" ;;
                     2) execute_command "deploy" "k8s" ;;
@@ -462,7 +462,7 @@ show_interactive_menu() {
                 echo "3. Backup Data"
                 echo
                 read -p "Select maintenance task (1-3): " maint_choice
-                
+
                 case $maint_choice in
                     1) execute_command "maintenance" "cleanup" ;;
                     2) execute_command "maintenance" "logs" ;;
@@ -484,7 +484,7 @@ show_interactive_menu() {
                 print_error "Invalid choice. Please select 1-9."
                 ;;
         esac
-        
+
         echo
         read -p "Press Enter to continue..."
     done
@@ -497,14 +497,14 @@ main() {
         show_interactive_menu
         return
     fi
-    
+
     # Check prerequisites
     check_prerequisites
-    
+
     # Parse command line arguments
     local command=$1
     shift
-    
+
     if [[ "$command" == "help" ]]; then
         if [[ $# -eq 0 ]]; then
             show_help
@@ -513,14 +513,14 @@ main() {
         fi
         return
     fi
-    
+
     # Extract subcommand if present
     local subcommand=""
     if [[ $# -gt 0 ]]; then
         subcommand=$1
         shift
     fi
-    
+
     # Execute the command
     execute_command "$command" "$subcommand" "$@"
 }

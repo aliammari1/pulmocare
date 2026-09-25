@@ -90,17 +90,17 @@ class ReportGenerator:
                 <div class="report-title">{title}</div>
                 <div>Medical Report</div>
             </div>
-            
+
             <div class="report-meta">
                 <div><strong>Patient:</strong> {patient_name}</div>
                 <div><strong>Doctor:</strong> {doctor_name}</div>
                 <div><strong>Date:</strong> {created_at[:10]}</div>
             </div>
-            
+
             <div class="content">
                 {content}
             </div>
-            
+
             <div class="footer">
                 <p>This is an official medical report. Report ID: {report["_id"]}</p>
                 <p>Generated on {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}</p>

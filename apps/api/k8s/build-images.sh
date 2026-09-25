@@ -34,18 +34,18 @@ print_error() {
 build_and_push() {
     local service_name=$1
     local service_path=$2
-    
+
     print_status "Building $service_name..."
-    
+
     cd "$PROJECT_ROOT/$service_path"
-    
+
     # Build the image
     docker build -t "$REGISTRY/medapp-$service_name:$TAG" .
-    
+
     # Push the image
     print_status "Pushing $service_name to registry..."
     docker push "$REGISTRY/medapp-$service_name:$TAG"
-    
+
     print_status "$service_name build and push completed"
     cd "$PROJECT_ROOT"
 }

@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     # Shared module (editable install)
     "pulmocare-shared",
-    
+
     # Service-specific dependencies
     "aiofiles>=25.1.0",
     "minio>=7.1.14",

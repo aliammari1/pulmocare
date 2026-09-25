@@ -88,12 +88,12 @@ data:
     exporters:
       prometheus:
         endpoint: "0.0.0.0:8889"
-      
+
       otlp/tempo:
         endpoint: tempo-service:4317
         tls:
           insecure: true
-      
+
       loki:
         endpoint: http://loki-service:3100/loki/api/v1/push
 
@@ -103,12 +103,12 @@ data:
           receivers: [otlp]
           processors: [batch]
           exporters: [otlp/tempo]
-        
+
         metrics:
           receivers: [otlp]
           processors: [batch]
           exporters: [prometheus]
-        
+
         logs:
           receivers: [otlp]
           processors: [batch]

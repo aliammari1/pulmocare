@@ -39,24 +39,24 @@ print_header() {
 generate_tags() {
     local service_name=$1
     local tags=()
-    
+
     # Get Git information
     local git_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     local git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     local git_tag=$(git describe --tags --exact-match 2>/dev/null || echo "")
     local timestamp=$(date +%Y%m%d-%H%M%S)
-    
+
     # Environment based tagging
     local environment="${ENVIRONMENT:-dev}"
-    
+
     # Base image name
     local base_image="${REGISTRY_URL}/${PROJECT_NAME}/${service_name}"
-    
+
     # 1. Latest tag (for main/master branch)
     if [[ "$git_branch" == "main" || "$git_branch" == "master" ]]; then
         tags+=("${base_image}:latest")
     fi
-    
+
     # 2. Semantic version tag (if git tag exists)
     if [[ -n "$git_tag" ]]; then
         tags+=("${base_image}:${git_tag}")
@@ -65,32 +65,32 @@ generate_tags() {
             tags+=("${base_image}:v${BASH_REMATCH[1]}")
         fi
     fi
-    
+
     # 3. Commit-based tag (always)
     tags+=("${base_image}:commit-${git_commit}")
-    
+
     # 4. Branch-based tag (for feature branches)
     if [[ "$git_branch" != "main" && "$git_branch" != "master" ]]; then
         local clean_branch=$(echo "$git_branch" | sed 's/[^a-zA-Z0-9.-]/-/g' | tr '[:upper:]' '[:lower:]')
         tags+=("${base_image}:branch-${clean_branch}")
     fi
-    
+
     # 5. Environment tag
     tags+=("${base_image}:${environment}")
-    
+
     # 6. Timestamp tag (for uniqueness)
     tags+=("${base_image}:${timestamp}")
-    
+
     # 7. PR-based tag (if PR number is available)
     if [[ -n "${PR_NUMBER}" ]]; then
         tags+=("${base_image}:pr-${PR_NUMBER}")
     fi
-    
+
     # 8. Build number tag (if CI build number is available)
     if [[ -n "${BUILD_NUMBER}" ]]; then
         tags+=("${base_image}:build-${BUILD_NUMBER}")
     fi
-    
+
     printf '%s\n' "${tags[@]}"
 }
 
@@ -133,24 +133,24 @@ build_and_tag() {
     local service_path=$2
     local dockerfile_path="${PROJECT_ROOT}/${service_path}/Dockerfile"
     local context_path="${PROJECT_ROOT}/${service_path}"
-    
+
     print_header "Building $service_name..."
-    
+
     # Check if Dockerfile exists
     if [[ ! -f "$dockerfile_path" ]]; then
         print_error "Dockerfile not found: $dockerfile_path"
         return 1
     fi
-    
+
     # Generate tags
     local tags=($(generate_tags "$service_name"))
     local primary_tag="${tags[0]}"
-    
+
     print_status "Generated tags for $service_name:"
     for tag in "${tags[@]}"; do
         echo "  - $tag"
     done
-    
+
     # Build the image with primary tag
     print_status "Building image with primary tag: $primary_tag"
     docker build \
@@ -163,13 +163,13 @@ build_and_tag() {
         --label "org.opencontainers.image.description=MedApp $service_name service" \
         --file "$dockerfile_path" \
         "$context_path"
-    
+
     # Tag with all other tags
     for tag in "${tags[@]:1}"; do
         print_status "Tagging: $tag"
         docker tag "$primary_tag" "$tag"
     done
-    
+
     return 0
 }
 
@@ -177,9 +177,9 @@ build_and_tag() {
 push_images() {
     local service_name=$1
     local tags=($(generate_tags "$service_name"))
-    
+
     print_header "Pushing $service_name images..."
-    
+
     for tag in "${tags[@]}"; do
         print_status "Pushing: $tag"
         if docker push "$tag"; then
@@ -189,7 +189,7 @@ push_images() {
             return 1
         fi
     done
-    
+
     return 0
 }
 
@@ -197,7 +197,7 @@ push_images() {
 cleanup_local_images() {
     local service_name=$1
     local tags=($(generate_tags "$service_name"))
-    
+
     if [[ "${CLEANUP_LOCAL:-false}" == "true" ]]; then
         print_header "Cleaning up local images for $service_name..."
         for tag in "${tags[@]}"; do
@@ -210,7 +210,7 @@ cleanup_local_images() {
 scan_image() {
     local service_name=$1
     local primary_tag=$(generate_tags "$service_name" | head -n1)
-    
+
     if command -v trivy &> /dev/null; then
         print_header "Scanning $service_name for vulnerabilities..."
         trivy image --exit-code 0 --severity HIGH,CRITICAL --format table "$primary_tag"
@@ -226,9 +226,9 @@ generate_manifest() {
     local service_name=$1
     local tags=($(generate_tags "$service_name"))
     local manifest_file="${PROJECT_ROOT}/k8s/manifests/${service_name}-images.json"
-    
+
     mkdir -p "$(dirname "$manifest_file")"
-    
+
     cat > "$manifest_file" << EOF
 {
   "service": "$service_name",
@@ -241,7 +241,7 @@ $(printf '    "%s"' "${tags[0]}"; printf ',\n    "%s"' "${tags[@]:1}")
   "git_branch": "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')"
 }
 EOF
-    
+
     print_status "Generated manifest: $manifest_file"
 }
 
@@ -250,7 +250,7 @@ update_k8s_manifests() {
     local service_name=$1
     local primary_tag=$(generate_tags "$service_name" | head -n1)
     local k8s_file="${PROJECT_ROOT}/k8s/services/${service_name}-service.yaml"
-    
+
     if [[ -f "$k8s_file" ]]; then
         print_status "Updating Kubernetes manifest: $k8s_file"
         sed -i.bak "s|image: .*/${service_name}:.*|image: ${primary_tag}|g" "$k8s_file"
@@ -262,37 +262,37 @@ update_k8s_manifests() {
 build_and_push_service() {
     local service_name=$1
     local service_path=$2
-    
+
     print_header "=== Processing $service_name ==="
-    
+
     # Build and tag
     if ! build_and_tag "$service_name" "$service_path"; then
         print_error "Failed to build $service_name"
         return 1
     fi
-    
+
     # Scan for vulnerabilities
     if [[ "${ENABLE_SCANNING:-true}" == "true" ]]; then
         scan_image "$service_name"
     fi
-    
+
     # Push images
     if ! push_images "$service_name"; then
         print_error "Failed to push $service_name"
         return 1
     fi
-    
+
     # Generate manifest
     generate_manifest "$service_name"
-    
+
     # Update K8s manifests
     if [[ "${UPDATE_K8S_MANIFESTS:-true}" == "true" ]]; then
         update_k8s_manifests "$service_name"
     fi
-    
+
     # Cleanup local images
     cleanup_local_images "$service_name"
-    
+
     print_status "✅ Successfully processed $service_name"
     return 0
 }
@@ -303,21 +303,21 @@ main() {
     print_status "Registry: $REGISTRY_URL"
     print_status "Project: $PROJECT_NAME"
     print_status "Registry Type: $REGISTRY_TYPE"
-    
+
     # Check prerequisites
     if ! command -v docker &> /dev/null; then
         print_error "Docker is not installed"
         exit 1
     fi
-    
+
     if ! docker info &> /dev/null; then
         print_error "Docker daemon is not running"
         exit 1
     fi
-    
+
     # Login to registry
     registry_login
-    
+
     # Services to build
     local services=(
         "auth:services/auth"
@@ -329,33 +329,33 @@ main() {
         "appointments:services/appointments"
         "medfiles:services/medfiles"
     )
-    
+
     # Add medagent if requested
     if [[ "${INCLUDE_MEDAGENT:-false}" == "true" ]]; then
         services+=("medagent:services/medagent")
     fi
-    
+
     local failed_services=()
     local successful_services=()
-    
+
     # Process each service
     for service_info in "${services[@]}"; do
         IFS=':' read -r service_name service_path <<< "$service_info"
-        
+
         if build_and_push_service "$service_name" "$service_path"; then
             successful_services+=("$service_name")
         else
             failed_services+=("$service_name")
         fi
     done
-    
+
     # Summary
     print_header "📊 Build Summary"
     print_status "Successful builds: ${#successful_services[@]}"
     for service in "${successful_services[@]}"; do
         echo "  ✅ $service"
     done
-    
+
     if [[ ${#failed_services[@]} -gt 0 ]]; then
         print_error "Failed builds: ${#failed_services[@]}"
         for service in "${failed_services[@]}"; do
@@ -363,9 +363,9 @@ main() {
         done
         exit 1
     fi
-    
+
     print_status "🎉 All services built and pushed successfully!"
-    
+
     # Display access information
     print_header "📋 Registry Access Information"
     case "$REGISTRY_TYPE" in

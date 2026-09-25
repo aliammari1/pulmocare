@@ -53,7 +53,7 @@ detect_ci_platform() {
 # Function to get environment variables based on CI platform
 get_ci_variables() {
     local platform=$(detect_ci_platform)
-    
+
     case "$platform" in
         "jenkins")
             export CI_COMMIT_SHA="${GIT_COMMIT:-$(git rev-parse HEAD)}"
@@ -93,7 +93,7 @@ get_ci_variables() {
             export CI_PIPELINE_URL="unknown"
             ;;
     esac
-    
+
     print_status "Detected CI platform: $platform"
     print_status "Commit SHA: ${CI_COMMIT_SHA:0:8}"
     print_status "Branch: $CI_BRANCH"
@@ -104,7 +104,7 @@ get_ci_variables() {
 is_release_build() {
     local branch="$CI_BRANCH"
     local tag="$(git describe --tags --exact-match 2>/dev/null || echo '')"
-    
+
     if [[ -n "$tag" ]]; then
         return 0
     elif [[ "$branch" == "main" || "$branch" == "master" ]]; then
@@ -119,7 +119,7 @@ is_release_build() {
 # Function to determine deployment environment
 get_deployment_environment() {
     local branch="$CI_BRANCH"
-    
+
     if [[ "$branch" == "main" || "$branch" == "master" ]]; then
         echo "production"
     elif [[ "$branch" == "staging" ]]; then
@@ -139,34 +139,34 @@ generate_pipeline_tags() {
     local environment=$(get_deployment_environment)
     local base_image="${REGISTRY_URL}/${PROJECT_NAME}/${service_name}"
     local tags=()
-    
+
     # Core tags
     tags+=("${base_image}:${CI_BUILD_NUMBER}")
     tags+=("${base_image}:commit-${CI_COMMIT_SHA:0:8}")
     tags+=("${base_image}:${environment}")
-    
+
     # Branch-specific tags
     if [[ "$CI_BRANCH" != "main" && "$CI_BRANCH" != "master" ]]; then
         local clean_branch=$(echo "$CI_BRANCH" | sed 's/[^a-zA-Z0-9.-]/-/g' | tr '[:upper:]' '[:lower:]')
         tags+=("${base_image}:branch-${clean_branch}")
     fi
-    
+
     # Release tags
     if is_release_build; then
         tags+=("${base_image}:latest")
-        
+
         # If there's a git tag, use it
         local git_tag=$(git describe --tags --exact-match 2>/dev/null || echo '')
         if [[ -n "$git_tag" ]]; then
             tags+=("${base_image}:${git_tag}")
         fi
     fi
-    
+
     # PR-specific tags
     if [[ -n "$CI_PR_NUMBER" ]]; then
         tags+=("${base_image}:pr-${CI_PR_NUMBER}")
     fi
-    
+
     printf '%s\n' "${tags[@]}"
 }
 
@@ -175,23 +175,23 @@ pipeline_build_and_push() {
     local service_name=$1
     local service_path=$2
     local dockerfile_path="$service_path/Dockerfile"
-    
+
     print_header "Pipeline build: $service_name"
-    
+
     if [[ ! -f "$dockerfile_path" ]]; then
         print_error "Dockerfile not found: $dockerfile_path"
         return 1
     fi
-    
+
     # Generate tags
     local tags=($(generate_pipeline_tags "$service_name"))
     local primary_tag="${tags[0]}"
-    
+
     print_status "Generated tags:"
     for tag in "${tags[@]}"; do
         echo "  - $tag"
     done
-    
+
     # Build with build arguments
     local build_args=(
         --build-arg "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -200,7 +200,7 @@ pipeline_build_and_push() {
         --build-arg "BUILD_NUMBER=${CI_BUILD_NUMBER}"
         --build-arg "BRANCH=${CI_BRANCH}"
     )
-    
+
     # Build with labels
     local labels=(
         --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -213,7 +213,7 @@ pipeline_build_and_push() {
         --label "ci.branch=${CI_BRANCH}"
         --label "ci.commit=${CI_COMMIT_SHA}"
     )
-    
+
     print_status "Building $service_name..."
     docker build \
         "${build_args[@]}" \
@@ -221,22 +221,22 @@ pipeline_build_and_push() {
         --tag "$primary_tag" \
         --file "$dockerfile_path" \
         "$service_path"
-    
+
     # Tag with all additional tags
     for tag in "${tags[@]:1}"; do
         docker tag "$primary_tag" "$tag"
     done
-    
+
     # Push all tags
     print_status "Pushing $service_name images..."
     for tag in "${tags[@]}"; do
         print_status "Pushing: $tag"
         docker push "$tag"
     done
-    
+
     # Output variables for downstream jobs
     output_pipeline_variables "$service_name" "${tags[@]}"
-    
+
     return 0
 }
 
@@ -246,7 +246,7 @@ output_pipeline_variables() {
     shift
     local tags=("$@")
     local primary_tag="${tags[0]}"
-    
+
     case "$(detect_ci_platform)" in
         "github-actions")
             echo "::set-output name=${service_name}_image::${primary_tag}"
@@ -272,13 +272,13 @@ update_k8s_manifests() {
     local service_name=$1
     local new_tag=$2
     local manifest_path="k8s/services/${service_name}-service.yaml"
-    
+
     if [[ -f "$manifest_path" ]]; then
         print_status "Updating Kubernetes manifest: $manifest_path"
-        
+
         # Use sed to update the image tag
         sed -i "s|image: .*/medapp-${service_name}:.*|image: ${REGISTRY_URL}/${PROJECT_NAME}/${service_name}:${new_tag}|g" "$manifest_path"
-        
+
         print_status "Updated manifest with tag: $new_tag"
     else
         print_warning "Kubernetes manifest not found: $manifest_path"
@@ -288,18 +288,18 @@ update_k8s_manifests() {
 # Function to run security scanning
 security_scan() {
     local image_tag=$1
-    
+
     print_header "Running security scan on: $image_tag"
-    
+
     # Use Trivy for vulnerability scanning
     if command -v trivy &> /dev/null; then
         print_status "Scanning with Trivy..."
         trivy image --severity HIGH,CRITICAL --format json --output scan-results.json "$image_tag"
-        
+
         # Check if there are any HIGH or CRITICAL vulnerabilities
         local critical_count=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL") | length' scan-results.json 2>/dev/null | wc -l)
         local high_count=$(jq '.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH") | length' scan-results.json 2>/dev/null | wc -l)
-        
+
         if [[ $critical_count -gt 0 ]]; then
             print_error "Found $critical_count CRITICAL vulnerabilities"
             return 1
@@ -311,7 +311,7 @@ security_scan() {
     else
         print_warning "Trivy not installed, skipping security scan"
     fi
-    
+
     return 0
 }
 
@@ -319,9 +319,9 @@ security_scan() {
 generate_build_report() {
     local services=("$@")
     local report_file="build-report.json"
-    
+
     print_header "Generating build report..."
-    
+
     local report_data=$(cat <<EOF
 {
   "build": {
@@ -339,7 +339,7 @@ generate_build_report() {
   "services": [
 EOF
 )
-    
+
     local first=true
     for service in "${services[@]}"; do
         if [[ "$first" == "true" ]]; then
@@ -347,10 +347,10 @@ EOF
         else
             report_data+=","
         fi
-        
+
         local tags=($(generate_pipeline_tags "$service"))
         local tags_json=$(printf '"%s",' "${tags[@]}" | sed 's/,$//')
-        
+
         report_data+=$(cat <<EOF
 
     {
@@ -360,14 +360,14 @@ EOF
 EOF
 )
     done
-    
+
     report_data+=$(cat <<EOF
 
   ]
 }
 EOF
 )
-    
+
     echo "$report_data" > "$report_file"
     print_status "Build report generated: $report_file"
 }
@@ -375,9 +375,9 @@ EOF
 # Function to cleanup old images in registry
 cleanup_old_images() {
     local max_age_days=${1:-30}
-    
+
     print_header "Cleaning up images older than $max_age_days days"
-    
+
     # This would need to be implemented based on the registry type
     # For now, just log the action
     print_status "Cleanup would remove images older than $max_age_days days"
@@ -389,23 +389,23 @@ run_pipeline() {
     local action=$1
     shift
     local services=("$@")
-    
+
     # Set up CI environment
     get_ci_variables
-    
+
     case "$action" in
         "build")
             if [[ ${#services[@]} -eq 0 ]]; then
                 # Default services
                 services=("auth" "medecins" "patients" "ordonnances" "radiologues" "reports" "appointments" "medfiles")
             fi
-            
+
             print_header "Building ${#services[@]} services"
-            
+
             local failed_services=()
             for service in "${services[@]}"; do
                 local service_path="services/$service"
-                
+
                 if [[ -d "$service_path" ]]; then
                     if pipeline_build_and_push "$service" "$service_path"; then
                         print_status "✅ $service build completed"
@@ -417,15 +417,15 @@ run_pipeline() {
                     print_warning "Service directory not found: $service_path"
                 fi
             done
-            
+
             # Generate build report
             generate_build_report "${services[@]}"
-            
+
             if [[ ${#failed_services[@]} -gt 0 ]]; then
                 print_error "Failed services: ${failed_services[*]}"
                 exit 1
             fi
-            
+
             print_status "All services built successfully"
             ;;
         "scan")

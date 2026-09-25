@@ -73,9 +73,9 @@ FastAPIInstrumentor.instrument_app(app)
 @app.middleware("http")
 async def metrics_middleware(request, call_next):
     start_time = datetime.now()
-    
+
     response = await call_next(request)
-    
+
     # Record metrics
     duration = (datetime.now() - start_time).total_seconds()
     REQUEST_COUNT.labels(
@@ -83,12 +83,12 @@ async def metrics_middleware(request, call_next):
         endpoint=request.url.path,
         status=response.status_code
     ).inc()
-    
+
     REQUEST_DURATION.labels(
         method=request.method,
         endpoint=request.url.path
     ).observe(duration)
-    
+
     return response
 
 # Service info endpoint
@@ -129,7 +129,7 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app:app",
         host=Config.HOST,

@@ -103,9 +103,9 @@
 
     - name: Wait for infrastructure to be ready
       command: >
-        kubectl wait --for=condition=ready pod 
-        -l app={{ item }} 
-        --timeout=300s 
+        kubectl wait --for=condition=ready pod
+        -l app={{ item }}
+        --timeout=300s
         -n medapp
       loop:
         - consul
@@ -128,7 +128,7 @@
 
           🔗 Access URLs (port-forward required):
           - Consul UI: kubectl port-forward svc/consul 8500:8500 -n medapp
-          - MongoDB: kubectl port-forward svc/mongodb 27017:27017 -n medapp  
+          - MongoDB: kubectl port-forward svc/mongodb 27017:27017 -n medapp
           - Redis: kubectl port-forward svc/redis 6379:6379 -n medapp
           - RabbitMQ Management: kubectl port-forward svc/rabbitmq 15672:15672 -n medapp
           - Prometheus: kubectl port-forward svc/prometheus 9090:9090 -n medapp

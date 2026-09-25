@@ -11,9 +11,9 @@ mkdir -p "$RESULTS_DIR"
 scan_image() {
     local image="$1"
     local output_file="$RESULTS_DIR/$(echo "$image" | tr '/' '_' | tr ':' '_').json"
-    
+
     echo "Scanning $image..."
-    
+
     if command -v trivy &> /dev/null; then
         trivy image --config "$CONFIG_FILE" --output "$output_file" "$image"
         echo "Results saved to: $output_file"

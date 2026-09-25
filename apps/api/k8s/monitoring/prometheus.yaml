@@ -99,7 +99,7 @@ data:
 
       - job_name: 'medapp-services'
         static_configs:
-        - targets: 
+        - targets:
           - 'auth-service.medapp:8086'
           - 'medecins-service.medapp:8081'
           - 'patients-service.medapp:8083'
