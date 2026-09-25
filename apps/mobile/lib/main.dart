@@ -5,10 +5,13 @@ import 'screens/AppointmentsScreen.dart';
 import 'screens/entry_view.dart';
 import 'screens/home_view.dart';
 import 'screens/login_view.dart';
+import 'screens/ordonnance_screen.dart';
+import 'screens/ordonnances_list_screen.dart';
 import 'screens/patients_view.dart';
 import 'screens/reports/reports_list_screen.dart';
 import 'services/auth_view_model.dart';
 import 'services/chat_viewmodel.dart';
+import 'services/ordonnance_viewmodel.dart';
 import 'services/token_storage.dart';
 import 'theme/app_theme.dart';
 
@@ -26,6 +29,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider.value(value: authViewModel),
         ChangeNotifierProvider(create: (_) => ChatViewModel()),
+        ChangeNotifierProvider(create: (_) => OrdonnanceViewModel()),
       ],
       child: const MedicalApp(),
     ),
@@ -55,6 +59,8 @@ class MedicalApp extends StatelessWidget {
         '/reportsList': (_) => const ReportsListScreen(),
         '/appointmentsScreen': (_) => const AppointmentsScreen(),
         '/patients_doctor': (_) => const PatientsView(),
+        '/new-ordonnance': (_) => const OrdonnanceScreen(),
+        '/ordonnances-list': (_) => const OrdonnancesListScreen(),
       },
     );
   }
