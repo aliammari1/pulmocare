@@ -35,9 +35,10 @@ class AnalyticsService {
     required DateTime endDate,
   }) {
     final trend = <DateTime, int>{};
-    var currentDate = startDate;
+    var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+    final lastDate = DateTime(endDate.year, endDate.month, endDate.day);
 
-    while (currentDate.isBefore(endDate)) {
+    while (!currentDate.isAfter(lastDate)) {
       trend[currentDate] = reports
           .where((report) =>
               report.date.year == currentDate.year &&

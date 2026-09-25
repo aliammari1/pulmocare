@@ -67,9 +67,7 @@ class ReportService:
                 if self.rabbitmq_client:
                     self.rabbitmq_client.publish_report_created(report["_id"])
             except Exception:
-                logger_service.exception(
-                    "Report persisted but report-created event could not be published"
-                )
+                logger_service.exception("Report persisted but report-created event could not be published")
 
             return report
         except Exception as e:
@@ -93,9 +91,7 @@ class ReportService:
                     if self.rabbitmq_client:
                         self.rabbitmq_client.publish_report_updated(report_id)
                 except Exception:
-                    logger_service.exception(
-                        "Report updated but report-updated event could not be published"
-                    )
+                    logger_service.exception("Report updated but report-updated event could not be published")
 
             return updated_report
         except Exception as e:
@@ -119,9 +115,7 @@ class ReportService:
                     if self.rabbitmq_client:
                         self.rabbitmq_client.publish_report_deleted(report_id)
                 except Exception:
-                    logger_service.exception(
-                        "Report deleted but report-deleted event could not be published"
-                    )
+                    logger_service.exception("Report deleted but report-deleted event could not be published")
 
             return success
         except Exception as e:

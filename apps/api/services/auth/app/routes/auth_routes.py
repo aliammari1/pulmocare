@@ -52,7 +52,6 @@ def _first_keycloak_attribute(attributes: dict, name: str) -> str:
 )
 async def login(request: LoginRequest):
     try:
-
         try:
             # Use KeycloakService for login
             result = keycloak_service.login(request.email, request.password)
@@ -320,7 +319,6 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
         # Check if requesting own info or has admin role
         if user_id != user_info.get("sub") and "admin" not in user_info.get("realm_access", {}).get("roles", []):
             raise HTTPException(status_code=403, detail="Unauthorized")
-
         # Use KeycloakService to get user information
         user_data = keycloak_service.get_user_info_by_id(user_id)
 
@@ -440,9 +438,7 @@ async def get_patient_contact(
 ):
     """Return minimal patient contact data to authenticated clinical staff."""
     requester_roles = set(_realm_roles(user_info))
-    if requester_roles.isdisjoint(
-        {Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value}
-    ):
+    if requester_roles.isdisjoint({Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value}):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clinical staff role required",
@@ -450,9 +446,7 @@ async def get_patient_contact(
 
     try:
         patient = keycloak_service.get_user_info_by_id(patient_id)
-        patient_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
-            patient_id
-        )
+        patient_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(patient_id)
         if Role.PATIENT.value not in {role.get("name") for role in patient_roles}:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -494,9 +488,7 @@ async def get_provider_directory_entry(
                 detail="Provider not found",
             )
 
-        realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
-            provider_id
-        )
+        realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(provider_id)
         roles = {item.get("name") for item in realm_roles}
         if Role.DOCTOR.value in roles:
             provider_role = Role.DOCTOR.value
@@ -554,9 +546,7 @@ async def get_provider_directory(
         )
 
     requested_roles = (
-        {provider_type.value}
-        if provider_type is not None
-        else {Role.DOCTOR.value, Role.RADIOLOGIST.value}
+        {provider_type.value} if provider_type is not None else {Role.DOCTOR.value, Role.RADIOLOGIST.value}
     )
 
     try:
@@ -568,9 +558,7 @@ async def get_provider_directory(
                 continue
 
             try:
-                realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
-                    user_id
-                )
+                realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
                 roles = {item.get("name") for item in realm_roles}
             except Exception:
                 roles = set()
@@ -584,11 +572,7 @@ async def get_provider_directory(
             if not matched_roles:
                 continue
 
-            provider_role = (
-                Role.DOCTOR.value
-                if Role.DOCTOR.value in matched_roles
-                else Role.RADIOLOGIST.value
-            )
+            provider_role = Role.DOCTOR.value if Role.DOCTOR.value in matched_roles else Role.RADIOLOGIST.value
             attributes = user.get("attributes", {}) or {}
 
             display_name = " ".join(
@@ -640,7 +624,6 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
         user_id = user_info.get("user_id")
         if not user_id:
             raise HTTPException(status_code=404, detail="User ID not found in token")
-
 
         # Use KeycloakService to get user information
         user_data = keycloak_service.get_user_info_by_id(user_id)
@@ -847,13 +830,7 @@ async def decide_verification(
                 "verification_details": json.dumps(details),
             },
         )
-        return {
-            "message": (
-                "Provider verification approved"
-                if request.approved
-                else "Provider verification rejected"
-            )
-        }
+        return {"message": ("Provider verification approved" if request.approved else "Provider verification rejected")}
     except Exception:
         raise HTTPException(
             status_code=500,
