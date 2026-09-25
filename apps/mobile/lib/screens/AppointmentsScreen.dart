@@ -7,6 +7,7 @@ import '../models/appointment.dart';
 import '../services/appointment_service.dart';
 import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/appointment_booking_dialog.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key, this.embedded = false});
@@ -93,13 +94,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
 
     if (_appointments.isEmpty) {
+      final auth = context.read<AuthViewModel>();
+      final canBook = auth.userRole == 'patient' &&
+          auth.userId != null &&
+          auth.userId!.isNotEmpty;
       return _StateMessage(
         icon: Icons.event_available_outlined,
         title: 'No appointments scheduled',
-        message:
-            'Appointments returned by the scheduling service will appear here.',
-        actionLabel: 'Refresh',
-        onAction: _load,
+        message: canBook
+            ? 'Choose a clinical provider and request your first appointment.'
+            : 'Appointments returned by the scheduling service will appear here.',
+        actionLabel: canBook ? 'Book appointment' : 'Refresh',
+        onAction: canBook ? _bookAppointment : _load,
       );
     }
 
@@ -115,6 +121,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (context.read<AuthViewModel>().userRole == 'patient') ...[
+            FilledButton.icon(
+              onPressed: _bookAppointment,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Book appointment'),
+            ),
+            const SizedBox(height: 20),
+          ],
           if (upcoming.isNotEmpty) ...[
             Text('Upcoming', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
@@ -136,6 +150,29 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _bookAppointment() async {
+    final auth = context.read<AuthViewModel>();
+    final patientId = auth.userId;
+    if (patientId == null || patientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your session is missing a patient ID.')),
+      );
+      return;
+    }
+
+    final booked = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AppointmentBookingDialog(patientId: patientId),
+    );
+    if (!mounted || booked != true) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Appointment request submitted.')),
+    );
+    await _load();
   }
 
   bool _canCancel(Appointment appointment) =>
