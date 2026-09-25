@@ -32,7 +32,7 @@ class AppointmentConsumer:
         """Connect to RabbitMQ server"""
         try:
             # Create connection string
-            connection_string = f"amqp://{self.config.RABBITMQ_USER}:{self.config.RABBITMQ_PASS}@{self.config.RABBITMQ_HOST}:{self.config.RABBITMQ_PORT}/{self.config.RABBITMQ_VHOST}"
+            connection_string = f"amqp://{self.config.rabbitmq_user}:{self.config.rabbitmq_pass}@{self.config.rabbitmq_host}:{self.config.rabbitmq_port}/{self.config.rabbitmq_vhost}"
 
             # Connect using aio_pika
             self.connection = await aio_pika.connect_robust(connection_string, heartbeat=600)
