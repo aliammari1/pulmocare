@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Role(str, Enum):
@@ -105,6 +105,28 @@ class RegisterResponse(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    phone: str | None = Field(default=None, max_length=40)
+    specialty: str | None = Field(default=None, max_length=120)
+    address: str | None = Field(default=None, max_length=300)
+    profile_image: str | None = Field(default=None, max_length=1_500_000)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class SignatureUpdateRequest(BaseModel):
+    signature: str = Field(min_length=1, max_length=750_000)
+
+
+class VerificationRequest(BaseModel):
+    document_object_name: str = Field(min_length=1, max_length=500)
+    document_bucket: str = Field(default="patientdocuments", min_length=1, max_length=100)
 
 
 class MessageResponse(BaseModel):
