@@ -1,12 +1,16 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:medapp/models/doctor.dart';
+import 'package:medapp/services/file_service.dart';
 import 'package:medapp/services/token_storage.dart';
 import 'package:medapp/utils/DioClient.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final Dio _dio = DioHttpClient().dio;
   final TokenStorage _tokens = TokenStorage.instance;
+  final FileService _files = FileService();
 
   Doctor? currentDoctor;
   bool isAuthenticated = false;
@@ -206,9 +210,7 @@ class AuthViewModel extends ChangeNotifier {
         profileImage: attributes['profile_image']?.toString(),
         isVerified: _asBool(attributes['is_verified']),
         verificationDetails:
-            attributes['verification_details'] is Map<String, dynamic>
-                ? attributes['verification_details'] as Map<String, dynamic>
-                : null,
+            _verificationDetails(attributes['verification_details']),
         signature: attributes['signature']?.toString(),
       );
       notifyListeners();
@@ -234,6 +236,132 @@ class AuthViewModel extends ChangeNotifier {
     } finally {
       await _clearSession();
       notifyListeners();
+    }
+  }
+
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        'auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+      );
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to update your password.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> updateProfile({
+    required String name,
+    required String specialty,
+    required String phoneNumber,
+    required String address,
+    String? base64Image,
+  }) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.put<Map<String, dynamic>>(
+        'auth/profile',
+        data: {
+          'name': name.trim(),
+          'phone': phoneNumber.trim(),
+          'address': address.trim(),
+          if (userRole == 'doctor' ||
+              userRole == 'radiologist' ||
+              userRole == 'admin')
+            'specialty': specialty.trim(),
+          if (base64Image != null) 'profile_image': base64Image,
+        },
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to update your profile.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> updateSignature(String signatureBase64) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.put<Map<String, dynamic>>(
+        'auth/profile/signature',
+        data: {'signature': signatureBase64},
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to update your signature.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> submitVerificationDocument({
+    required String filePath,
+    required String filename,
+  }) async {
+    final id = userId;
+    if (id == null || id.isEmpty) {
+      errorMessage = 'Your session does not contain a user ID.';
+      notifyListeners();
+      return false;
+    }
+
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      final uploaded = await _files.uploadVerificationDocument(
+        filePath: filePath,
+        filename: filename,
+        userId: id,
+      );
+      await _dio.post<Map<String, dynamic>>(
+        'auth/profile/verification',
+        data: {
+          'document_bucket': uploaded.bucket,
+          'document_object_name': uploaded.objectName,
+        },
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to submit the verification document.',
+      );
+      return false;
+    } catch (_) {
+      errorMessage = 'Unable to submit the verification document.';
+      notifyListeners();
+      return false;
+    } finally {
+      _setBusy(false);
     }
   }
 
@@ -306,6 +434,24 @@ class AuthViewModel extends ChangeNotifier {
     if (value is bool) return value;
     if (value is String) return value.toLowerCase() == 'true';
     return false;
+  }
+
+  static Map<String, dynamic>? _verificationDetails(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, item) => MapEntry(key.toString(), item));
+    }
+    if (value is String && value.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) {
+          return decoded.map((key, item) => MapEntry(key.toString(), item));
+        }
+      } catch (_) {
+        return {'status': value};
+      }
+    }
+    return null;
   }
 
   static String? _profileName(Map<String, dynamic> data) {
