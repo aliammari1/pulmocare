@@ -45,11 +45,11 @@ class RabbitMQClient:
         """Set up connection to RabbitMQ"""
         try:
             # Create credentials and connection parameters
-            credentials = pika.PlainCredentials(self.config.RABBITMQ_USER, self.config.RABBITMQ_PASS)
+            credentials = pika.PlainCredentials(self.config.rabbitmq_user, self.config.rabbitmq_pass)
             parameters = pika.ConnectionParameters(
-                host=self.config.RABBITMQ_HOST,
-                port=self.config.RABBITMQ_PORT,
-                virtual_host=self.config.RABBITMQ_VHOST,
+                host=self.config.rabbitmq_host,
+                port=self.config.rabbitmq_port,
+                virtual_host=self.config.rabbitmq_vhost,
                 credentials=credentials,
                 heartbeat=600,
                 blocked_connection_timeout=300,
@@ -145,7 +145,7 @@ class RabbitMQClient:
                     content_type="application/json",
                     timestamp=int(time.time()),
                     message_id=f"{socket.gethostname()}-{time.time()}",
-                    headers={"service": self.config.SERVICE_NAME},
+                    headers={"service": self.config.service_name},
                 ),
             )
 
