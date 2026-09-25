@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 
 //class ScrapedDoctorScreen extends StatefulWidget {
 
@@ -35,7 +35,7 @@ class ScrapedDoctorScreen extends StatefulWidget {
   const ScrapedDoctorScreen({super.key});
 
   @override
-  _ScrapedDoctorScreenState createState() => _ScrapedDoctorScreenState();
+  State<ScrapedDoctorScreen> createState() => _ScrapedDoctorScreenState();
 }
 
 class _ScrapedDoctorScreenState extends State<ScrapedDoctorScreen> {

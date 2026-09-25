@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 import '../models/ordonnance.dart';
 
 class OrdonnanceService {

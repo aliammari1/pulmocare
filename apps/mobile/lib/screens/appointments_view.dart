@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'AppointmentsScreen.dart';
+import 'appointments_screen.dart';
 
 /// Compatibility wrapper for older navigation code.
 class AppointmentsView extends StatelessWidget {

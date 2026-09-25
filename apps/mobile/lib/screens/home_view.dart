@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chat_dialog.dart';
-import 'AppointmentsScreen.dart';
+import 'appointments_screen.dart';
 import 'account_view.dart';
 import 'patients_view.dart';
 import 'reports/reports_list_screen.dart';

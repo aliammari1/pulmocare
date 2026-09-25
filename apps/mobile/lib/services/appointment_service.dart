@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/appointment.dart';
 import '../models/clinical_provider.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class AppointmentService {
   AppointmentService({Dio? dio}) : _dio = dio ?? DioHttpClient().dio;

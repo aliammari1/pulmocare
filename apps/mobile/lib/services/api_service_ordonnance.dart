@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/medicament.dart';
 import '../models/ordonnance.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class ApiService {
   ApiService({Dio? dio})

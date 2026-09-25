@@ -13,24 +13,26 @@ class DioHttpClient {
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 30),
         sendTimeout: const Duration(seconds: 30),
-        headers: const {
-          'Accept': 'application/json',
-        },
+        headers: const {'Accept': 'application/json'},
       ),
     );
 
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (options.extra['skipAuth'] != true) {
+          if (options.extra['skipAuth'] != true &&
+              isApiOrigin(options.uri) &&
+              !_hasAuthorizationHeader(options.headers)) {
             final token = TokenStorage.instance.accessToken;
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
+              options.extra['autoAuthAttached'] = true;
             }
           }
 
-          options.headers['X-Request-ID'] =
-              DateTime.now().microsecondsSinceEpoch.toString();
+          options.headers['X-Request-ID'] = DateTime.now()
+              .microsecondsSinceEpoch
+              .toString();
 
           if (kDebugMode) {
             debugPrint('[HTTP] ${options.method} ${options.uri}');
@@ -64,6 +66,7 @@ class DioHttpClient {
           try {
             final accessToken = await _refreshAccessToken();
             if (accessToken == null) {
+              await TokenStorage.instance.clear();
               handler.next(error);
               return;
             }
@@ -74,8 +77,13 @@ class DioHttpClient {
 
             final response = await dio.fetch<dynamic>(request);
             handler.resolve(response);
+          } on DioException catch (refreshError) {
+            if (refreshError.response?.statusCode == 400 ||
+                refreshError.response?.statusCode == 401) {
+              await TokenStorage.instance.clear();
+            }
+            handler.next(error);
           } catch (_) {
-            await TokenStorage.instance.clear();
             handler.next(error);
           }
         },
@@ -90,10 +98,22 @@ class DioHttpClient {
   late final Dio dio;
   Future<String?>? _refreshFuture;
 
+  static bool isApiOrigin(Uri uri) {
+    final api = Uri.parse(Config.apiBaseUrl);
+    return uri.scheme == api.scheme &&
+        uri.host == api.host &&
+        uri.port == api.port;
+  }
+
+  static bool _hasAuthorizationHeader(Map<String, dynamic> headers) =>
+      headers.keys.any((key) => key.toLowerCase() == 'authorization');
+
   bool _canRefresh(DioException error) {
     final request = error.requestOptions;
     if (error.response?.statusCode != 401) return false;
     if (request.extra['skipAuth'] == true) return false;
+    if (request.extra['autoAuthAttached'] != true) return false;
+    if (!isApiOrigin(request.uri)) return false;
     if (request.extra['retriedAfterRefresh'] == true) return false;
     if (request.path.contains('auth/token/refresh')) return false;
 

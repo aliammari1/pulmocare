@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/patient_directory_entry.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class PatientDirectoryService {
   PatientDirectoryService({Dio? dio}) : _dio = dio ?? DioHttpClient().dio;

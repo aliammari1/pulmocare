@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'screens/AppointmentsScreen.dart';
+import 'screens/appointments_screen.dart';
 import 'screens/entry_view.dart';
 import 'screens/home_view.dart';
 import 'screens/login_view.dart';

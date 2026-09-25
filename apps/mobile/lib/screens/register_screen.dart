@@ -3,13 +3,13 @@ import 'package:dio/dio.dart';
 import 'dart:convert';
 
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -35,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           "role": selectedRole,
         }),
       );
+      if (!mounted) return;
       final data = response.data;
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(

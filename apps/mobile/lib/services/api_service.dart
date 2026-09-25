@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/report.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class ApiService {
   ApiService({Dio? dio}) : _dio = dio ?? DioHttpClient().dio;
