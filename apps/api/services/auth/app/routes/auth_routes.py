@@ -444,6 +444,52 @@ async def get_users_by_role(
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
+@router.get("/patients/{patient_id}/contact")
+async def get_patient_contact(
+    patient_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return minimal patient contact data to authenticated clinical staff."""
+    requester_roles = set(_realm_roles(user_info))
+    if requester_roles.isdisjoint(
+        {Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value}
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinical staff role required",
+        )
+
+    try:
+        patient = keycloak_service.get_user_info_by_id(patient_id)
+        patient_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(
+            patient_id
+        )
+        if Role.PATIENT.value not in {role.get("name") for role in patient_roles}:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Patient not found",
+            )
+
+        return {
+            "email": patient.get("email") or "",
+            "name": " ".join(
+                part
+                for part in (
+                    str(patient.get("firstName") or "").strip(),
+                    str(patient.get("lastName") or "").strip(),
+                )
+                if part
+            ).strip(),
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found",
+        )
+
+
 @router.get("/providers")
 async def get_provider_directory(
     provider_type: Role | None = None,
