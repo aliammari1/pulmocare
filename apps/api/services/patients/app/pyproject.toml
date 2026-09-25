@@ -87,3 +87,16 @@ max-args = 8
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "*/tests/*",
+    ".venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
