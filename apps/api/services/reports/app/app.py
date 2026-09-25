@@ -16,6 +16,7 @@ from config import get_config
 from pulmocare_shared import setup_cors, setup_observability, setup_telemetry
 from pulmocare_shared.middleware import health_router
 from report_generator import ReportGenerator
+from routes.assistant_routes import router as assistant_router
 from routes.integration_routes import router as integration_router
 from routes.radiology_routes import router as radiology_router
 from services.mongodb_client import MongoDBClient
