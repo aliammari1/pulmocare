@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/appointment.dart';
+import '../models/clinical_provider.dart';
 import '../utils/DioClient.dart';
 
 class AppointmentService {
@@ -44,6 +45,32 @@ class AppointmentService {
         .where((item) => item.id.isNotEmpty)
         .toList()
       ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+  }
+
+  Future<Appointment> createAppointment({
+    required String patientId,
+    required ClinicalProvider provider,
+    required DateTime appointmentDate,
+    required String appointmentType,
+    required String reason,
+    int durationMinutes = 30,
+    bool virtual = false,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'appointments/',
+      data: {
+        'patient_id': patientId,
+        'provider_id': provider.id,
+        'provider_type': provider.providerType,
+        'appointment_type': appointmentType,
+        'appointment_date': appointmentDate.toUtc().toIso8601String(),
+        'duration_minutes': durationMinutes,
+        'reason': reason.trim().isEmpty ? null : reason.trim(),
+        'virtual': virtual,
+      },
+    );
+
+    return Appointment.fromJson(response.data ?? const {});
   }
 
   Future<void> cancelAppointment(String appointmentId) async {
