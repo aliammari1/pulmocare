@@ -394,6 +394,15 @@ async def get_users_by_role(
         else:
             users = keycloak_service.keycloak_admin.get_users({"first": first, "max": max})
 
+        def _safe_directory_attributes(user: dict) -> dict:
+            attributes = user.get("attributes", {}) or {}
+            safe_attributes = {}
+            for key in ("phone",):
+                value = attributes.get(key)
+                if value is not None:
+                    safe_attributes[key] = value
+            return safe_attributes
+
         return [
             {
                 "id": user.get("id"),
@@ -402,7 +411,7 @@ async def get_users_by_role(
                 "firstName": user.get("firstName"),
                 "lastName": user.get("lastName"),
                 "enabled": user.get("enabled", True),
-                "attributes": user.get("attributes", {}),
+                "attributes": _safe_directory_attributes(user),
             }
             for user in users
         ]
