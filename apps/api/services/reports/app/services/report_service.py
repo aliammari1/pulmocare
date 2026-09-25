@@ -60,8 +60,16 @@ class ReportService:
             # Insert into database
             report = self.mongodb_client.insert_report(report_data)
 
-            # Publish event for analysis
-            self.rabbitmq_client.publish_report_created(report["_id"])
+            # Persisted report creation is the primary operation. Event delivery
+            # is best-effort so a broker outage cannot turn a successful write
+            # into a misleading client-side failure.
+            try:
+                if self.rabbitmq_client:
+                    self.rabbitmq_client.publish_report_created(report["_id"])
+            except Exception:
+                logger_service.exception(
+                    "Report persisted but report-created event could not be published"
+                )
 
             return report
         except Exception as e:
@@ -75,11 +83,21 @@ class ReportService:
             updated_report = self.mongodb_client.update_report(report_id, report_data)
 
             if updated_report:
-                # Invalidate cache
-                self.redis_client.invalidate_report(report_id)
+                try:
+                    if self.redis_client:
+                        self.redis_client.invalidate_report(report_id)
+                except Exception:
+                    logger_service.exception(
+                        "Report updated but cache invalidation failed"
+                    )
 
-                # Publish event
-                self.rabbitmq_client.publish_report_updated(report_id)
+                try:
+                    if self.rabbitmq_client:
+                        self.rabbitmq_client.publish_report_updated(report_id)
+                except Exception:
+                    logger_service.exception(
+                        "Report updated but report-updated event could not be published"
+                    )
 
             return updated_report
         except Exception as e:
@@ -93,11 +111,21 @@ class ReportService:
             success = self.mongodb_client.delete_report(report_id)
 
             if success:
-                # Invalidate cache
-                self.redis_client.invalidate_report(report_id)
+                try:
+                    if self.redis_client:
+                        self.redis_client.invalidate_report(report_id)
+                except Exception:
+                    logger_service.exception(
+                        "Report deleted but cache invalidation failed"
+                    )
 
-                # Publish event
-                self.rabbitmq_client.publish_report_deleted(report_id)
+                try:
+                    if self.rabbitmq_client:
+                        self.rabbitmq_client.publish_report_deleted(report_id)
+                except Exception:
+                    logger_service.exception(
+                        "Report deleted but report-deleted event could not be published"
+                    )
 
             return success
         except Exception as e:

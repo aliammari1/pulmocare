@@ -55,6 +55,22 @@ def _is_staff(user_info: dict) -> bool:
     return not _roles(user_info).isdisjoint({"doctor", "radiologist", "admin"})
 
 
+def _ensure_can_write(report: dict, user_info: dict) -> None:
+    roles = _roles(user_info)
+    if "admin" in roles:
+        return
+
+    user_id = str(user_info.get("user_id", ""))
+    owner_id = str(report.get("doctor_id") or report.get("created_by") or "")
+    if user_id and owner_id == user_id:
+        return
+
+    raise HTTPException(
+        status_code=403,
+        detail="You do not have permission to modify this report",
+    )
+
+
 def _ensure_can_read(report: dict, user_info: dict) -> None:
     if _is_staff(user_info):
         return
@@ -111,7 +127,9 @@ async def create_report(
         raise HTTPException(status_code=400, detail="No data provided")
 
     payload = dict(data)
-    payload["created_by"] = user_info.get("user_id")
+    writer_id = str(user_info.get("user_id", ""))
+    payload["doctor_id"] = writer_id
+    payload["created_by"] = writer_id
     return report_service.create_report(payload)
 
 
@@ -125,7 +143,22 @@ async def update_report(
     if not data:
         raise HTTPException(status_code=400, detail="No data provided")
 
+    existing = report_service.get_raw_report(report_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Report not found")
+    _ensure_can_write(existing, user_info)
+
     payload = dict(data)
+    for immutable_key in (
+        "_id",
+        "id",
+        "report_id",
+        "patient_id",
+        "doctor_id",
+        "created_by",
+        "created_at",
+    ):
+        payload.pop(immutable_key, None)
     payload["updated_by"] = user_info.get("user_id")
     report = report_service.update_report(report_id, payload)
     if not report:
@@ -139,7 +172,11 @@ async def delete_report(
     user_info: dict = Depends(get_current_report_writer),
 ):
     """Delete a report as an authenticated clinician."""
-    del user_info
+    existing = report_service.get_raw_report(report_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Report not found")
+    _ensure_can_write(existing, user_info)
+
     if not report_service.delete_report(report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     return Response(status_code=204)
