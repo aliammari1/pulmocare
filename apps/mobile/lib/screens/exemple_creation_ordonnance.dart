@@ -31,6 +31,7 @@ class ExempleCreationOrdonnance extends StatelessWidget {
 
           final viewModel = context.read<OrdonnanceViewModel>();
           final success = await viewModel.createOrdonnance(ordonnance);
+          if (!context.mounted) return;
 
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -40,10 +41,11 @@ class ExempleCreationOrdonnance extends StatelessWidget {
               ),
             );
           }
-        } catch (e) {
+        } catch (_) {
+          if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur: $e'),
+            const SnackBar(
+              content: Text('Création impossible'),
               backgroundColor: Colors.red,
             ),
           );

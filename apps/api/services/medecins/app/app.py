@@ -28,10 +28,10 @@ app = FastAPI(
 )
 
 # Setup CORS using shared module
-setup_cors(app, config.cors_origins)
+setup_cors(app, config)
 
 # Setup OpenTelemetry using shared module
-setup_telemetry(app, config)
+setup_telemetry(config, app)
 
 # Include health check router
 app.include_router(health_router)
@@ -56,4 +56,3 @@ if __name__ == "__main__":
         reload=config.is_development,
         log_level="debug" if config.debug else "info",
     )
-

@@ -8,7 +8,7 @@ class RapportScreen extends StatefulWidget {
   const RapportScreen({super.key});
 
   @override
-  _RapportScreenState createState() => _RapportScreenState();
+  State<RapportScreen> createState() => _RapportScreenState();
 }
 
 class _RapportScreenState extends State<RapportScreen> {
@@ -27,7 +27,7 @@ class _RapportScreenState extends State<RapportScreen> {
     'Scanner',
     'IRM',
     'Radiographie',
-    'Échographie'
+    'Échographie',
   ];
 
   // Modèles de rapports par type
@@ -54,7 +54,7 @@ CONSTATATIONS :
 
 CONCLUSION URGENTE :
 [À compléter]
-'''
+''',
   };
 
   @override
@@ -73,6 +73,7 @@ CONCLUSION URGENTE :
           reportType: _selectedReportType,
           content: _contentController.text,
         );
+        if (!mounted) return;
 
         // Ajoutez une notification
         context.read<NotificationProvider>().addRapportNotification();
@@ -100,7 +101,8 @@ CONCLUSION URGENTE :
           _selectedReportType = 'Standard';
           _contentController.text = _reportTemplates['Standard'] ?? '';
         });
-      } catch (e) {
+      } catch (_) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -128,13 +130,10 @@ CONCLUSION URGENTE :
   }) {
     return Card(
       elevation: 2,
-      shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: AppTheme.lightBlue,
-          width: 1,
-        ),
+        side: BorderSide(color: AppTheme.lightBlue, width: 1),
       ),
       child: Padding(
         padding: EdgeInsets.all(16.0),
@@ -149,10 +148,7 @@ CONCLUSION URGENTE :
                     color: AppTheme.lightBlue,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    color: AppTheme.primaryColor,
-                  ),
+                  child: Icon(icon, color: AppTheme.primaryColor),
                 ),
                 SizedBox(width: 12),
                 Text(
@@ -194,15 +190,11 @@ CONCLUSION URGENTE :
                       hintText: "Entrez le nom complet du patient",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppTheme.lightBlue,
-                        ),
+                        borderSide: BorderSide(color: AppTheme.lightBlue),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppTheme.lightBlue,
-                        ),
+                        borderSide: BorderSide(color: AppTheme.lightBlue),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -227,16 +219,14 @@ CONCLUSION URGENTE :
                   title: 'Type d\'Examen',
                   icon: Icons.medical_services,
                   content: DropdownButtonFormField<String>(
-                    value: _selectedExamType,
+                    initialValue: _selectedExamType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppTheme.lightBlue,
-                        ),
+                        borderSide: BorderSide(color: AppTheme.lightBlue),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -254,10 +244,7 @@ CONCLUSION URGENTE :
                     ),
                     isExpanded: true,
                     items: _examTypes.map((String type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
+                      return DropdownMenuItem(value: type, child: Text(type));
                     }).toList(),
                     onChanged: (String? newValue) {
                       if (newValue != null) {
@@ -279,16 +266,14 @@ CONCLUSION URGENTE :
                   title: 'Type de Rapport',
                   icon: Icons.description,
                   content: DropdownButtonFormField<String>(
-                    value: _selectedReportType,
+                    initialValue: _selectedReportType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: AppTheme.lightBlue,
-                        ),
+                        borderSide: BorderSide(color: AppTheme.lightBlue),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -306,10 +291,7 @@ CONCLUSION URGENTE :
                     ),
                     isExpanded: true,
                     items: _reportTemplates.keys.map((String type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
+                      return DropdownMenuItem(value: type, child: Text(type));
                     }).toList(),
                     onChanged: (String? newValue) {
                       if (newValue != null) {
@@ -336,9 +318,7 @@ CONCLUSION URGENTE :
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppTheme.lightBlue,
-                      ),
+                      border: Border.all(color: AppTheme.lightBlue),
                     ),
                     child: TextFormField(
                       controller: _contentController,
@@ -347,9 +327,7 @@ CONCLUSION URGENTE :
                         contentPadding: EdgeInsets.all(16),
                         alignLabelWithHint: true,
                       ),
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                      ),
+                      style: TextStyle(fontFamily: 'Roboto'),
                       maxLines: 15,
                       validator: (value) =>
                           value!.isEmpty ? "Ce champ est obligatoire" : null,
@@ -368,7 +346,7 @@ CONCLUSION URGENTE :
                     ),
                     minimumSize: Size(double.infinity, 54),
                     elevation: 3,
-                    shadowColor: AppTheme.primaryColor.withOpacity(0.5),
+                    shadowColor: AppTheme.primaryColor.withValues(alpha: 0.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

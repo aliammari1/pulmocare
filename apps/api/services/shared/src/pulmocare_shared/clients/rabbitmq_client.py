@@ -4,8 +4,9 @@ RabbitMQ client for message queue operations.
 
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
@@ -32,6 +33,7 @@ class RabbitMQClient:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -52,7 +54,7 @@ class RabbitMQClient:
             "patient": "patient.events",
             "events": "pulmocare.events",
         }
-        
+
         self._initialized = True
 
     def connect(self) -> BlockingChannel:
@@ -133,7 +135,7 @@ class RabbitMQClient:
                 **message,
                 "_metadata": {
                     "source_service": self.service_name,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "message_id": str(uuid.uuid4()),
                     "correlation_id": correlation_id or str(uuid.uuid4()),
                 },

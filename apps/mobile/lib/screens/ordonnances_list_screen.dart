@@ -150,10 +150,7 @@ class _PrescriptionCard extends StatelessWidget {
             color: AppTheme.primary.withValues(alpha: .10),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(
-            Icons.medication_outlined,
-            color: AppTheme.primary,
-          ),
+          child: const Icon(Icons.medication_outlined, color: AppTheme.primary),
         ),
         title: Text(patientLabel),
         subtitle: Text(
@@ -214,10 +211,7 @@ class _StateMessage extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
-              OutlinedButton(
-                onPressed: onAction,
-                child: Text(actionLabel),
-              ),
+              OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
             ],
           ),
         ),

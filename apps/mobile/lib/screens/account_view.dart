@@ -42,10 +42,7 @@ class AccountView extends StatelessWidget {
               if (provider && role != 'admin')
                 VerificationAlert(isVerified: doctor?.isVerified ?? false),
               if (provider && role != 'admin') const SizedBox(height: 8),
-              Text(
-                'Profile',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('Profile', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 10),
               _InfoCard(
                 children: [
@@ -74,10 +71,7 @@ class AccountView extends StatelessWidget {
                   _InfoRow(
                     icon: Icons.location_on_outlined,
                     label: 'Address',
-                    value: _valueOrFallback(
-                      doctor?.address,
-                      'Not specified',
-                    ),
+                    value: _valueOrFallback(doctor?.address, 'Not specified'),
                     showDivider: false,
                   ),
                 ],
@@ -143,7 +137,10 @@ class AccountView extends StatelessWidget {
     );
 
     if (embedded) return body;
-    return Scaffold(appBar: AppBar(title: const Text('Account')), body: body);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Account')),
+      body: body,
+    );
   }
 
   static Uint8List? _decodeImage(String? encoded) {
@@ -168,7 +165,8 @@ class AccountView extends StatelessWidget {
     AuthViewModel auth,
   ) async {
     final profile = auth.currentDoctor;
-    final provider = auth.userRole == 'doctor' ||
+    final provider =
+        auth.userRole == 'doctor' ||
         auth.userRole == 'radiologist' ||
         auth.userRole == 'admin';
     final formKey = GlobalKey<FormState>();
@@ -201,10 +199,9 @@ class AccountView extends StatelessWidget {
                         labelText: 'Full name',
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
-                      validator: (value) =>
-                          (value?.trim().length ?? 0) < 2
-                              ? 'Enter your full name'
-                              : null,
+                      validator: (value) => (value?.trim().length ?? 0) < 2
+                          ? 'Enter your full name'
+                          : null,
                     ),
                     if (provider) ...[
                       const SizedBox(height: 14),
@@ -213,8 +210,7 @@ class AccountView extends StatelessWidget {
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
                           labelText: 'Specialty',
-                          prefixIcon:
-                              Icon(Icons.medical_services_outlined),
+                          prefixIcon: Icon(Icons.medical_services_outlined),
                         ),
                       ),
                     ],
@@ -275,8 +271,9 @@ class AccountView extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed:
-                  auth.isBusy ? null : () => Navigator.pop(dialogContext),
+              onPressed: auth.isBusy
+                  ? null
+                  : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -286,8 +283,9 @@ class AccountView extends StatelessWidget {
                       if (!formKey.currentState!.validate()) return;
                       String? image;
                       if (selectedImage != null) {
-                        image =
-                            base64Encode(await selectedImage!.readAsBytes());
+                        image = base64Encode(
+                          await selectedImage!.readAsBytes(),
+                        );
                       }
                       final ok = await auth.updateProfile(
                         name: name.text,
@@ -316,9 +314,9 @@ class AccountView extends StatelessWidget {
     address.dispose();
 
     if (context.mounted && auth.errorMessage.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated.')));
     }
   }
 
@@ -348,8 +346,9 @@ class AccountView extends StatelessWidget {
                     controller: current,
                     obscureText: true,
                     autofillHints: const [AutofillHints.password],
-                    decoration:
-                        const InputDecoration(labelText: 'Current password'),
+                    decoration: const InputDecoration(
+                      labelText: 'Current password',
+                    ),
                     validator: (value) => (value?.length ?? 0) < 8
                         ? 'Enter your current password'
                         : null,
@@ -359,8 +358,9 @@ class AccountView extends StatelessWidget {
                     controller: next,
                     obscureText: true,
                     autofillHints: const [AutofillHints.newPassword],
-                    decoration:
-                        const InputDecoration(labelText: 'New password'),
+                    decoration: const InputDecoration(
+                      labelText: 'New password',
+                    ),
                     validator: (value) => (value?.length ?? 0) < 8
                         ? 'Use at least 8 characters'
                         : null,
@@ -373,9 +373,8 @@ class AccountView extends StatelessWidget {
                     decoration: const InputDecoration(
                       labelText: 'Confirm new password',
                     ),
-                    validator: (value) => value != next.text
-                        ? 'Passwords do not match'
-                        : null,
+                    validator: (value) =>
+                        value != next.text ? 'Passwords do not match' : null,
                   ),
                   if (localError != null) ...[
                     const SizedBox(height: 12),
@@ -392,8 +391,9 @@ class AccountView extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed:
-                  auth.isBusy ? null : () => Navigator.pop(dialogContext),
+              onPressed: auth.isBusy
+                  ? null
+                  : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -424,16 +424,13 @@ class AccountView extends StatelessWidget {
     confirm.dispose();
 
     if (context.mounted && auth.errorMessage.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Password updated.')));
     }
   }
 
-  Future<void> _confirmLogout(
-    BuildContext context,
-    AuthViewModel auth,
-  ) async {
+  Future<void> _confirmLogout(BuildContext context, AuthViewModel auth) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -491,8 +488,9 @@ class _ProfileHeader extends StatelessWidget {
           CircleAvatar(
             radius: 34,
             backgroundColor: Colors.white,
-            backgroundImage:
-                imageBytes == null ? null : MemoryImage(imageBytes!),
+            backgroundImage: imageBytes == null
+                ? null
+                : MemoryImage(imageBytes!),
             child: imageBytes == null
                 ? Text(
                     name.isEmpty ? '?' : name[0].toUpperCase(),
@@ -512,16 +510,13 @@ class _ProfileHeader extends StatelessWidget {
                 Text(
                   name,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (email.isNotEmpty) ...[
                   const SizedBox(height: 3),
-                  Text(
-                    email,
-                    style: const TextStyle(color: Colors.white70),
-                  ),
+                  Text(email, style: const TextStyle(color: Colors.white70)),
                 ],
                 const SizedBox(height: 10),
                 Wrap(

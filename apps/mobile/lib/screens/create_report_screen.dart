@@ -51,6 +51,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
 
   final ApiService _api = ApiService();
   bool _isSaving = false;
+  bool _allowPop = false;
   String _generatedId = '';
   final _uuid = const Uuid();
 
@@ -119,17 +120,25 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('MEDICAL REPORT',
-                          style: pw.TextStyle(
-                              fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(
+                        'MEDICAL REPORT',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
                       pw.SizedBox(height: 5),
                       pw.Text(
-                          'Date: ${DateFormat('MMM dd, yyyy').format(_selectedDate)}'),
+                        'Date: ${DateFormat('MMM dd, yyyy').format(_selectedDate)}',
+                      ),
                       _isUrgent
-                          ? pw.Text('URGENT',
+                          ? pw.Text(
+                              'URGENT',
                               style: pw.TextStyle(
-                                  color: PdfColors.red,
-                                  fontWeight: pw.FontWeight.bold))
+                                color: PdfColors.red,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            )
                           : pw.Container(),
                     ],
                   ),
@@ -139,9 +148,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
               ),
               pw.Divider(thickness: 1.5),
               pw.SizedBox(height: 15),
-              pw.Text('PATIENT INFORMATION',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'PATIENT INFORMATION',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 decoration: pw.BoxDecoration(
@@ -173,9 +186,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 ),
               ),
               pw.SizedBox(height: 15),
-              pw.Text('VITAL SIGNS',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'VITAL SIGNS',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 decoration: pw.BoxDecoration(
@@ -185,20 +202,29 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 child: pw.Row(
                   children: [
                     pw.Expanded(
-                        child: pw.Text(
-                            'Temperature: ${_temperatureController.text} °C')),
+                      child: pw.Text(
+                        'Temperature: ${_temperatureController.text} °C',
+                      ),
+                    ),
                     pw.Expanded(
-                        child: pw.Text(
-                            'BP: ${_bloodPressureController.text} mmHg')),
+                      child: pw.Text(
+                        'BP: ${_bloodPressureController.text} mmHg',
+                      ),
+                    ),
                     pw.Expanded(
-                        child: pw.Text('Pulse: ${_pulseController.text} bpm')),
+                      child: pw.Text('Pulse: ${_pulseController.text} bpm'),
+                    ),
                   ],
                 ),
               ),
               pw.SizedBox(height: 15),
-              pw.Text('DIAGNOSIS',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'DIAGNOSIS',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 width: double.infinity,
@@ -209,9 +235,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 child: pw.Text(_diagnosisController.text),
               ),
               pw.SizedBox(height: 15),
-              pw.Text('SYMPTOMS',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'SYMPTOMS',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 width: double.infinity,
@@ -222,9 +252,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 child: pw.Text(_symptomsController.text),
               ),
               pw.SizedBox(height: 15),
-              pw.Text('PRESCRIPTION',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'PRESCRIPTION',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 width: double.infinity,
@@ -235,9 +269,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 child: pw.Text(_prescriptionController.text),
               ),
               pw.SizedBox(height: 15),
-              pw.Text('DOCTOR\'S NOTES',
-                  style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text(
+                'DOCTOR\'S NOTES',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
               pw.Container(
                 padding: const pw.EdgeInsets.all(10),
                 width: double.infinity,
@@ -277,7 +315,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
     final providerId = auth.userId;
     if (providerId == null || providerId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your authenticated provider ID is missing.')),
+        const SnackBar(
+          content: Text('Your authenticated provider ID is missing.'),
+        ),
       );
       return;
     }
@@ -335,9 +375,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to save report: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to save report: $error')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -399,30 +439,37 @@ class _CreateReportScreenState extends State<CreateReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_hasUnsavedChanges()) {
-          final result = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Discard Changes?'),
-              content: const Text(
-                  'You have unsaved changes. Are you sure you want to discard them?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Discard'),
-                ),
-              ],
-            ),
-          );
-          return result ?? false;
-        }
-        return true;
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final result =
+            !_hasUnsavedChanges() ||
+            (await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Discard Changes?'),
+                    content: const Text(
+                      'You have unsaved changes. Are you sure you want to discard them?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Discard'),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false);
+        if (result != true || !mounted) return;
+        setState(() => _allowPop = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).pop();
+        });
       },
       child: Scaffold(
         appBar: AppBar(
@@ -440,18 +487,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
             controller: _tabController,
             indicatorColor: Colors.white,
             tabs: const [
-              Tab(
-                icon: Icon(Icons.person),
-                text: 'Patient',
-              ),
-              Tab(
-                icon: Icon(Icons.medical_services),
-                text: 'Diagnosis',
-              ),
-              Tab(
-                icon: Icon(Icons.note_alt),
-                text: 'Notes',
-              ),
+              Tab(icon: Icon(Icons.person), text: 'Patient'),
+              Tab(icon: Icon(Icons.medical_services), text: 'Diagnosis'),
+              Tab(icon: Icon(Icons.note_alt), text: 'Notes'),
             ],
           ),
         ),
@@ -472,13 +510,13 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(
-                          child: _buildSectionHeader('Vital Signs'),
-                        ),
+                        Expanded(child: _buildSectionHeader('Vital Signs')),
                         IconButton(
-                          icon: Icon(_isShowingVitalSigns
-                              ? Icons.expand_less
-                              : Icons.expand_more),
+                          icon: Icon(
+                            _isShowingVitalSigns
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                          ),
                           onPressed: () {
                             setState(() {
                               _isShowingVitalSigns = !_isShowingVitalSigns;
@@ -500,7 +538,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                               _isUrgent = value;
                             });
                           },
-                          activeColor: Colors.red,
+                          activeThumbColor: Colors.red,
                         ),
                       ],
                     ),
@@ -514,15 +552,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInputSection(
-                      'Symptoms',
-                      _symptomsController,
-                    ),
+                    _buildInputSection('Symptoms', _symptomsController),
                     const SizedBox(height: 16),
-                    _buildInputSection(
-                      'Diagnosis',
-                      _diagnosisController,
-                    ),
+                    _buildInputSection('Diagnosis', _diagnosisController),
                     const SizedBox(height: 16),
                     _buildInputSection(
                       'Prescription',
@@ -612,9 +644,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.cancel),
                   label: const Text('Cancel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
                 ),
               ),
               const SizedBox(width: 16),
@@ -627,8 +657,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Icon(Icons.save),
@@ -714,10 +745,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.badge),
                     ),
-                    validator: (value) =>
-                        (value?.trim().isEmpty ?? true)
-                            ? 'Select a patient'
-                            : null,
+                    validator: (value) => (value?.trim().isEmpty ?? true)
+                        ? 'Select a patient'
+                        : null,
                   ),
                 ),
               ],
@@ -762,9 +792,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                     onPressed: () => _selectDate(context),
                   ),
                 ),
-                child: Text(
-                  DateFormat('MMMM dd, yyyy').format(_selectedDate),
-                ),
+                child: Text(DateFormat('MMMM dd, yyyy').format(_selectedDate)),
               ),
             ),
           ],
@@ -872,8 +900,9 @@ class _CreateReportScreenState extends State<CreateReportScreen>
         const SizedBox(height: 8),
         Card(
           elevation: 1,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Stack(
             children: [
               Padding(
@@ -899,16 +928,20 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                 right: 8,
                 bottom: 8,
                 child: ElevatedButton.icon(
-                  onPressed: () => _openReportEditor(label
-                      .toLowerCase()
-                      .replaceAll('\'s', '')
-                      .replaceAll(' ', '_')),
+                  onPressed: () => _openReportEditor(
+                    label
+                        .toLowerCase()
+                        .replaceAll('\'s', '')
+                        .replaceAll(' ', '_'),
+                  ),
                   icon: const Icon(Icons.edit_note, size: 16),
                   label: const Text('Advanced Editor'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.secondary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),

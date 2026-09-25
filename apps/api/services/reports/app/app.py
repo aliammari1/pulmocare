@@ -4,7 +4,10 @@ Reports Service - FastAPI Application.
 Handles authenticated medical report storage and export.
 """
 
+import asyncio
 import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Response
@@ -27,11 +30,36 @@ from services.report_service import ReportService
 config = get_config()
 api = APIRouter()
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Connect backing services at startup, leaving schema import side-effect free."""
+    redis_client = RedisClient(config)
+    mongodb_client = await asyncio.to_thread(MongoDBClient, config)
+    rabbitmq_client = await asyncio.to_thread(RabbitMQClient, config)
+    _app.state.report_service = ReportService(mongodb_client, redis_client, rabbitmq_client)
+    try:
+        yield
+    finally:
+        _app.state.report_service = None
+        rabbitmq_client.close()
+        mongodb_client.close()
+        redis_client.close()
+
+
+def _service() -> ReportService:
+    service = getattr(app.state, "report_service", None)
+    if service is None:
+        raise HTTPException(status_code=503, detail="Reports service is not ready")
+    return service
+
+
 app = FastAPI(
     title="Reports API",
     version=config.version,
     docs_url="/docs" if config.is_development else None,
     redoc_url="/redoc" if config.is_development else None,
+    lifespan=lifespan,
 )
 
 setup_cors(app, config)
@@ -39,12 +67,7 @@ setup_telemetry(config, app)
 setup_observability(config, app)
 app.include_router(health_router)
 
-redis_client = RedisClient(config)
-mongodb_client = MongoDBClient(config)
-rabbitmq_client = RabbitMQClient(config)
-
 report_generator = ReportGenerator()
-report_service = ReportService(mongodb_client, redis_client, rabbitmq_client)
 
 
 def _roles(user_info: dict) -> set[str]:
@@ -92,10 +115,10 @@ async def get_reports(
     """List reports visible to the authenticated user."""
     roles = _roles(user_info)
     if _is_staff(user_info):
-        return report_service.get_all_reports(search=search)
+        return _service().get_all_reports(search=search)
 
     if "patient" in roles:
-        return report_service.get_all_reports(
+        return _service().get_all_reports(
             search=search,
             patient_id=str(user_info.get("user_id", "")),
         )
@@ -109,7 +132,7 @@ async def get_report(
     user_info: dict = Depends(get_current_user),
 ):
     """Get a report when the caller is allowed to view it."""
-    report = report_service.get_report_by_id(report_id)
+    report = _service().get_report_by_id(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
@@ -130,7 +153,7 @@ async def create_report(
     writer_id = str(user_info.get("user_id", ""))
     payload["doctor_id"] = writer_id
     payload["created_by"] = writer_id
-    return report_service.create_report(payload)
+    return _service().create_report(payload)
 
 
 @api.put("/{report_id}")
@@ -143,7 +166,7 @@ async def update_report(
     if not data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    existing = report_service.get_raw_report(report_id)
+    existing = _service().get_raw_report(report_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Report not found")
     _ensure_can_write(existing, user_info)
@@ -160,7 +183,7 @@ async def update_report(
     ):
         payload.pop(immutable_key, None)
     payload["updated_by"] = user_info.get("user_id")
-    report = report_service.update_report(report_id, payload)
+    report = _service().update_report(report_id, payload)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
@@ -172,12 +195,12 @@ async def delete_report(
     user_info: dict = Depends(get_current_report_writer),
 ):
     """Delete a report as an authenticated clinician."""
-    existing = report_service.get_raw_report(report_id)
+    existing = _service().get_raw_report(report_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Report not found")
     _ensure_can_write(existing, user_info)
 
-    if not report_service.delete_report(report_id):
+    if not _service().delete_report(report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     return Response(status_code=204)
 
@@ -188,7 +211,7 @@ async def export_report(
     user_info: dict = Depends(get_current_user),
 ):
     """Generate and download a report PDF when the caller can read it."""
-    report = report_service.get_raw_report(report_id)
+    report = _service().get_raw_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 

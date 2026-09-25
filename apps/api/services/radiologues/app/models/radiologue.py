@@ -94,19 +94,41 @@ class Radiologue:
             _id=user_data.get("id"),
             name=name,
             email=user_data.get("email", ""),
-            specialty=(attributes.get("specialty", [""])[0] if isinstance(attributes.get("specialty", []), list) and attributes.get("specialty", []) else attributes.get("specialty", "")),
-            phone=(attributes.get("phone", [""])[0] if isinstance(attributes.get("phone", []), list) and attributes.get("phone", []) else attributes.get("phone", "")),
-            address=(attributes.get("address", [""])[0] if isinstance(attributes.get("address", []), list) and attributes.get("address", []) else attributes.get("address", "")),
-            license_number=(
-                attributes.get("license_number", [""])[0] if isinstance(attributes.get("license_number", []), list) and attributes.get("license_number", []) else attributes.get("license_number", "")
+            specialty=(
+                attributes.get("specialty", [""])[0]
+                if isinstance(attributes.get("specialty", []), list) and attributes.get("specialty", [])
+                else attributes.get("specialty", "")
             ),
-            hospital=(attributes.get("hospital", [""])[0] if isinstance(attributes.get("hospital", []), list) and attributes.get("hospital", []) else attributes.get("hospital", "")),
+            phone=(
+                attributes.get("phone", [""])[0]
+                if isinstance(attributes.get("phone", []), list) and attributes.get("phone", [])
+                else attributes.get("phone", "")
+            ),
+            address=(
+                attributes.get("address", [""])[0]
+                if isinstance(attributes.get("address", []), list) and attributes.get("address", [])
+                else attributes.get("address", "")
+            ),
+            license_number=(
+                attributes.get("license_number", [""])[0]
+                if isinstance(attributes.get("license_number", []), list) and attributes.get("license_number", [])
+                else attributes.get("license_number", "")
+            ),
+            hospital=(
+                attributes.get("hospital", [""])[0]
+                if isinstance(attributes.get("hospital", []), list) and attributes.get("hospital", [])
+                else attributes.get("hospital", "")
+            ),
         )
 
         # Add is_verified if available
         is_verified = attributes.get("is_verified")
         if is_verified:
-            radiologue.is_verified = str(is_verified[0]).lower() == "true" if isinstance(is_verified, list) and is_verified else str(is_verified).lower() == "true"
+            radiologue.is_verified = (
+                str(is_verified[0]).lower() == "true"
+                if isinstance(is_verified, list) and is_verified
+                else str(is_verified).lower() == "true"
+            )
 
         # Add verification_details if available
         verification_details = attributes.get("verification_details")

@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class PatientsView extends StatefulWidget {
   const PatientsView({super.key});
@@ -43,15 +43,16 @@ class _PatientsViewState extends State<PatientsView> {
         queryParameters: {'role': 'patient', 'first': 0, 'max': 100},
       );
 
-      final patients = (response.data ?? const [])
-          .whereType<Map>()
-          .map(
-            (value) => _PatientSummary.fromJson(
-              value.map((key, item) => MapEntry(key.toString(), item)),
-            ),
-          )
-          .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
+      final patients =
+          (response.data ?? const [])
+              .whereType<Map>()
+              .map(
+                (value) => _PatientSummary.fromJson(
+                  value.map((key, item) => MapEntry(key.toString(), item)),
+                ),
+              )
+              .toList()
+            ..sort((a, b) => a.name.compareTo(b.name));
 
       if (!mounted) return;
       setState(() {
@@ -76,73 +77,74 @@ class _PatientsViewState extends State<PatientsView> {
     final patients = query.isEmpty
         ? _patients
         : _patients
-            .where(
-              (patient) =>
-                  patient.name.toLowerCase().contains(query) ||
-                  patient.email.toLowerCase().contains(query),
-            )
-            .toList();
+              .where(
+                (patient) =>
+                    patient.name.toLowerCase().contains(query) ||
+                    patient.email.toLowerCase().contains(query),
+              )
+              .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Patients')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _ErrorState(message: _error!, onRetry: _loadPatients)
-              : RefreshIndicator(
-                  onRefresh: _loadPatients,
-                  child: ListView(
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      TextField(
-                        controller: _search,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Search patients',
-                          prefixIcon: Icon(Icons.search_rounded),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        '${patients.length} patient${patients.length == 1 ? '' : 's'}',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      const SizedBox(height: 10),
-                      if (patients.isEmpty)
-                        const _EmptyPatients()
-                      else
-                        for (final patient in patients)
-                          Card(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+          ? _ErrorState(message: _error!, onRetry: _loadPatients)
+          : RefreshIndicator(
+              onRefresh: _loadPatients,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  TextField(
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Search patients',
+                      prefixIcon: Icon(Icons.search_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    '${patients.length} patient${patients.length == 1 ? '' : 's'}',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 10),
+                  if (patients.isEmpty)
+                    const _EmptyPatients()
+                  else
+                    for (final patient in patients)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: AppTheme.primary.withValues(
+                              alpha: .10,
+                            ),
+                            child: Text(
+                              patient.initials,
+                              style: const TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w700,
                               ),
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    AppTheme.primary.withValues(alpha: .10),
-                                child: Text(
-                                  patient.initials,
-                                  style: const TextStyle(
-                                    color: AppTheme.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              title: Text(patient.name),
-                              subtitle: Text(
-                                [
-                                  patient.email,
-                                  if (patient.phone != null) patient.phone!,
-                                ].join('\n'),
-                              ),
-                              isThreeLine: patient.phone != null,
                             ),
                           ),
-                    ],
-                  ),
-                ),
+                          title: Text(patient.name),
+                          subtitle: Text(
+                            [
+                              patient.email,
+                              if (patient.phone != null) patient.phone!,
+                            ].join('\n'),
+                          ),
+                          isThreeLine: patient.phone != null,
+                        ),
+                      ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -173,10 +175,9 @@ class _PatientSummary {
     final combined = '$first $last'.trim();
     final attributes = _map(json['attributes']);
     final email = json['email']?.toString() ?? '';
-    final fallbackName =
-        json['username']?.toString().trim().isNotEmpty == true
-            ? json['username'].toString()
-            : email;
+    final fallbackName = json['username']?.toString().trim().isNotEmpty == true
+        ? json['username'].toString()
+        : email;
 
     return _PatientSummary(
       id: json['id']?.toString() ?? '',

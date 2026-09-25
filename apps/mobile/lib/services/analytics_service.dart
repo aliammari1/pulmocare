@@ -40,10 +40,12 @@ class AnalyticsService {
 
     while (!currentDate.isAfter(lastDate)) {
       trend[currentDate] = reports
-          .where((report) =>
-              report.date.year == currentDate.year &&
-              report.date.month == currentDate.month &&
-              report.date.day == currentDate.day)
+          .where(
+            (report) =>
+                report.date.year == currentDate.year &&
+                report.date.month == currentDate.month &&
+                report.date.day == currentDate.day,
+          )
           .length;
 
       currentDate = currentDate.add(const Duration(days: 1));
@@ -85,14 +87,17 @@ class AnalyticsService {
     List<MedicalReport> reports,
     DateTime month,
   ) {
-    final monthlyReports = reports.where((report) =>
-        report.date.year == month.year && report.date.month == month.month);
+    final monthlyReports = reports.where(
+      (report) =>
+          report.date.year == month.year && report.date.month == month.month,
+    );
 
     return {
       'total_reports': monthlyReports.length,
       'urgent_reports': monthlyReports.where((r) => r.isUrgent).length,
-      'completed_reports':
-          monthlyReports.where((r) => r.status == 'completed').length,
+      'completed_reports': monthlyReports
+          .where((r) => r.status == 'completed')
+          .length,
       'average_reports_per_day': monthlyReports.length / 30,
       'diagnosis_distribution': getDiagnosisFrequency(monthlyReports.toList()),
       'vital_signs_averages': getVitalSignsAverages(monthlyReports.toList()),
@@ -103,10 +108,9 @@ class AnalyticsService {
     List<MedicalReport> reports,
     String patientId,
   ) {
-    final patientReports = reports
-        .where((report) => report.patientId == patientId)
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final patientReports =
+        reports.where((report) => report.patientId == patientId).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
 
     return patientReports.map((report) {
       final vitalSigns = report.vitalSigns;

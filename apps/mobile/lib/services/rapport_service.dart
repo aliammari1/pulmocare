@@ -12,16 +12,16 @@ class RapportService {
     required String content,
   }) async {
     try {
-      final response = await _dio.post('/rapport', data: {
-        "patientName": patientName,
-        "examType": examType,
-        "reportType": reportType,
-        "content": content,
-      });
-
-      print("✅ Rapport ajouté : ${response.data}");
-    } catch (e) {
-      print("❌ Erreur lors de l'ajout du rapport : $e");
+      await _dio.post(
+        '/rapport',
+        data: {
+          "patientName": patientName,
+          "examType": examType,
+          "reportType": reportType,
+          "content": content,
+        },
+      );
+    } catch (_) {
       throw 'Impossible d\'ajouter le rapport';
     }
   }
@@ -31,8 +31,7 @@ class RapportService {
     try {
       final response = await _dio.get('/rapports');
       return List<Map<String, dynamic>>.from(response.data);
-    } catch (e) {
-      print("❌ Erreur lors de la récupération des rapports : $e");
+    } catch (_) {
       throw 'Impossible de récupérer les rapports';
     }
   }

@@ -110,11 +110,7 @@ class _BrandHeader extends StatelessWidget {
           ),
           child: Padding(
             padding: EdgeInsets.all(18),
-            child: Icon(
-              Icons.air_rounded,
-              size: 52,
-              color: AppTheme.primary,
-            ),
+            child: Icon(Icons.air_rounded, size: 52, color: AppTheme.primary),
           ),
         ),
         SizedBox(height: 18),

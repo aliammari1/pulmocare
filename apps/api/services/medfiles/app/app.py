@@ -35,10 +35,10 @@ app = FastAPI(
 )
 
 # Setup CORS using shared module
-setup_cors(app, config.cors_origins)
+setup_cors(app, config)
 
 # Setup OpenTelemetry using shared module
-setup_telemetry(app, config)
+setup_telemetry(config, app)
 
 # Include health check router
 app.include_router(health_router)
@@ -232,6 +232,7 @@ async def download_shared_object(encoded_url: str):
 
         # Validate URL to prevent open redirect attacks
         from urllib.parse import urlparse
+
         parsed = urlparse(original_url)
         allowed_hosts = {
             os.getenv("MINIO_HOST", "minio"),

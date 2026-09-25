@@ -1,13 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 
-enum LogLevel {
-  debug,
-  info,
-  warning,
-  error,
-}
+enum LogLevel { debug, info, warning, error }
 
 class LoggingService {
   static final LoggingService _instance = LoggingService._internal();
@@ -29,29 +25,15 @@ class LoggingService {
     return logsDir.path;
   }
 
-  Future<void> log(
-    String message,
-    LogLevel level, {
-    dynamic error,
-    StackTrace? stackTrace,
-    String? userId,
-  }) async {
+  Future<void> log(String event, LogLevel level) async {
     final timestamp = DateTime.now();
-    final formattedDate =
-        DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(timestamp);
-    final logMessage = '$formattedDate [${level.name.toUpperCase()}] $message'
-        '${error != null ? '\nError: $error' : ''}'
-        '${stackTrace != null ? '\nStack Trace:\n$stackTrace' : ''}'
-        '${userId != null ? ' (User: $userId)' : ''}';
+    final formattedDate = DateFormat(
+      'yyyy-MM-dd HH:mm:ss.SSS',
+    ).format(timestamp);
+    final logMessage = '$formattedDate [${level.name.toUpperCase()}] $event';
 
     // Write to today's log file
     await _writeToFile(logMessage);
-
-    // Also print to console in debug mode
-    assert(() {
-      print(logMessage);
-      return true;
-    }());
   }
 
   Future<void> _writeToFile(String message) async {
@@ -69,53 +51,27 @@ class LoggingService {
       final directory = Directory(logsDir);
       final files = await directory
           .list()
-          .where((entity) =>
-              entity is File &&
-              entity.path.contains(logFilePrefix) &&
-              entity.path.endsWith('.log'))
+          .where(
+            (entity) =>
+                entity is File &&
+                entity.path.contains(logFilePrefix) &&
+                entity.path.endsWith('.log'),
+          )
           .toList();
 
       if (files.length > maxLogFiles) {
         // Sort files by last modified timestamp
         files.sort(
-            (a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+          (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+        );
 
         // Delete oldest files
         for (var i = maxLogFiles; i < files.length; i++) {
           await files[i].delete();
         }
       }
-    } catch (e) {
-      print('Failed to cleanup logs: $e');
-    }
-  }
-
-  Future<List<String>> getRecentLogs({int maxLines = 100}) async {
-    try {
-      final logsDir = await _logsDirectory;
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final logFile = File('$logsDir/$logFilePrefix$today.log');
-
-      if (!await logFile.exists()) {
-        return [];
-      }
-
-      final lines = await logFile.readAsLines();
-      return lines.reversed.take(maxLines).toList().reversed.toList();
-    } catch (e) {
-      print('Failed to read logs: $e');
-      return [];
-    }
-  }
-
-  Future<void> exportLogs() async {
-    try {
-      final logsDir = await _logsDirectory;
-      final exportFile = File(
-          '$logsDir/logs_export_${DateTime.now().millisecondsSinceEpoch}.zip');
-      // TODO: Implement log file compression and export
-    } catch (e) {
-      print('Failed to export logs: $e');
+    } catch (_) {
+      if (kDebugMode) debugPrint('Log cleanup failed');
     }
   }
 }

@@ -10,7 +10,9 @@ def send_otp_email(to_email, otp):
         sender_email = os.getenv("EMAIL_ADDRESS")
         sender_password = os.getenv("EMAIL_PASSWORD")
 
-        logger_service.debug(f"Email configuration - Sender: {sender_email}, Password length: {len(sender_password) if sender_password else 0}")
+        logger_service.debug(
+            f"Email configuration - Sender: {sender_email}, Password length: {len(sender_password) if sender_password else 0}"
+        )
 
         if not sender_email or not sender_password:
             logger_service.error("Email configuration missing")

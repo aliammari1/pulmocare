@@ -39,6 +39,7 @@ class LoggerService:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -102,13 +103,17 @@ class LoggerService:
 
     def _setup_otel_logging(self) -> None:
         """Set up OpenTelemetry logging export."""
+        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+            return
         try:
-            resource = Resource.create({
-                "service.name": self.config.effective_otel_service_name,
-                "service.version": self.config.version,
-                "service.instance.id": socket.gethostname(),
-                "deployment.environment": self.config.env,
-            })
+            resource = Resource.create(
+                {
+                    "service.name": self.config.effective_otel_service_name,
+                    "service.version": self.config.version,
+                    "service.instance.id": socket.gethostname(),
+                    "deployment.environment": self.config.env,
+                }
+            )
 
             logger_provider = LoggerProvider(resource=resource)
             set_logger_provider(logger_provider)
@@ -206,6 +211,7 @@ def get_logger(service_name: str | None = None) -> LoggerService:
     """Get cached logger instance."""
     if LoggerService._instance is None:
         from pulmocare_shared.config import BaseConfig
+
         config = BaseConfig()
         if service_name:
             object.__setattr__(config, "service_name", service_name)

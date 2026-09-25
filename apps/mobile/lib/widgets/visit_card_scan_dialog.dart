@@ -5,13 +5,13 @@ import 'package:dio/dio.dart';
 import 'dart:convert';
 
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 
 class VisitCardScanDialog extends StatefulWidget {
   const VisitCardScanDialog({super.key});
 
   @override
-  _VisitCardScanDialogState createState() => _VisitCardScanDialogState();
+  State<VisitCardScanDialog> createState() => _VisitCardScanDialogState();
 }
 
 class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
@@ -49,6 +49,7 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
         options: Options(headers: {"Content-Type": "application/json"}),
         data: json.encode({'image': base64Image}),
       );
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         var data = response.data;
@@ -56,10 +57,10 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
       } else {
         setState(() => _errorMessage = 'Failed to process image');
       }
-    } catch (e) {
-      setState(() => _errorMessage = 'Network error occurred');
+    } catch (_) {
+      if (mounted) setState(() => _errorMessage = 'Network error occurred');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -128,7 +129,7 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: Color(0xFF35C5CF).withOpacity(0.1),
+          color: Color(0xFF35C5CF).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(

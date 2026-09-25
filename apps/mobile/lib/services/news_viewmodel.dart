@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:html/parser.dart' as parser;
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 import '../models/news_item.dart';
 
 class NewsViewModel extends ChangeNotifier {
@@ -35,11 +35,12 @@ class NewsViewModel extends ChangeNotifier {
       final specialty = _selectedSpecialty.toLowerCase().replaceAll('é', 'e');
       final url = 'https://www.univadis.fr/news/$specialty';
 
-      final response = await dio.get(url,
+      final response = await dio.get(
+        url,
         options: Options(
           headers: {
             'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
           },
         ),
       );
@@ -80,15 +81,8 @@ class NewsViewModel extends ChangeNotifier {
             })
             .where((item) => item.title.isNotEmpty)
             .toList();
-
-        print('Fetched ${_news.length} articles for $_selectedSpecialty');
-        print('URL accessed: $url');
-      } else {
-        print('Failed to fetch news: ${response.statusCode}');
-        print('URL attempted: $url');
       }
-    } catch (e) {
-      print('Error fetching news: $e');
+    } catch (_) {
       _news = [];
     } finally {
       _isLoading = false;

@@ -228,10 +228,7 @@ async def update_ordonnance(
             raise HTTPException(status_code=404, detail="Prescription not found")
 
         # Check if the doctor is the owner (admins may manage all records).
-        if (
-            ordonnance_data.get("doctor_id") != user_info.get("user_id")
-            and "admin" not in _roles(user_info)
-        ):
+        if ordonnance_data.get("doctor_id") != user_info.get("user_id") and "admin" not in _roles(user_info):
             raise HTTPException(
                 status_code=403,
                 detail="You can only update your own prescriptions",
@@ -277,10 +274,7 @@ async def delete_ordonnance(ordonnance_id: str, user_info: dict = Depends(get_cu
             raise HTTPException(status_code=404, detail="Prescription not found")
 
         # Check if the doctor is the owner (admins may manage all records).
-        if (
-            ordonnance_data.get("doctor_id") != user_info.get("user_id")
-            and "admin" not in _roles(user_info)
-        ):
+        if ordonnance_data.get("doctor_id") != user_info.get("user_id") and "admin" not in _roles(user_info):
             raise HTTPException(
                 status_code=403,
                 detail="You can only delete your own prescriptions",

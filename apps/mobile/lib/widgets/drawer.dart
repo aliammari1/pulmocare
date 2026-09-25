@@ -24,7 +24,7 @@ class AppDrawer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       spreadRadius: 5,
                       blurRadius: 15,
                       offset: const Offset(0, 3),
@@ -37,7 +37,7 @@ class AppDrawer extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
-                        color: AppTheme.paleBlue.withOpacity(0.1),
+                        color: AppTheme.paleBlue.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -57,10 +57,7 @@ class AppDrawer extends StatelessWidget {
                     const SizedBox(height: 12),
                     const Text(
                       'Are you sure you want to logout?',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 25),
@@ -149,12 +146,18 @@ class AppDrawer extends StatelessWidget {
                         backgroundColor: Colors.white,
                         backgroundImage:
                             authViewModel.currentDoctor?.profileImage != null
-                                ? MemoryImage(base64Decode(
-                                    authViewModel.currentDoctor!.profileImage!))
-                                : null,
+                            ? MemoryImage(
+                                base64Decode(
+                                  authViewModel.currentDoctor!.profileImage!,
+                                ),
+                              )
+                            : null,
                         child: authViewModel.currentDoctor?.profileImage == null
-                            ? const Icon(Icons.person,
-                                size: 45, color: Colors.blue)
+                            ? const Icon(
+                                Icons.person,
+                                size: 45,
+                                color: Colors.blue,
+                              )
                             : null,
                       ),
                       const SizedBox(height: 15),
@@ -187,10 +190,7 @@ class AppDrawer extends StatelessWidget {
             leading: Icon(Icons.logout, color: AppTheme.kErrorRed),
             title: const Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             onTap: () async {
               if (await _showLogoutConfirmation(context)) {

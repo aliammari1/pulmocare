@@ -13,7 +13,7 @@ class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
 
   @override
-  _ArchiveScreenState createState() => _ArchiveScreenState();
+  State<ArchiveScreen> createState() => _ArchiveScreenState();
 }
 
 class _ArchiveScreenState extends State<ArchiveScreen> {
@@ -88,10 +88,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             child: _isLoading
                 ? _buildLoadingIndicator()
                 : _hasError
-                    ? _buildErrorState()
-                    : _filteredRapports.isEmpty
-                        ? _buildEmptyState()
-                        : _buildRapportsList(),
+                ? _buildErrorState()
+                : _filteredRapports.isEmpty
+                ? _buildEmptyState()
+                : _buildRapportsList(),
           ),
         ],
       ),
@@ -153,19 +153,13 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           SizedBox(height: 16),
           Text(
             "Erreur lors du chargement des rapports",
-            style: TextStyle(
-              color: textPrimaryColor,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: textPrimaryColor, fontSize: 16),
           ),
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _loadRapports,
             icon: Icon(Icons.refresh, color: primaryColor),
-            label: Text(
-              "Réessayer",
-              style: TextStyle(color: primaryColor),
-            ),
+            label: Text("Réessayer", style: TextStyle(color: primaryColor)),
             style: TextButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               // ignore: deprecated_member_use
@@ -199,10 +193,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(
-              color: textPrimaryColor,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: textPrimaryColor, fontSize: 16),
           ),
           if (_searchController.text.isNotEmpty) ...[
             SizedBox(height: 16),
@@ -245,7 +236,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
@@ -266,7 +257,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -313,10 +304,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           ],
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: primaryColor,
-                      ),
+                      Icon(Icons.chevron_right, color: primaryColor),
                     ],
                   ),
                 ),
@@ -345,7 +333,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: Offset(0, 4),
                 ),
@@ -382,13 +370,22 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildDetailRow(
-                            Icons.person, "Patient", rapport["patientName"]),
+                          Icons.person,
+                          "Patient",
+                          rapport["patientName"],
+                        ),
                         SizedBox(height: 12),
-                        _buildDetailRow(Icons.medical_services_outlined,
-                            "Type d'examen", rapport["examType"]),
+                        _buildDetailRow(
+                          Icons.medical_services_outlined,
+                          "Type d'examen",
+                          rapport["examType"],
+                        ),
                         SizedBox(height: 12),
-                        _buildDetailRow(Icons.folder_outlined,
-                            "Type de rapport", rapport["reportType"]),
+                        _buildDetailRow(
+                          Icons.folder_outlined,
+                          "Type de rapport",
+                          rapport["reportType"],
+                        ),
                         SizedBox(height: 20),
                         Text(
                           "Contenu:",
@@ -462,14 +459,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: primaryColor,
-            size: 20,
-          ),
+          child: Icon(icon, color: primaryColor, size: 20),
         ),
         SizedBox(width: 12),
         Expanded(
@@ -478,10 +471,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  color: textSecondaryColor,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: textSecondaryColor, fontSize: 12),
               ),
               SizedBox(height: 2),
               Text(

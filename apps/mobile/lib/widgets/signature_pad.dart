@@ -5,10 +5,7 @@ import 'dart:typed_data';
 class SignaturePad extends StatefulWidget {
   final Function(Uint8List) onSigned;
 
-  const SignaturePad({
-    super.key,
-    required this.onSigned,
-  });
+  const SignaturePad({super.key, required this.onSigned});
 
   @override
   SignaturePadState createState() => SignaturePadState();
@@ -59,7 +56,7 @@ class SignaturePadState extends State<SignaturePad> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -72,8 +69,9 @@ class SignaturePadState extends State<SignaturePad> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -118,7 +116,10 @@ class SignaturePadState extends State<SignaturePad> {
                   },
                   child: CustomPaint(
                     painter: SignaturePainter(
-                        _strokes, _currentColor, _currentWidth),
+                      _strokes,
+                      _currentColor,
+                      _currentWidth,
+                    ),
                     size: const Size(300, 150),
                   ),
                 ),
@@ -183,7 +184,7 @@ class SignaturePadState extends State<SignaturePad> {
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -215,10 +216,7 @@ class SignaturePadState extends State<SignaturePad> {
     return TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, color: color),
-      label: Text(
-        label,
-        style: TextStyle(color: color),
-      ),
+      label: Text(label, style: TextStyle(color: color)),
     );
   }
 

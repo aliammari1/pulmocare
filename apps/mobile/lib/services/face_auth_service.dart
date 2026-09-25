@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:camera/camera.dart';
 import 'package:logging/logging.dart';
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 import 'package:http_parser/http_parser.dart';
 
 class FaceAuthService {

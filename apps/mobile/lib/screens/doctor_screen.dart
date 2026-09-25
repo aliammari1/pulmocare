@@ -13,7 +13,7 @@ class DoctorScreen extends StatefulWidget {
   const DoctorScreen({super.key});
 
   @override
-  _DoctorScreenState createState() => _DoctorScreenState();
+  State<DoctorScreen> createState() => _DoctorScreenState();
 }
 
 class _DoctorScreenState extends State<DoctorScreen> {
@@ -105,10 +105,10 @@ class _DoctorScreenState extends State<DoctorScreen> {
             child: _isLoading
                 ? _buildLoadingIndicator()
                 : _hasError
-                    ? _buildErrorState()
-                    : _filteredDoctors.isEmpty
-                        ? _buildEmptyState()
-                        : _buildDoctorsList(),
+                ? _buildErrorState()
+                : _filteredDoctors.isEmpty
+                ? _buildEmptyState()
+                : _buildDoctorsList(),
           ),
         ],
       ),
@@ -123,7 +123,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -169,22 +169,16 @@ class _DoctorScreenState extends State<DoctorScreen> {
           SizedBox(height: 16),
           Text(
             "Erreur lors du chargement des docteurs",
-            style: TextStyle(
-              color: textPrimaryColor,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: textPrimaryColor, fontSize: 16),
           ),
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _loadDoctors,
             icon: Icon(Icons.refresh, color: primaryColor),
-            label: Text(
-              "Réessayer",
-              style: TextStyle(color: primaryColor),
-            ),
+            label: Text("Réessayer", style: TextStyle(color: primaryColor)),
             style: TextButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              backgroundColor: primaryColor.withOpacity(0.1),
+              backgroundColor: primaryColor.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -214,10 +208,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
           SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(
-              color: textPrimaryColor,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: textPrimaryColor, fontSize: 16),
           ),
           if (_searchController.text.isNotEmpty) ...[
             SizedBox(height: 16),
@@ -233,7 +224,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               ),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                backgroundColor: primaryColor.withOpacity(0.1),
+                backgroundColor: primaryColor.withValues(alpha: 0.1),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -259,7 +250,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
@@ -280,7 +271,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: doctor["profile_image"] != null
@@ -298,11 +289,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                                   },
                                 ),
                               )
-                            : Icon(
-                                Icons.person,
-                                color: primaryColor,
-                                size: 24,
-                              ),
+                            : Icon(Icons.person, color: primaryColor, size: 24),
                       ),
                       SizedBox(width: 16),
                       Expanded(
@@ -353,10 +340,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                           ],
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: primaryColor,
-                      ),
+                      Icon(Icons.chevron_right, color: primaryColor),
                     ],
                   ),
                 ),
@@ -387,11 +371,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               ),
               SizedBox(width: 8),
               if (doctor["is_verified"] == true)
-                Icon(
-                  Icons.verified,
-                  color: Colors.blue,
-                  size: 20,
-                ),
+                Icon(Icons.verified, color: Colors.blue, size: 20),
             ],
           ),
           content: SingleChildScrollView(
@@ -400,11 +380,17 @@ class _DoctorScreenState extends State<DoctorScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDetailItem(
-                    "Spécialité", doctor["specialty"] ?? "Non spécifiée"),
+                  "Spécialité",
+                  doctor["specialty"] ?? "Non spécifiée",
+                ),
                 _buildDetailItem(
-                    "Adresse", doctor["address"] ?? "Non spécifiée"),
+                  "Adresse",
+                  doctor["address"] ?? "Non spécifiée",
+                ),
                 _buildDetailItem(
-                    "Téléphone", doctor["phone_number"] ?? "Non spécifié"),
+                  "Téléphone",
+                  doctor["phone_number"] ?? "Non spécifié",
+                ),
                 _buildDetailItem("Email", doctor["email"] ?? "Non spécifié"),
                 if (doctor["profile_image"] != null) ...[
                   SizedBox(height: 16),
@@ -419,7 +405,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         return Container(
                           height: 100,
                           width: double.infinity,
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           child: Icon(
                             Icons.image_not_supported,
                             color: primaryColor,
@@ -437,10 +423,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text(
-                "Fermer",
-                style: TextStyle(color: primaryColor),
-              ),
+              child: Text("Fermer", style: TextStyle(color: primaryColor)),
             ),
           ],
         );
@@ -463,13 +446,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
             ),
           ),
           SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: textPrimaryColor,
-              fontSize: 16,
-            ),
-          ),
+          Text(value, style: TextStyle(color: textPrimaryColor, fontSize: 16)),
         ],
       ),
     );

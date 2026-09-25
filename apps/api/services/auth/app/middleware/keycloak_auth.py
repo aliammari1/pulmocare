@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from typing import Any
 
@@ -12,6 +13,7 @@ from models.auth import Role
 
 # Security scheme for Swagger UI
 security = HTTPBearer()
+logger = logging.getLogger(__name__)
 
 
 class KeycloakMiddleware:
@@ -40,6 +42,7 @@ class KeycloakMiddleware:
         self.realm = realm or os.getenv("KEYCLOAK_REALM", "pulmocare")
         self.client_id = client_id or os.getenv("KEYCLOAK_CLIENT_ID", "pulmocare-api")
         self.client_secret = client_secret or os.getenv("KEYCLOAK_CLIENT_SECRET", "pulmocare-secret")
+        self.audience = os.getenv("KEYCLOAK_AUDIENCE") or None
 
         # Cache for public key to avoid repeated requests
         self._public_key = None
@@ -51,7 +54,7 @@ class KeycloakMiddleware:
             f"{self.keycloak_url}/realms/{self.realm}/protocol/openid-connect/token/introspect"
         )
 
-        print(f"Keycloak middleware initialized for realm {self.realm} with URL {self.keycloak_url}")
+        logger.info("Keycloak middleware initialized for realm %s", self.realm)
 
     def _fetch_jwks(self):
         response = requests.get(self.well_known_url, timeout=10)
@@ -116,26 +119,20 @@ class KeycloakMiddleware:
                 public_key,
                 algorithms=["RS256"],
                 issuer=f"{self.keycloak_url}/realms/{self.realm}",
+                audience=self.audience,
                 options={
                     "verify_signature": True,
                     "verify_exp": True,
                     "verify_nbf": True,
                     "verify_iat": True,
-                    "verify_aud": False,
+                    "verify_aud": self.audience is not None,
                     "verify_iss": True,
                     "require": ["exp", "iat"],
                 },
             )
 
             return payload
-        except jwt.ExpiredSignatureError:
-            print("Token expired")
-            raise
-        except jwt.InvalidTokenError as e:
-            print(f"Invalid token: {e!s}")
-            raise
-        except Exception as e:
-            print(f"Error verifying token: {e!s}")
+        except jwt.InvalidTokenError:
             raise
 
     def introspect_token(self, token):
@@ -166,8 +163,7 @@ class KeycloakMiddleware:
                 raise jwt.InvalidTokenError("Token is not active")
 
             return result
-        except Exception as e:
-            print(f"Error introspecting token: {e!s}")
+        except (requests.RequestException, jwt.InvalidTokenError):
             raise
 
     async def get_current_user(
@@ -220,14 +216,15 @@ class KeycloakMiddleware:
                 detail="Token expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except jwt.InvalidTokenError as e:
+        except jwt.InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid token: {e!s}",
+                detail="Invalid authentication token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except Exception as e:
-            print(f"Authentication error: {e!s}")
+        except HTTPException:
+            raise
+        except (requests.RequestException, ValueError, TypeError):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication failed",

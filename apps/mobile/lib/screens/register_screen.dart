@@ -3,13 +3,13 @@ import 'package:dio/dio.dart';
 import 'dart:convert';
 
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -32,19 +32,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           "password": passwordController.text,
           "name": nameController.text,
           "phone": phoneController.text,
-          "role": selectedRole
+          "role": selectedRole,
         }),
       );
+      if (!mounted) return;
       final data = response.data;
       if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Registration successful!")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Registration successful!")));
         Navigator.pushReplacementNamed(context, '/login');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data["error"])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(data["error"])));
       }
     }
   }
@@ -66,7 +67,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: selectedRole,
+                initialValue: selectedRole,
                 decoration: const InputDecoration(labelText: "I am a"),
                 items: ['Patient', 'Doctor'].map((String role) {
                   return DropdownMenuItem(value: role, child: Text(role));

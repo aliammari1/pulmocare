@@ -36,7 +36,7 @@ class Appointment {
       appointmentType: (json['appointment_type'] ?? 'consultation').toString(),
       appointmentDate:
           DateTime.tryParse(json['appointment_date']?.toString() ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0),
+          DateTime.fromMillisecondsSinceEpoch(0),
       durationMinutes: _asInt(json['duration_minutes'], fallback: 30),
       status: (json['status'] ?? 'pending').toString(),
       reason: _nullableString(json['reason']),

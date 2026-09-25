@@ -27,6 +27,7 @@ class ConsulClient:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config

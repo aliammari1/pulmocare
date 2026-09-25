@@ -101,8 +101,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
     if (edited == null || !mounted) return;
 
     setState(() {
-      final existing =
-          _medications.indexWhere((item) => item.name == edited.name);
+      final existing = _medications.indexWhere(
+        (item) => item.name == edited.name,
+      );
       if (existing >= 0) {
         _medications[existing] = edited;
       } else {
@@ -124,7 +125,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
         (role != 'doctor' && role != 'admin')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('A doctor account is required to prescribe medication.'),
+          content: Text(
+            'A doctor account is required to prescribe medication.',
+          ),
         ),
       );
       return;
@@ -211,10 +214,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       labelText: 'Patient name',
                       prefixIcon: Icon(Icons.person_outline_rounded),
                     ),
-                    validator: (value) =>
-                        (value?.trim().isEmpty ?? true)
-                            ? 'Select a patient.'
-                            : null,
+                    validator: (value) => (value?.trim().isEmpty ?? true)
+                        ? 'Select a patient.'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -224,10 +226,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       labelText: 'Patient ID',
                       prefixIcon: Icon(Icons.badge_outlined),
                     ),
-                    validator: (value) =>
-                        (value?.trim().isEmpty ?? true)
-                            ? 'Select a patient.'
-                            : null,
+                    validator: (value) => (value?.trim().isEmpty ?? true)
+                        ? 'Select a patient.'
+                        : null,
                   ),
                 ],
               ),
@@ -246,10 +247,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       labelText: 'Diagnosis / indication',
                       alignLabelWithHint: true,
                     ),
-                    validator: (value) =>
-                        (value?.trim().length ?? 0) < 3
-                            ? 'Enter the clinical indication.'
-                            : null,
+                    validator: (value) => (value?.trim().length ?? 0) < 3
+                        ? 'Enter the clinical indication.'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -264,14 +264,16 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _clinic,
-                    decoration:
-                        const InputDecoration(labelText: 'Clinic (optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Clinic (optional)',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _specialty,
-                    decoration:
-                        const InputDecoration(labelText: 'Specialty (optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Specialty (optional)',
+                    ),
                   ),
                 ],
               ),
@@ -295,8 +297,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                               child: SizedBox(
                                 width: 18,
                                 height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             )
                           : null,
@@ -309,8 +312,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: results.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1),
+                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (_, index) {
                           final item = results[index];
                           return ListTile(
@@ -318,7 +320,8 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                             subtitle: Text(
                               [
                                 if ((item.usage ?? '').isNotEmpty) item.usage!,
-                                if ((item.dosage ?? '').isNotEmpty) item.dosage!,
+                                if ((item.dosage ?? '').isNotEmpty)
+                                  item.dosage!,
                               ].join(' • '),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -348,9 +351,8 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                           onTap: () => _addMedication(medication),
                           trailing: IconButton(
                             tooltip: 'Remove medication',
-                            onPressed: () => setState(
-                              () => _medications.remove(medication),
-                            ),
+                            onPressed: () =>
+                                setState(() => _medications.remove(medication)),
                             icon: const Icon(Icons.close_rounded),
                           ),
                         ),
@@ -371,8 +373,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       const Text('Signature'),
                       const SizedBox(height: 8),
                       SignaturePad(
-                        onSigned: (data) =>
-                            setState(() => _signature = data),
+                        onSigned: (data) => setState(() => _signature = data),
                       ),
                     ],
                   );
@@ -382,8 +383,7 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                       const SizedBox(height: 8),
                       CachetMedecin(
                         imageBytes: _stamp,
-                        onSelect: (bytes) =>
-                            setState(() => _stamp = bytes),
+                        onSelect: (bytes) => setState(() => _stamp = bytes),
                       ),
                     ],
                   );
@@ -421,7 +421,9 @@ class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.check_rounded),
-          label: Text(_saving ? 'Creating prescription…' : 'Create prescription'),
+          label: Text(
+            _saving ? 'Creating prescription…' : 'Create prescription',
+          ),
         ),
       ),
     );
@@ -446,8 +448,7 @@ class _MedicationEditorDialogState extends State<_MedicationEditorDialog> {
   void initState() {
     super.initState();
     _dosage = TextEditingController(text: widget.medication.dosage ?? '');
-    _frequency =
-        TextEditingController(text: widget.medication.posologie ?? '');
+    _frequency = TextEditingController(text: widget.medication.posologie ?? '');
   }
 
   @override
@@ -473,9 +474,7 @@ class _MedicationEditorDialogState extends State<_MedicationEditorDialog> {
               ),
             TextField(
               controller: _dosage,
-              decoration: const InputDecoration(
-                labelText: 'Dosage / strength',
-              ),
+              decoration: const InputDecoration(labelText: 'Dosage / strength'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -556,8 +555,8 @@ class _SectionCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),

@@ -21,12 +21,12 @@ class RabbitMQClient:
         """Initialize RabbitMQ connection and channel"""
         try:
             # Create connection parameters
-            credentials = pika.PlainCredentials(self.config.RABBITMQ_USER, self.config.RABBITMQ_PASS)
+            credentials = pika.PlainCredentials(self.config.rabbitmq_user, self.config.rabbitmq_pass)
 
             parameters = pika.ConnectionParameters(
-                host=self.config.RABBITMQ_HOST,
-                port=self.config.RABBITMQ_PORT,
-                virtual_host=self.config.RABBITMQ_VHOST,
+                host=self.config.rabbitmq_host,
+                port=self.config.rabbitmq_port,
+                virtual_host=self.config.rabbitmq_vhost,
                 credentials=credentials,
                 heartbeat=600,
             )

@@ -163,11 +163,19 @@ def handle_patient_data_request(ch, method, properties, body):
                         "id": str(prescription.get("_id")),
                         "doctor_id": prescription.get("doctor_id"),
                         "doctor_name": prescription.get("doctor_name", "Unknown Doctor"),
-                        "created_at": (prescription.get("created_at").isoformat() if isinstance(prescription.get("created_at"), datetime) else prescription.get("created_at")),
+                        "created_at": (
+                            prescription.get("created_at").isoformat()
+                            if isinstance(prescription.get("created_at"), datetime)
+                            else prescription.get("created_at")
+                        ),
                         "status": prescription.get("status"),
                         "medications": prescription.get("medications", []),
                         "instructions": prescription.get("instructions", ""),
-                        "last_updated": (prescription.get("updated_at").isoformat() if isinstance(prescription.get("updated_at"), datetime) else prescription.get("updated_at", "")),
+                        "last_updated": (
+                            prescription.get("updated_at").isoformat()
+                            if isinstance(prescription.get("updated_at"), datetime)
+                            else prescription.get("updated_at", "")
+                        ),
                     }
                 )
 
@@ -233,7 +241,9 @@ def main():
             on_message_callback=handle_validation_request,
         )
 
-        rabbitmq_client.channel.basic_consume(queue="prescription.notifications", on_message_callback=handle_notification)
+        rabbitmq_client.channel.basic_consume(
+            queue="prescription.notifications", on_message_callback=handle_notification
+        )
 
         # New consumer for patient data requests
         rabbitmq_client.channel.queue_declare(queue="patient.data.prescriptions", durable=True)

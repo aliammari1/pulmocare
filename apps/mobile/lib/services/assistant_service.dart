@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class AssistantReply {
   const AssistantReply({

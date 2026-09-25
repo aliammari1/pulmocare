@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:medapp/models/doctor.dart';
 import 'package:medapp/services/file_service.dart';
 import 'package:medapp/services/token_storage.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final Dio _dio = DioHttpClient().dio;
@@ -91,14 +91,12 @@ class AuthViewModel extends ChangeNotifier {
         await _loadIdentity(access);
       }
 
-      if (expectedRole != null &&
-          userRole != null &&
-          userRole!.isNotEmpty &&
-          userRole != expectedRole) {
+      if (expectedRole != null && userRole != expectedRole) {
         await _clearSession();
-        errorMessage =
-            'This account is registered as ${_readableRole(userRole!)}. '
-            'Choose the matching sign-in option.';
+        errorMessage = userRole == null || userRole!.isEmpty
+            ? 'This account has no assigned role. Contact an administrator.'
+            : 'This account is registered as ${_readableRole(userRole!)}. '
+                  'Choose the matching sign-in option.';
         return false;
       }
 
@@ -156,8 +154,10 @@ class AuthViewModel extends ChangeNotifier {
 
       return await login(email, password, expectedRole: 'patient');
     } on DioException catch (error) {
-      errorMessage =
-          _messageFromDio(error, fallback: 'Unable to create the account.');
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to create the account.',
+      );
       return false;
     } finally {
       _setBusy(false);
@@ -190,8 +190,7 @@ class AuthViewModel extends ChangeNotifier {
     if (!isAuthenticated) return;
 
     try {
-      final response =
-          await _dio.get<Map<String, dynamic>>('auth/profile');
+      final response = await _dio.get<Map<String, dynamic>>('auth/profile');
       final data = response.data ?? const {};
       final attributes = _asMap(data['attributes']);
 
@@ -209,8 +208,9 @@ class AuthViewModel extends ChangeNotifier {
         address: attributes['address']?.toString() ?? '',
         profileImage: attributes['profile_image']?.toString(),
         isVerified: _asBool(attributes['is_verified']),
-        verificationDetails:
-            _verificationDetails(attributes['verification_details']),
+        verificationDetails: _verificationDetails(
+          attributes['verification_details'],
+        ),
         signature: attributes['signature']?.toString(),
       );
       notifyListeners();

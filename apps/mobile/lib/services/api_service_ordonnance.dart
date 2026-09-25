@@ -6,22 +6,23 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/medicament.dart';
 import '../models/ordonnance.dart';
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class ApiService {
   ApiService({Dio? dio})
-      : dio = dio ?? DioHttpClient().dio,
-        _openFda = Dio(
-          BaseOptions(
-            baseUrl: 'https://api.fda.gov/drug/',
-            connectTimeout: const Duration(seconds: 12),
-            receiveTimeout: const Duration(seconds: 20),
-            headers: const {'Accept': 'application/json'},
-          ),
-        );
+    : dio = dio ?? DioHttpClient().dio,
+      _openFda = Dio(
+        BaseOptions(
+          baseUrl: 'https://api.fda.gov/drug/',
+          connectTimeout: const Duration(seconds: 12),
+          receiveTimeout: const Duration(seconds: 20),
+          headers: const {'Accept': 'application/json'},
+        ),
+      );
 
-  static const String _openFdaApiKey =
-      String.fromEnvironment('OPENFDA_API_KEY');
+  static const String _openFdaApiKey = String.fromEnvironment(
+    'OPENFDA_API_KEY',
+  );
 
   final Dio dio;
   final Dio _openFda;
@@ -43,63 +44,68 @@ class ApiService {
       final results = response.data?['results'];
       if (results is! List) return const [];
 
-      return results.whereType<Map>().map((item) {
-        final data =
-            item.map((key, value) => MapEntry(key.toString(), value));
-        final openFda = data['openfda'] is Map
-            ? (data['openfda'] as Map).map(
-                (key, value) => MapEntry(key.toString(), value),
-              )
-            : const <String, dynamic>{};
+      return results
+          .whereType<Map>()
+          .map((item) {
+            final data = item.map(
+              (key, value) => MapEntry(key.toString(), value),
+            );
+            final openFda = data['openfda'] is Map
+                ? (data['openfda'] as Map).map(
+                    (key, value) => MapEntry(key.toString(), value),
+                  )
+                : const <String, dynamic>{};
 
-        String first(dynamic value) {
-          if (value is List && value.isNotEmpty) {
-            return value.first?.toString() ?? '';
-          }
-          return value?.toString() ?? '';
-        }
+            String first(dynamic value) {
+              if (value is List && value.isNotEmpty) {
+                return value.first?.toString() ?? '';
+              }
+              return value?.toString() ?? '';
+            }
 
-        String joined(dynamic value) {
-          if (value is! List) return '';
-          return value
-              .map((entry) => entry.toString().trim())
-              .where((entry) => entry.isNotEmpty)
-              .join('\n');
-        }
+            String joined(dynamic value) {
+              if (value is! List) return '';
+              return value
+                  .map((entry) => entry.toString().trim())
+                  .where((entry) => entry.isNotEmpty)
+                  .join('\n');
+            }
 
-        final brand = first(openFda['brand_name']);
-        final generic = first(openFda['generic_name']);
-        final dosageForm = first(openFda['dosage_form']);
-        final strength = first(openFda['strength']);
-        final dosage = [dosageForm, strength]
-            .where((entry) => entry.isNotEmpty)
-            .join(' ');
+            final brand = first(openFda['brand_name']);
+            final generic = first(openFda['generic_name']);
+            final dosageForm = first(openFda['dosage_form']);
+            final strength = first(openFda['strength']);
+            final dosage = [
+              dosageForm,
+              strength,
+            ].where((entry) => entry.isNotEmpty).join(' ');
 
-        final administration = joined(data['dosage_and_administration']);
-        final fallbackAdministration =
-            joined(data['dosage_forms_and_strengths']);
+            final administration = joined(data['dosage_and_administration']);
+            final fallbackAdministration = joined(
+              data['dosage_forms_and_strengths'],
+            );
 
-        return Medicament(
-          name: brand.isNotEmpty ? brand : generic,
-          usage: generic,
-          dosage: dosage,
-          posologie: administration.isNotEmpty
-              ? administration
-              : fallbackAdministration,
-          laboratoire: first(openFda['manufacturer_name']),
-          route: first(openFda['route']),
-          warning: joined(data['warnings']),
-        );
-      }).where((medication) => medication.name.isNotEmpty).toList()
+            return Medicament(
+              name: brand.isNotEmpty ? brand : generic,
+              usage: generic,
+              dosage: dosage,
+              posologie: administration.isNotEmpty
+                  ? administration
+                  : fallbackAdministration,
+              laboratoire: first(openFda['manufacturer_name']),
+              route: first(openFda['route']),
+              warning: joined(data['warnings']),
+            );
+          })
+          .where((medication) => medication.name.isNotEmpty)
+          .toList()
         ..sort((a, b) => a.name.compareTo(b.name));
     } on DioException {
       return const [];
     }
   }
 
-  Future<Map<String, dynamic>> createOrdonnance(
-    Ordonnance ordonnance,
-  ) async {
+  Future<Map<String, dynamic>> createOrdonnance(Ordonnance ordonnance) async {
     final response = await dio.post<Map<String, dynamic>>(
       'ordonnances',
       data: ordonnance.toJson(),
@@ -140,21 +146,15 @@ class ApiService {
     return items
         .whereType<Map>()
         .map(
-          (item) => item.map(
-            (key, value) => MapEntry(key.toString(), value),
-          ),
+          (item) => item.map((key, value) => MapEntry(key.toString(), value)),
         )
         .toList();
   }
 
-  Future<Map<String, dynamic>?> getMedecinOrdonnance(
-    String ordonnanceId,
-  ) =>
+  Future<Map<String, dynamic>?> getMedecinOrdonnance(String ordonnanceId) =>
       getSingleOrdonnance(ordonnanceId);
 
-  Future<Map<String, dynamic>?> getSingleOrdonnance(
-    String ordonnanceId,
-  ) async {
+  Future<Map<String, dynamic>?> getSingleOrdonnance(String ordonnanceId) async {
     try {
       final response = await dio.get<Map<String, dynamic>>(
         'ordonnances/$ordonnanceId',
@@ -184,9 +184,7 @@ class ApiService {
     Uint8List pdfBytes,
   ) async {
     final directory = await getApplicationDocumentsDirectory();
-    final file = File(
-      '${directory.path}/prescription_$ordonnanceId.pdf',
-    );
+    final file = File('${directory.path}/prescription_$ordonnanceId.pdf');
     await file.writeAsBytes(pdfBytes, flush: true);
     return file.path;
   }
@@ -199,9 +197,7 @@ class ApiService {
     return saveOrdonnancePdf(ordonnanceId, pdfBytes);
   }
 
-  Future<List<Map<String, dynamic>>> getMedecinPdfs(
-    String doctorId,
-  ) async {
+  Future<List<Map<String, dynamic>>> getMedecinPdfs(String doctorId) async {
     final prescriptions = await getMedecinOrdonnances(doctorId);
     return prescriptions
         .map(

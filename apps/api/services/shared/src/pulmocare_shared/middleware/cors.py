@@ -32,6 +32,7 @@ def setup_cors(
     """
     if config is None:
         from pulmocare_shared.config import get_config
+
         config = get_config()
 
     origins = allow_origins or config.cors_origins

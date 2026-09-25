@@ -146,7 +146,9 @@ class _SignupViewState extends State<SignupView> {
                             ? const SizedBox(
                                 height: 22,
                                 width: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Create account'),
                       ),
@@ -165,12 +167,12 @@ class _SignupViewState extends State<SignupView> {
     if (!_formKey.currentState!.validate()) return;
 
     final ok = await context.read<AuthViewModel>().signupPatient(
-          name: _name.text,
-          email: _email.text,
-          password: _password.text,
-          phone: _phone.text.isEmpty ? null : _phone.text,
-          address: _address.text.isEmpty ? null : _address.text,
-        );
+      name: _name.text,
+      email: _email.text,
+      password: _password.text,
+      phone: _phone.text.isEmpty ? null : _phone.text,
+      address: _address.text.isEmpty ? null : _address.text,
+    );
 
     if (!mounted || !ok) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);

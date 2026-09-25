@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'package:medapp/utils/dio_client.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,10 +18,7 @@ class ApiService {
             "Accept": "application/json",
           },
         ),
-        data: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
+        data: jsonEncode({"email": email, "password": password}),
       );
 
       final data = jsonDecode(response.data);
@@ -60,7 +57,7 @@ class ApiService {
         options: Options(
           headers: {
             "Authorization": "Bearer $token",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
         ),
       );

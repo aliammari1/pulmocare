@@ -1,18 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from auth.keycloak_auth import get_current_report_writer
-from config import Config
 from services.logger_service import logger_service
-from services.mongodb_client import MongoDBClient
-from services.rabbitmq_client import RabbitMQClient
 from services.report_service import ReportService
 
 router = APIRouter(prefix="/api/integration", tags=["Integration"])
 
-mongodb_client = MongoDBClient(Config)
-rabbitmq_client = RabbitMQClient(Config)
-report_service = ReportService(mongodb_client, None, rabbitmq_client)
+
+def _service(request: Request) -> ReportService:
+    service = getattr(request.app.state, "report_service", None)
+    if service is None:
+        raise HTTPException(status_code=503, detail="Reports service is not ready")
+    return service
 
 
 class AnalysisSummaryRequest(BaseModel):
@@ -25,16 +25,17 @@ class AnalysisSummaryRequest(BaseModel):
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def analyze_report(
+    request: Request,
     report_id: str = Query(..., description="ID of the report to analyze"),
     user_info: dict = Depends(get_current_report_writer),
 ):
     """Queue an existing report for analysis."""
     del user_info
     try:
-        if not report_service.get_report_by_id(report_id):
+        if not _service(request).get_report_by_id(report_id):
             raise HTTPException(status_code=404, detail="Report not found")
 
-        if not report_service.queue_report_for_analysis(report_id):
+        if not _service(request).queue_report_for_analysis(report_id):
             raise HTTPException(
                 status_code=503,
                 detail="Unable to queue report analysis",
@@ -53,13 +54,14 @@ async def analyze_report(
 
 @router.get("/report-analysis/{report_id}")
 async def get_report_analysis(
+    request: Request,
     report_id: str,
     user_info: dict = Depends(get_current_report_writer),
 ):
     """Return persisted analysis results for a report."""
     del user_info
     try:
-        analysis = mongodb_client.db.report_analyses.find_one({"report_id": report_id})
+        analysis = _service(request).mongodb_client.db.report_analyses.find_one({"report_id": report_id})
         if not analysis:
             raise HTTPException(
                 status_code=404,
@@ -83,6 +85,7 @@ async def get_report_analysis(
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_analysis_summary(
+    request: Request,
     data: AnalysisSummaryRequest,
     user_info: dict = Depends(get_current_report_writer),
 ):
@@ -90,7 +93,7 @@ async def create_analysis_summary(
     if not data.report_ids:
         raise HTTPException(status_code=400, detail="Report IDs are required")
 
-    missing = [report_id for report_id in data.report_ids if not report_service.get_report_by_id(report_id)]
+    missing = [report_id for report_id in data.report_ids if not _service(request).get_report_by_id(report_id)]
     if missing:
         raise HTTPException(
             status_code=404,
@@ -98,7 +101,7 @@ async def create_analysis_summary(
         )
 
     try:
-        job_id = report_service.queue_summary_generation(
+        job_id = _service(request).queue_summary_generation(
             report_ids=data.report_ids,
             summary_type=data.summary_type,
             requester_id=user_info.get("user_id"),

@@ -319,7 +319,9 @@ class MessageConsumer:
                     # Notify patient about renewal
                     patient_id = original.get("patient_id")
                     if patient_id:
-                        self.rabbitmq_client.notify_patient_prescription(new_prescription_id, patient_id, "renewal_approved")
+                        self.rabbitmq_client.notify_patient_prescription(
+                            new_prescription_id, patient_id, "renewal_approved"
+                        )
 
                     logger_service.info(f"Created renewed prescription {new_prescription_id}")
                 else:

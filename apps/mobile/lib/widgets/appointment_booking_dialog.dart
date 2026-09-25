@@ -7,10 +7,7 @@ import '../services/appointment_service.dart';
 import '../services/provider_directory_service.dart';
 
 class AppointmentBookingDialog extends StatefulWidget {
-  const AppointmentBookingDialog({
-    super.key,
-    required this.patientId,
-  });
+  const AppointmentBookingDialog({super.key, required this.patientId});
 
   final String patientId;
 
@@ -223,9 +220,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                         label: Text(
                           _dateTime == null
                               ? 'Choose date and time'
-                              : DateFormat.yMMMd()
-                                  .add_jm()
-                                  .format(_dateTime!),
+                              : DateFormat.yMMMd().add_jm().format(_dateTime!),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -239,16 +234,16 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                           alignLabelWithHint: true,
                           prefixIcon: Icon(Icons.notes_outlined),
                         ),
-                        validator: (value) =>
-                            (value?.trim().length ?? 0) < 3
-                                ? 'Briefly describe the reason for the visit.'
-                                : null,
+                        validator: (value) => (value?.trim().length ?? 0) < 3
+                            ? 'Briefly describe the reason for the visit.'
+                            : null,
                       ),
                       SwitchListTile.adaptive(
                         contentPadding: EdgeInsets.zero,
                         value: _virtual,
-                        onChanged:
-                            _saving ? null : (value) => setState(() => _virtual = value),
+                        onChanged: _saving
+                            ? null
+                            : (value) => setState(() => _virtual = value),
                         title: const Text('Virtual appointment'),
                         subtitle: const Text(
                           'The provider can add meeting details after confirmation.',

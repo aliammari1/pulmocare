@@ -23,8 +23,11 @@ class AppDrawer extends StatelessWidget {
                 const CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.medical_services,
-                      size: 30, color: Color(0xFF35C5CF)),
+                  child: Icon(
+                    Icons.medical_services,
+                    size: 30,
+                    color: Color(0xFF35C5CF),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -38,7 +41,7 @@ class AppDrawer extends StatelessWidget {
                 Text(
                   'Complete Medical Solution',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),
@@ -50,22 +53,42 @@ class AppDrawer extends StatelessWidget {
           _buildNavItem(context, 'Dashboard', Icons.dashboard, '/dashboard'),
           _buildNavItem(context, 'Reports', Icons.assignment, '/rapportScreen'),
           _buildNavItem(
-              context, 'Appointments', Icons.event, '/appointmentsScreen'),
+            context,
+            'Appointments',
+            Icons.event,
+            '/appointmentsScreen',
+          ),
           _buildNavItem(context, 'Archives', Icons.archive, '/archiveScreen'),
           const Divider(),
           _buildNavSection(context, 'Account'),
           _buildNavItem(context, 'Profile', Icons.person, '/profileRadio'),
           _buildNavItem(
-              context, 'Doctor Login', Icons.medical_information, '/login',
-              arguments: {'userType': 'doctor'}),
+            context,
+            'Doctor Login',
+            Icons.medical_information,
+            '/login',
+            arguments: {'userType': 'doctor'},
+          ),
           _buildNavItem(
-              context, 'Radiologist Login', Icons.mediation, '/loginRadio'),
+            context,
+            'Radiologist Login',
+            Icons.mediation,
+            '/loginRadio',
+          ),
           _buildNavItem(
-              context, 'Patient Login', Icons.personal_injury, '/loginScreen'),
+            context,
+            'Patient Login',
+            Icons.personal_injury,
+            '/loginScreen',
+          ),
           const Divider(),
           _buildNavSection(context, 'Tools'),
           _buildNavItem(
-              context, 'Create Report', Icons.note_add, '/createReport'),
+            context,
+            'Create Report',
+            Icons.note_add,
+            '/createReport',
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -92,8 +115,12 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _buildNavItem(
-      BuildContext context, String title, IconData icon, String route,
-      {Map<String, dynamic>? arguments}) {
+    BuildContext context,
+    String title,
+    IconData icon,
+    String route, {
+    Map<String, dynamic>? arguments,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Theme.of(context).primaryColor),
       title: Text(title),

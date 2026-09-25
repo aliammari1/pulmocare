@@ -8,7 +8,7 @@ class MedicalPrompts {
   ];
 
   static String getRandomSuggestion() {
-    return suggestionPrompts[
-        DateTime.now().millisecond % suggestionPrompts.length];
+    return suggestionPrompts[DateTime.now().millisecond %
+        suggestionPrompts.length];
   }
 }

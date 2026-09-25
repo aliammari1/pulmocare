@@ -18,7 +18,9 @@ def handle_examination_request(ch, method, properties, body):
         patient_id = message.get("patient_id")
 
         # Log the request details
-        logger_service.info(f"Processing examination request {request_id} for patient {patient_id} from doctor {doctor_id}")
+        logger_service.info(
+            f"Processing examination request {request_id} for patient {patient_id} from doctor {doctor_id}"
+        )
 
         # Process the examination request
         # In a real scenario, you might need to handle this data differently

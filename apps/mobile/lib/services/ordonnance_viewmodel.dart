@@ -160,8 +160,7 @@ class OrdonnanceViewModel extends ChangeNotifier {
     try {
       final ordonnances = await _apiService.getDoctorOrdonnances(medecinId);
       yield ordonnances;
-    } catch (e) {
-      print('Erreur lors du chargement des ordonnances: $e');
+    } catch (_) {
       yield [];
     }
   }
@@ -182,8 +181,10 @@ class OrdonnanceViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> loadMedecinOrdonnances(String? medecinId,
-      {int retryCount = 1}) async {
+  Future<void> loadMedecinOrdonnances(
+    String? medecinId, {
+    int retryCount = 1,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
@@ -196,12 +197,11 @@ class OrdonnanceViewModel extends ChangeNotifier {
       _medecinOrdonnances = await _apiService.getMedecinOrdonnances(medecinId);
       _errorMessage = null;
     } catch (e) {
-      print("Error in viewmodel: $e");
       if (retryCount > 0) {
         await Future.delayed(const Duration(seconds: 1));
         return loadMedecinOrdonnances(medecinId, retryCount: retryCount - 1);
       }
-      _errorMessage = 'Erreur: $e';
+      _errorMessage = 'Impossible de charger les ordonnances.';
       _medecinOrdonnances = [];
     } finally {
       _isLoading = false;
@@ -248,8 +248,9 @@ class OrdonnanceViewModel extends ChangeNotifier {
       notifyListeners();
 
       // Récupérer d'abord les données de l'ordonnance
-      final ordonnanceData =
-          await _apiService.getMedecinOrdonnance(ordonnanceId);
+      final ordonnanceData = await _apiService.getMedecinOrdonnance(
+        ordonnanceId,
+      );
       if (ordonnanceData == null) {
         throw Exception('Ordonnance non trouvée');
       }
@@ -272,8 +273,9 @@ class OrdonnanceViewModel extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> getSingleOrdonnance(String ordonnanceId) async {
     try {
-      final ordonnanceData =
-          await _apiService.getSingleOrdonnance(ordonnanceId);
+      final ordonnanceData = await _apiService.getSingleOrdonnance(
+        ordonnanceId,
+      );
       if (ordonnanceData == null) {
         throw Exception('Ordonnance introuvable');
       }
@@ -360,8 +362,7 @@ Votre médecin
       }
 
       return true;
-    } catch (e) {
-      print('Error in handleOrdonnanceCreation: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -390,13 +391,8 @@ Votre médecin
 
       _setLoading(false);
       return true;
-    } catch (e, stackTrace) {
-      print('\n=== ERREUR DANS LE VIEWMODEL ===');
-      print('Type: ${e.runtimeType}');
-      print('Message: $e');
-      print('Stack trace:\n$stackTrace');
-
-      _setError(e.toString());
+    } catch (_) {
+      _setError('Impossible de créer l’ordonnance.');
       _setLoading(false);
       return false;
     }
@@ -411,8 +407,10 @@ Votre médecin
         throw Exception('ID de l\'ordonnance non défini');
       }
 
-      final filename =
-          await _apiService.saveOrdonnancePdf(ordonnanceId, pdfBytes);
+      final filename = await _apiService.saveOrdonnancePdf(
+        ordonnanceId,
+        pdfBytes,
+      );
 
       _isLoading = false;
       _errorMessage = null;

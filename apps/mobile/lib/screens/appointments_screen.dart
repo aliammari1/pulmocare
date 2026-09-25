@@ -43,8 +43,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       final userId = auth.userId;
       final appointments = await _service.listAppointments(
         patientId: role == 'patient' ? userId : null,
-        providerId:
-            role == 'doctor' || role == 'radiologist' ? userId : null,
+        providerId: role == 'doctor' || role == 'radiologist' ? userId : null,
       );
 
       if (!mounted) return;
@@ -95,7 +94,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
     if (_appointments.isEmpty) {
       final auth = context.read<AuthViewModel>();
-      final canBook = auth.userRole == 'patient' &&
+      final canBook =
+          auth.userRole == 'patient' &&
           auth.userId != null &&
           auth.userId!.isNotEmpty;
       return _StateMessage(
@@ -110,10 +110,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
 
     final now = DateTime.now();
-    final upcoming =
-        _appointments.where((item) => item.appointmentDate.isAfter(now)).toList();
+    final upcoming = _appointments
+        .where((item) => item.appointmentDate.isAfter(now))
+        .toList();
     final previous =
-        _appointments.where((item) => !item.appointmentDate.isAfter(now)).toList()
+        _appointments
+            .where((item) => !item.appointmentDate.isAfter(now))
+            .toList()
           ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
 
     return RefreshIndicator(
@@ -210,9 +213,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       await _load();
     } on DioException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_friendlyError(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_friendlyError(error))));
     }
   }
 
@@ -229,10 +232,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 }
 
 class _AppointmentCard extends StatelessWidget {
-  const _AppointmentCard({
-    required this.appointment,
-    this.onCancel,
-  });
+  const _AppointmentCard({required this.appointment, this.onCancel});
 
   final Appointment appointment;
   final VoidCallback? onCancel;
@@ -277,9 +277,9 @@ class _AppointmentCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        DateFormat.yMMMd()
-                            .add_jm()
-                            .format(appointment.appointmentDate.toLocal()),
+                        DateFormat.yMMMd().add_jm().format(
+                          appointment.appointmentDate.toLocal(),
+                        ),
                       ),
                     ],
                   ),

@@ -46,7 +46,9 @@ class CircuitBreaker:
         self.last_failure_time: float | None = None
         self.half_open_calls = 0
 
-        logger_service.info(f"Circuit breaker '{name}' initialized with failure threshold: {failure_threshold}, recovery timeout: {recovery_timeout}s")
+        logger_service.info(
+            f"Circuit breaker '{name}' initialized with failure threshold: {failure_threshold}, recovery timeout: {recovery_timeout}s"
+        )
 
     def is_closed(self) -> bool:
         """

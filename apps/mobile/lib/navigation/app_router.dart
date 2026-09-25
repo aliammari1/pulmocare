@@ -33,9 +33,7 @@ class AppRouter {
           settings: settings,
         );
       default:
-        return MaterialPageRoute(
-          builder: (_) => const OrdonnanceScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const OrdonnanceScreen());
     }
   }
 }

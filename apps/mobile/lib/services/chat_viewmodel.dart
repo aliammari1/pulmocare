@@ -6,7 +6,7 @@ import 'assistant_service.dart';
 
 class ChatViewModel extends ChangeNotifier {
   ChatViewModel({AssistantService? assistant})
-      : _assistant = assistant ?? AssistantService();
+    : _assistant = assistant ?? AssistantService();
 
   final AssistantService _assistant;
   final List<ChatMessage> _messages = [];

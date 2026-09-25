@@ -27,7 +27,7 @@ class BaseConfig(BaseSettings):
     version: str = Field(default="1.0.0", description="Service version")
     env: str = Field(default="development", description="Environment (development, staging, production)")
     debug: bool = Field(default=False, description="Debug mode")
-    
+
     # Server settings
     host: str = Field(default="0.0.0.0", description="Server host")
     port: int = Field(default=8080, description="Server port")
@@ -64,10 +64,7 @@ class BaseConfig(BaseSettings):
 
     # Logging settings
     log_level: str = Field(default="INFO", description="Logging level")
-    log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        description="Log format"
-    )
+    log_format: str = Field(default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", description="Log format")
     log_dir: str = Field(default="logs", description="Log directory")
     log_max_size: int = Field(default=10485760, description="Max log file size (10MB)")
     log_backup_count: int = Field(default=5, description="Number of log backups to keep")
@@ -77,23 +74,18 @@ class BaseConfig(BaseSettings):
     enable_metrics: bool = Field(default=True, description="Enable metrics collection")
 
     # OpenTelemetry settings
-    otel_exporter_otlp_endpoint: str = Field(
-        default="http://localhost:4317",
-        description="OTLP exporter endpoint"
-    )
+    otel_exporter_otlp_endpoint: str = Field(default="http://localhost:4317", description="OTLP exporter endpoint")
     otel_service_name: str = Field(default="", description="OpenTelemetry service name")
     otel_disable_on_error: bool = Field(default=True, description="Disable OTEL on connection error")
     otel_python_log_correlation: bool = Field(default=True, description="Enable log correlation")
 
     # Sentry settings (error tracking; PHI-scrubbed, PII off by default)
     sentry_dsn: str = Field(default="", description="Sentry DSN (empty disables Sentry)")
-    sentry_traces_sample_rate: float = Field(
-        default=0.0, description="Sentry tracing sample rate (0 = errors only)"
-    )
+    sentry_traces_sample_rate: float = Field(default=0.0, description="Sentry tracing sample rate (0 = errors only)")
 
     # Auth service settings
     auth_service_url: str = Field(default="http://auth-service:8086", description="Auth service URL")
-    
+
     # JWT settings
     jwt_secret_key: str = Field(default="dev-jwt-secret-key-change-in-production", description="JWT secret key")
     jwt_access_token_expires: int = Field(default=3600, description="JWT access token expiry (seconds)")
@@ -114,8 +106,7 @@ class BaseConfig(BaseSettings):
 
     # CORS settings
     cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8080"],
-        description="CORS allowed origins"
+        default=["http://localhost:3000", "http://localhost:8080"], description="CORS allowed origins"
     )
 
     @property
@@ -179,7 +170,7 @@ def load_env_file(env: str | None = None) -> None:
 
     env = env or os.getenv("ENV", "development")
     env_file = f".env.{env}"
-    
+
     if os.path.exists(env_file):
         load_dotenv(env_file, override=True)
     elif os.path.exists(".env"):

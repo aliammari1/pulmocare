@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import '../utils/DioClient.dart';
+import '../utils/dio_client.dart';
 
 class UploadedFile {
   const UploadedFile({
@@ -24,7 +24,8 @@ class UploadedFile {
       bucket: (json['bucket'] ?? '').toString(),
       objectName: (json['object_name'] ?? '').toString(),
       filename: (json['filename'] ?? '').toString(),
-      contentType: (json['content_type'] ?? 'application/octet-stream').toString(),
+      contentType: (json['content_type'] ?? 'application/octet-stream')
+          .toString(),
       size: json['size'] is int
           ? json['size'] as int
           : int.tryParse(json['size']?.toString() ?? '') ?? 0,
@@ -46,9 +47,7 @@ class FileService {
       'file': await MultipartFile.fromFile(filePath, filename: filename),
       'bucket': 'patientdocuments',
       'folder': 'verification/$userId',
-      'metadata': jsonEncode({
-        'purpose': 'provider_verification',
-      }),
+      'metadata': jsonEncode({'purpose': 'provider_verification'}),
     });
 
     final response = await _dio.post<Map<String, dynamic>>(
@@ -59,7 +58,9 @@ class FileService {
     final data = response.data ?? const <String, dynamic>{};
     final uploaded = UploadedFile.fromJson(data);
     if (uploaded.objectName.isEmpty || uploaded.bucket.isEmpty) {
-      throw const FormatException('File service returned an incomplete upload response');
+      throw const FormatException(
+        'File service returned an incomplete upload response',
+      );
     }
     return uploaded;
   }
