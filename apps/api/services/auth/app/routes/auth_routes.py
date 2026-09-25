@@ -171,8 +171,8 @@ async def register(request: RegisterRequest):
                 detail="Verification cannot be self-assigned during registration",
             )
 
-
-        # Prepare user data for registration
+        # Only patient-facing fields are accepted by public registration.
+        # Provider credentials/verification are provisioned through admin flows.
         first_name, last_name = _split_name(request.name)
         user_data = {
             "email": request.email,
@@ -180,43 +180,26 @@ async def register(request: RegisterRequest):
             "password": request.password,
             "firstName": first_name,
             "lastName": last_name,
-            "phone": (request.phone if request.phone else ""),
-            "specialty": request.specialty if request.specialty else "",
-            "address": request.address if request.address else "",
+            "phone": request.phone or "",
+            "address": request.address or "",
             "role": Role.PATIENT.value,
-            "bio": request.bio if request.bio else "",
-            "license_number": request.license_number if request.license_number else "",
-            "hospital": request.hospital if request.hospital else "",
-            "education": request.education if request.education else "",
-            "experience": request.experience if request.experience else "",
-            "signature": request.signature if request.signature else "",
+            "specialty": "",
+            "bio": "",
+            "license_number": "",
+            "hospital": "",
+            "education": "",
+            "experience": "",
+            "signature": "",
             "is_verified": "false",
             "verification_details": None,
-            # Add new patient fields - handle both frontend and backend field naming
-            "date_of_birth": request.date_of_birth or request.date_of_birth
-            if hasattr(request, "date_of_birth")
-            else "",
-            "blood_type": request.blood_type or request.blood_type if hasattr(request, "blood_type") else "",
-            "social_security_number": (request.social_security_number if request.social_security_number else ""),
-            "medical_history": (
-                request.medical_history
-                if request.medical_history
-                else (
-                    [request.medical_history]
-                    if hasattr(request, "medical_history") and isinstance(request.medical_history, str)
-                    else (request.medical_history if hasattr(request, "medical_history") else [])
-                )
-            ),
-            "allergies": request.allergies if request.allergies else [],
-            "height": str(request.height or request.height)
-            if hasattr(request, "height") and request.height is not None
-            else "",
-            "weight": str(request.weight or request.weight)
-            if hasattr(request, "weight") and request.weight is not None
-            else "",
-            "medical_files": request.medical_files
-            if hasattr(request, "medical_files") and request.medical_files
-            else [],
+            "date_of_birth": request.date_of_birth or "",
+            "blood_type": request.blood_type or "",
+            "social_security_number": request.social_security_number or "",
+            "medical_history": request.medical_history or [],
+            "allergies": request.allergies or [],
+            "height": "" if request.height is None else str(request.height),
+            "weight": "" if request.weight is None else str(request.weight),
+            "medical_files": request.medical_files or [],
         }
 
         try:
@@ -253,13 +236,20 @@ async def register(request: RegisterRequest):
                     detail="User registration failed: Insufficient permissions. Contact the administrator.",
                 )
             else:
-                raise HTTPException(status_code=500, detail=f"User registration failed: {error_message}")
+                logger.exception("Identity provider failed to create user")
+                raise HTTPException(
+                    status_code=500,
+                    detail="User registration failed",
+                ) from e
 
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Unexpected registration failure")
-        raise HTTPException(status_code=500, detail=f"Registration failed: {e!s}")
+        raise HTTPException(
+            status_code=500,
+            detail="Registration failed",
+        ) from e
 
 
 @router.post(
