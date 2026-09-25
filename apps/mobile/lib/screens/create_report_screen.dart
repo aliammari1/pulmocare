@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:medapp/models/medical_report.dart';
-import 'package:medapp/screens/report_list_screen.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../services/api_service.dart';
+import '../services/auth_view_model.dart';
+import 'reports/report_detail_screen.dart';
 import 'handwriting_screen.dart';
 import 'voice_dictation_screen.dart';
-import '../services/report_service.dart';
 import 'package:uuid/uuid.dart';
 import 'report_editor_screen.dart'; // Import the new report editor
 
@@ -47,7 +47,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
   bool _isUrgent = false;
   bool _isShowingVitalSigns = true;
 
-  late ReportService _reportService;
+  final ApiService _api = ApiService();
   bool _isSaving = false;
   String _generatedId = '';
   final _uuid = const Uuid();
@@ -57,17 +57,6 @@ class _CreateReportScreenState extends State<CreateReportScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _generatedId = 'MR-${_uuid.v4().substring(0, 8).toUpperCase()}';
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Try to get service from provider, fallback to service locator if needed
-    try {
-      _reportService = Provider.of<ReportService>(context, listen: false);
-    } catch (e) {
-      print('Service Error: $e');
-    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -267,69 +256,75 @@ class _CreateReportScreenState extends State<CreateReportScreen>
   }
 
   Future<void> _saveReport() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isSaving = true);
-      try {
-        final report = MedicalReport(
-          id: _generatedId,
-          patientName: _patientNameController.text,
-          patientId: _patientIdController.text,
-          date: _selectedDate,
-          diagnosis: _diagnosisController.text,
-          symptoms: _symptomsController.text,
-          prescription: _prescriptionController.text,
-          doctorNotes: _notesController.text,
-          isUrgent: _isUrgent,
-          doctorId: 'DR-001',
-          vitalSigns: {
-            'temperature': _temperatureController.text,
-            'blood_pressure': _bloodPressureController.text,
-            'pulse': _pulseController.text,
-            'respiration': _respirationController.text,
-            'oxygen': _oxygenController.text,
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final auth = context.read<AuthViewModel>();
+    final providerId = auth.userId;
+    if (providerId == null || providerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your authenticated provider ID is missing.')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final sections = <String>[
+        if (_symptomsController.text.trim().isNotEmpty)
+          'Symptoms\n${_symptomsController.text.trim()}',
+        if (_diagnosisController.text.trim().isNotEmpty)
+          'Diagnosis\n${_diagnosisController.text.trim()}',
+        if (_prescriptionController.text.trim().isNotEmpty)
+          'Prescription\n${_prescriptionController.text.trim()}',
+        if (_notesController.text.trim().isNotEmpty)
+          'Clinical notes\n${_notesController.text.trim()}',
+      ];
+
+      final created = await _api.createReport({
+        'patient_id': _patientIdController.text.trim(),
+        'doctor_id': providerId,
+        'title': _patientNameController.text.trim().isEmpty
+            ? 'Medical report'
+            : 'Medical report — ${_patientNameController.text.trim()}',
+        'content': sections.join('\n\n'),
+        'additional_data': {
+          'patient_name': _patientNameController.text.trim(),
+          'patient_age': _ageController.text.trim(),
+          'patient_gender': _genderController.text.trim(),
+          'report_date': _selectedDate.toUtc().toIso8601String(),
+          'urgent': _isUrgent,
+          'status': 'draft',
+          'vital_signs': {
+            'temperature': _temperatureController.text.trim(),
+            'blood_pressure': _bloodPressureController.text.trim(),
+            'pulse': _pulseController.text.trim(),
+            'respiration': _respirationController.text.trim(),
+            'oxygen': _oxygenController.text.trim(),
           },
-          status: 'draft',
+        },
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report saved to PulmoCare.')),
+      );
+
+      if (created.id.isNotEmpty) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ReportDetailScreen(reportId: created.id),
+          ),
         );
-
-        await _reportService.saveReport(report);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Report saved successfully'),
-              backgroundColor: Colors.green,
-              action: SnackBarAction(
-                label: 'View',
-                textColor: Colors.white,
-                onPressed: () {
-                  // Navigate to report details
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ReportListScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error saving report: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isSaving = false);
-        }
+      } else {
+        Navigator.of(context).pop();
       }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to save report: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
