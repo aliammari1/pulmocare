@@ -598,3 +598,73 @@ async def change_password(
             status_code=400,
             detail="Current password is incorrect or the new password was rejected",
         )
+
+
+@router.post("/profile/verification", response_model=MessageResponse)
+async def submit_verification(
+    request: VerificationRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    role = _primary_role(user_info)
+    if role not in (Role.DOCTOR, Role.RADIOLOGIST):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only clinical staff accounts can submit verification documents",
+        )
+
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+
+    details = {
+        "status": "pending",
+        "document_bucket": request.document_bucket,
+        "document_object_name": request.document_object_name,
+    }
+    try:
+        keycloak_service.update_user(
+            user_id,
+            {
+                "is_verified": False,
+                "verification_details": json.dumps(details),
+            },
+        )
+        return {"message": "Verification document submitted for review"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to submit verification")
+
+
+@router.post("/users/{user_id}/verification", response_model=MessageResponse)
+async def decide_verification(
+    request: VerificationDecisionRequest,
+    user_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    if Role.ADMIN.value not in _realm_roles(user_info):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator role required",
+        )
+
+    details = {
+        "status": "approved" if request.approved else "rejected",
+        "review_note": request.note or "",
+        "reviewed_by": user_info.get("user_id"),
+    }
+    try:
+        keycloak_service.update_user(
+            user_id,
+            {
+                "is_verified": request.approved,
+                "verification_details": json.dumps(details),
+            },
+        )
+        return {
+            "message": (
+                "Provider verification approved"
+                if request.approved
+                else "Provider verification rejected"
+            )
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update verification status")
