@@ -365,6 +365,113 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        'auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+      );
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to change your password.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> updateProfile({
+    required String name,
+    String? specialty,
+    String? phoneNumber,
+    String? address,
+    String? base64Image,
+  }) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.put<Map<String, dynamic>>(
+        'auth/profile',
+        data: {
+          'name': name.trim(),
+          if (specialty != null) 'specialty': specialty.trim(),
+          if (phoneNumber != null) 'phone': phoneNumber.trim(),
+          if (address != null) 'address': address.trim(),
+          if (base64Image != null) 'profile_image': base64Image,
+        },
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to update your profile.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> updateSignature(String signatureBase64) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.put<Map<String, dynamic>>(
+        'auth/profile/signature',
+        data: {'signature': signatureBase64},
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to update your signature.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> submitVerification({
+    required String documentObjectName,
+    String documentBucket = 'patientdocuments',
+  }) async {
+    _setBusy(true);
+    errorMessage = '';
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        'auth/profile/verification',
+        data: {
+          'document_object_name': documentObjectName,
+          'document_bucket': documentBucket,
+        },
+      );
+      await fetchProfile();
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to submit verification.',
+      );
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
   Future<void> _loadIdentity(String accessToken) async {
     final response = await _dio.post<Map<String, dynamic>>(
       'auth/token/verify',
