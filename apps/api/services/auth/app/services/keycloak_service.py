@@ -1,3 +1,4 @@
+import logging
 import os
 
 import requests
@@ -21,10 +22,8 @@ class KeycloakService:
 
         # Strip trailing '/auth' if present as newer Keycloak versions don't use this path
         if self.keycloak_url.endswith("/auth"):
-            print("Detected '/auth' suffix in Keycloak URL, removing it for compatibility")
+            logger.debug("Normalizing legacy Keycloak /auth base URL")
             self.keycloak_url = self.keycloak_url.removesuffix("/auth")
-        # Print initialized URL after removing '/auth' suffix
-        print(f"Initializing Keycloak service with URL: {self.keycloak_url}")
 
         self.realm = realm or os.getenv("KEYCLOAK_REALM", "pulmocare")
         self.client_id = client_id or os.getenv("KEYCLOAK_CLIENT_ID", "pulmocare-api")
@@ -43,7 +42,7 @@ class KeycloakService:
         )
 
         # Create a connection with service account
-        print(f"Setting up KeycloakOpenIDConnection with client credentials for {self.client_id}")
+        logger.debug("Initializing Keycloak service-account connection")
         self.keycloak_connection = KeycloakOpenIDConnection(
             server_url=self.keycloak_url,
             realm_name=self.realm,
@@ -54,7 +53,7 @@ class KeycloakService:
 
         # Initialize admin client for administrative operations using service account
         self.keycloak_admin = KeycloakAdmin(connection=self.keycloak_connection)
-        print("Keycloak service initialized with service account credentials")
+        logger.debug("Keycloak service-account connection initialized")
 
     def login(self, username, password):
         """
@@ -712,16 +711,19 @@ class KeycloakService:
             # Find user by email
             users = self.keycloak_admin.get_users({"email": email})
             if not users:
-                    return False
+                return False
 
             user_id = users[0]["id"]
 
             # Send password reset email
-            self.keycloak_admin.send_update_account(user_id=user_id, payload=["UPDATE_PASSWORD"])
+            self.keycloak_admin.send_update_account(
+                user_id=user_id,
+                payload=["UPDATE_PASSWORD"],
+            )
 
             return True
-        except Exception as e:
-            print(f"Password reset request error: {e!s}")
+        except Exception:
+            logger.exception("Password-reset request failed")
             raise
 
     def get_admin_token(self) -> str | None:
