@@ -47,13 +47,6 @@ app.include_router(integration_router)
 app.include_router(patients_router)
 
 
-# Keep legacy health endpoint for backward compatibility
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "UP", "service": Config.service_name}
-
-
 if __name__ == "__main__":
     uvicorn.run(
         "app:app",
