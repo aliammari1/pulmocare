@@ -131,9 +131,19 @@ async def refresh_token(request: RefreshTokenRequest):
 )
 async def register(request: RegisterRequest):
     try:
-        print(f"Registering user: {request}")
+        # Public registration is patient-only. Provider/admin roles and verification
+        # are provisioned through an authenticated administrative workflow.
+        if request.role not in (None, Role.PATIENT):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Clinical staff accounts must be provisioned by an administrator",
+            )
+        if request.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification cannot be self-assigned during registration",
+            )
 
-        # Log registration attempt
         print(f"Registration attempt for user: {request.email}")
 
         # Prepare user data for registration
@@ -146,15 +156,15 @@ async def register(request: RegisterRequest):
             "phone": (request.phone if request.phone else ""),
             "specialty": request.specialty if request.specialty else "",
             "address": request.address if request.address else "",
-            "role": request.role if request.role else "patient",
+            "role": Role.PATIENT.value,
             "bio": request.bio if request.bio else "",
             "license_number": request.license_number if request.license_number else "",
             "hospital": request.hospital if request.hospital else "",
             "education": request.education if request.education else "",
             "experience": request.experience if request.experience else "",
             "signature": request.signature if request.signature else "",
-            "is_verified": (str(request.is_verified).lower() if request.is_verified is not None else "false"),
-            "verification_details": (request.verification_details if request.verification_details else None),
+            "is_verified": "false",
+            "verification_details": None,
             # Add new patient fields - handle both frontend and backend field naming
             "date_of_birth": request.date_of_birth or request.date_of_birth
             if hasattr(request, "date_of_birth")
@@ -342,85 +352,65 @@ async def get_users_by_role(
     max: int = Query(10, ge=1, le=100),
     user_info: dict = Depends(get_current_user),
 ):
-    """
-    Get users filtered by role with pagination
+    """List users for authenticated clinical staff.
 
-    Args:
-        role: Optional role filter (e.g., 'doctor', 'patient')
-        first: Pagination offset
-        max: Maximum number of users to return
+    Raw Keycloak credential/access metadata is never returned. Patient accounts
+    may not enumerate other users.
     """
+    requester_roles = user_info.get("realm_access", {}).get("roles", [])
+    if not any(
+        allowed in requester_roles
+        for allowed in (Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinical staff role required",
+        )
+
     try:
-        print(f"Getting users with role: {role}, first: {first}, max: {max}")
+        if role:
+            role_name = role.value
+            users = keycloak_service.keycloak_admin.get_users({})
+            filtered_users = []
 
-        # If no role filter, just return all users with pagination
-        if not role:
-            print("No role specified, getting all users")
-            return keycloak_service.keycloak_admin.get_users({"first": first, "max": max})
-
-        role_name = role
-
-        print(f"Normalized role name: {role_name}")
-
-        # Get all users to check their roles (we'll apply pagination later)
-        all_users = keycloak_service.keycloak_admin.get_users({})
-        print(f"Total users found: {len(all_users)}")
-
-        # Filter users by role (check both realm roles and attributes)
-        filtered_users = []
-
-        for user in all_users:
-            user_id = user.get("id")
-            username = user.get("username")
-            has_role = False
-
-            # APPROACH 1: Check realm roles
-            try:
-                user_realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
-                realm_role_names = [r.get("name") for r in user_realm_roles]
-                print(f"User {username} realm roles: {realm_role_names}")
-
-                if role_name in realm_role_names:
-                    print(f"User {username} has {role_name} in realm roles")
-                    has_role = True
-
-            except Exception as e:
-                print(f"Error getting realm roles for user {username}: {e!s}")
-
-            # APPROACH 2: Check user attributes if realm role check didn't find a match
-            if not has_role:
+            for user in users:
+                user_id = user.get("id")
+                has_role = False
                 try:
+                    realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
+                    has_role = role_name in {item.get("name") for item in realm_roles}
+                except Exception:
+                    # Fall back to the explicit role attribute for older accounts.
                     attributes = user.get("attributes", {})
-                    print(f"User {username} attributes: {attributes}")
+                    attribute_role = attributes.get("role")
+                    if isinstance(attribute_role, list):
+                        attribute_role = attribute_role[0] if attribute_role else None
+                    has_role = attribute_role == role_name
 
-                    if attributes and "role" in attributes:
-                        attr_role = attributes["role"]
-                        # Handle both string and list values
-                        if isinstance(attr_role, list) and attr_role:
-                            attr_role = attr_role[0]
+                if has_role:
+                    filtered_users.append(user)
 
-                        # Compare with both formats of the role name
-                        if attr_role == role_name or attr_role == role:
-                            print(f"User {username} has {role_name} in attributes")
-                            has_role = True
+            users = filtered_users[first : first + max]
+        else:
+            users = keycloak_service.keycloak_admin.get_users({"first": first, "max": max})
 
-                except Exception as e:
-                    print(f"Error checking attributes for user {username}: {e!s}")
-
-            # Add user to filtered list if either check passed
-            if has_role:
-                filtered_users.append(user)
-
-        print(f"Found {len(filtered_users)} users with role {role_name}")
-
-        # Apply pagination to filtered results
-        start_idx = first
-        end_idx = min(first + max, len(filtered_users))
-        return filtered_users[start_idx:end_idx]
-
+        return [
+            {
+                "id": user.get("id"),
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "firstName": user.get("firstName"),
+                "lastName": user.get("lastName"),
+                "enabled": user.get("enabled", True),
+                "attributes": user.get("attributes", {}),
+            }
+            for user in users
+        ]
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Get users error: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Failed to get users: {e!s}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
 @router.get(
