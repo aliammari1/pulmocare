@@ -77,7 +77,9 @@ jobs:
         # (--cov-fail-under) so coverage is a true gate, not just a report.
         # The rest report "no tests ran" (exit 5) and stay non-blocking.
         run: >-
-          uv run pytest --cov --cov-report=xml --cov-report=term-missing
+          uv run pytest
+          ${{ matrix.service.name == 'patients' && '--cov=.' || '--cov' }}
+          --cov-report=xml --cov-report=term-missing
           ${{ (matrix.service.name == 'auth' || matrix.service.name == 'patients' || matrix.service.name == 'reports') && '--cov-fail-under=40' || '' }}
         continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
 
