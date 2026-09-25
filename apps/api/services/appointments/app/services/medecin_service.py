@@ -10,13 +10,13 @@ class MedecinService:
     def __init__(self, config):
         self.config = config
         # Log the URLs to help debug
-        logger_service.info(f"Medecins service host: {config.MEDECINS_SERVICE_HOST}, port: {config.MEDECINS_SERVICE_PORT}")
-        self.base_url = f"http://{config.MEDECINS_SERVICE_HOST}:{config.MEDECINS_SERVICE_PORT}/api"
-        self.timeout = config.REQUEST_TIMEOUT
+        logger_service.info(f"Medecins service host: {config.medecins_service_host}, port: {config.medecins_service_port}")
+        self.base_url = f"http://{config.medecins_service_host}:{config.medecins_service_port}/api"
+        self.timeout = config.request_timeout
         # Initialize circuit breaker
         self.circuit_breaker = CircuitBreaker(
-            failure_threshold=config.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recovery_timeout=config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+            failure_threshold=config.circuit_breaker_failure_threshold,
+            recovery_timeout=config.circuit_breaker_recovery_timeout,
             name="medecins-service",
         )
 
@@ -35,7 +35,6 @@ class MedecinService:
         headers = {}
         if auth_header:
             headers["Authorization"] = auth_header
-            logger_service.info(f"Using auth header for doctor lookup: {auth_header[:20]}...")
         else:
             logger_service.warning("No auth header provided for doctor lookup!")
 
@@ -52,10 +51,10 @@ class MedecinService:
                     logger_service.info(f"Doctor found: {doctor_id}")
                     return data
                 else:
-                    logger_service.error(f"Error fetching doctor: HTTP {response.status_code} - {response.text}")
-                    # For testing only: return a mock doctor to proceed with appointment creation
-                    logger_service.warning(f"Using mock doctor for ID: {doctor_id}")
-                    return {"id": doctor_id, "name": "Mock Doctor", "status": "active"}
+                    logger_service.error(
+                        f"Error fetching doctor: HTTP {response.status_code}"
+                    )
+                    return None
         except Exception as e:
             logger_service.error(f"Exception in doctor lookup: {e!s}")
             return None
