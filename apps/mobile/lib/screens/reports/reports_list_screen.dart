@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/report.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_view_model.dart';
+import '../create_report_screen.dart';
 import '../../theme/app_theme.dart';
 import 'report_detail_screen.dart';
 
@@ -94,6 +97,21 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (_canCreateReport(context)) ...[
+            FilledButton.icon(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CreateReportScreen(),
+                  ),
+                );
+                if (mounted) await _loadReports();
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Create medical report'),
+            ),
+            const SizedBox(height: 16),
+          ],
           TextField(
             controller: _search,
             textInputAction: TextInputAction.search,
@@ -164,6 +182,11 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
         ],
       ),
     );
+  }
+
+  static bool _canCreateReport(BuildContext context) {
+    final role = context.read<AuthViewModel>().userRole;
+    return role == 'doctor' || role == 'radiologist' || role == 'admin';
   }
 
   static String _shortId(String value) =>
