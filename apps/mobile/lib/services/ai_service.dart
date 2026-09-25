@@ -1,83 +1,55 @@
-import 'dart:convert';
-import 'package:dio/dio.dart';
-import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+import 'assistant_service.dart';
 
 class AiService {
-  final String _apiUrl = Config.apiBaseUrl;
-  final Dio dio = DioHttpClient().dio;
-  // Headers for API requests
-  Map<String, String> _getHeaders() {
+  AiService({AssistantService? assistant})
+      : _assistant = assistant ?? AssistantService();
+
+  final AssistantService _assistant;
+
+  Future<Map<String, dynamic>> processText(
+    String text, {
+    String context = '',
+  }) async {
+    final reply = await _assistant.send(
+      message:
+          'Improve the following clinical text for clarity, grammar, and concise professional wording. Do not add facts that are not present. Return only the revised text.\n\n' +
+              text,
+      context: context,
+    );
     return {
-      'Content-Type': 'application/json',
-      'X-Request-ID': DateTime.now().microsecondsSinceEpoch.toString(),
+      'correctedText': reply.response,
+      'suggestions': const <String>[],
+      'model': reply.model,
+      'disclaimer': reply.disclaimer,
     };
   }
 
-  // Process text for corrections and suggestions
-  Future<Map<String, dynamic>> processText(String text,
-      {String context = ''}) async {
-    try {
-      final response = await dio.post(
-        '$_apiUrl/ai/process-text',
-        options: Options(headers: _getHeaders()),
-        data: jsonEncode({'text': text, 'context': context, 'type': 'medical'}),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.data);
-      } else {
-        throw Exception('Failed to process text: ${response.data}');
-      }
-    } catch (e) {
-      return {'correctedText': text, 'suggestions': [], 'error': e.toString()};
-    }
-  }
-
-  // Get chatbot response to user input
   Future<Map<String, dynamic>> getChatbotResponse(
-      String userInput, String reportContext) async {
-    try {
-      final response = await dio.post(
-        '$_apiUrl/ai/chat',
-        options: Options(headers: _getHeaders()),
-        data: jsonEncode({
-          'input': userInput,
-          'context': reportContext,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.data);
-      } else {
-        throw Exception('Failed to get chatbot response: ${response.data}');
-      }
-    } catch (e) {
-      return {
-        'response': 'Sorry, I encountered an error processing your request.',
-        'error': e.toString()
-      };
-    }
+    String userInput,
+    String reportContext,
+  ) async {
+    final reply = await _assistant.send(
+      message: userInput,
+      context: reportContext,
+    );
+    return {
+      'response': reply.response,
+      'model': reply.model,
+      'disclaimer': reply.disclaimer,
+    };
   }
 
-  // Analyze medical report content
   Future<Map<String, dynamic>> analyzeReport(String reportContent) async {
-    try {
-      final response = await dio.post(
-        '$_apiUrl/ai/analyze-report',
-        options: Options(headers: _getHeaders()),
-        data: jsonEncode({
-          'content': reportContent,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.data);
-      } else {
-        throw Exception('Failed to analyze report: ${response.data}');
-      }
-    } catch (e) {
-      return {'analysis': {}, 'suggestions': [], 'error': e.toString()};
-    }
+    final reply = await _assistant.send(
+      message:
+          'Review this draft clinical report for missing context, ambiguous wording, and internal inconsistencies. Do not diagnose or invent findings. Return a concise review for the clinician.',
+      context: reportContent,
+    );
+    return {
+      'analysis': reply.response,
+      'suggestions': const <String>[],
+      'model': reply.model,
+      'disclaimer': reply.disclaimer,
+    };
   }
 }

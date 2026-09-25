@@ -8,6 +8,7 @@ import 'screens/login_view.dart';
 import 'screens/patients_view.dart';
 import 'screens/reports/reports_list_screen.dart';
 import 'services/auth_view_model.dart';
+import 'services/chat_viewmodel.dart';
 import 'services/token_storage.dart';
 import 'theme/app_theme.dart';
 
@@ -21,8 +22,11 @@ Future<void> main() async {
   FlutterError.onError = FlutterError.presentError;
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: authViewModel,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: authViewModel),
+        ChangeNotifierProvider(create: (_) => ChatViewModel()),
+      ],
       child: const MedicalApp(),
     ),
   );

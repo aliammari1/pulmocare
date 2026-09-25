@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/chat_dialog.dart';
 import 'AppointmentsScreen.dart';
 import 'account_view.dart';
 import 'patients_view.dart';
@@ -257,6 +258,18 @@ class _DashboardPage extends StatelessWidget {
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => const PatientsView(),
+                              ),
+                            ),
+                          ),
+                        if (isProvider)
+                          _ActionCard(
+                            icon: Icons.auto_awesome_outlined,
+                            title: 'Clinical assistant',
+                            subtitle:
+                                'Get server-backed help with clinical documentation and report wording.',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ChatDialog(),
                               ),
                             ),
                           ),
