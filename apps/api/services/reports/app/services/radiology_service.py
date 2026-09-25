@@ -10,7 +10,7 @@ Design notes:
 - If the weights/tools are unavailable, the service degrades gracefully and the
   endpoint still returns a structured (empty-findings) report flagged
   model_status="degraded" rather than 500-ing.
-- The narrative step uses the Anthropic SDK (claude-haiku-4-5). It is optional
+- The narrative step uses the Anthropic SDK with the configured active model. It is optional
   and disabled automatically when ANTHROPIC_API_KEY is not set.
 
 NOTHING here is for clinical use. See models/radiology.py for the banner.
@@ -26,7 +26,7 @@ from pulmocare_shared import genai_tool_span
 # MedRAX is vendored at apps/api/services/medagent. It is not a dependency of
 # the reports service's pyproject (it carries heavy ML deps + its own license);
 # the tools are imported lazily and only when weights are actually present.
-NARRATIVE_MODEL = "claude-haiku-4-5"
+NARRATIVE_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 _report_tool = None
 _vqa_tool = None
