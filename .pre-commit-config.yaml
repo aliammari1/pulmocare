@@ -1,4 +1,6 @@
-# Pre-commit hooks mirroring CI. Install with: pre-commit install
+# Fast repository hygiene hooks. Python lint/format runs per service in CI so
+# each service uses its own pyproject.toml instead of a conflicting root config.
+# Install with: pre-commit install
 # Run on all files: pre-commit run --all-files
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -14,19 +16,12 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.23.3
     hooks:
       - id: gitleaks
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.7
+    rev: v1.7.12
     hooks:
       - id: actionlint
