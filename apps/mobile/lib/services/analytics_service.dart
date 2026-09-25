@@ -35,7 +35,7 @@ class AnalyticsService {
     required DateTime endDate,
   }) {
     final trend = <DateTime, int>{};
-    final currentDate = startDate;
+    var currentDate = startDate;
 
     while (currentDate.isBefore(endDate)) {
       trend[currentDate] = reports
@@ -45,7 +45,7 @@ class AnalyticsService {
               report.date.day == currentDate.day)
           .length;
 
-      currentDate.add(const Duration(days: 1));
+      currentDate = currentDate.add(const Duration(days: 1));
     }
 
     return trend;
