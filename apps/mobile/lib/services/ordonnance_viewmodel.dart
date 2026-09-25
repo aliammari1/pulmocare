@@ -168,28 +168,13 @@ class OrdonnanceViewModel extends ChangeNotifier {
 
   Future<Uint8List?> generatePdfFromData(dynamic ordonnanceData) async {
     try {
-      // Parse date correctly handling both string and map formats
-      DateTime date;
-      if (ordonnanceData['date'] is Map) {
-        // Handle MongoDB date format
-        date = DateTime.parse(ordonnanceData['date']['\$date']);
-      } else {
-        // Handle string date format
-        date = DateTime.parse(ordonnanceData['date']);
+      if (ordonnanceData is! Map) {
+        throw const FormatException('Invalid prescription data');
       }
-
-      final ordonnance = Ordonnance(
-        id: ordonnanceData['_id'],
-        patientId: ordonnanceData['patient_id'].toString(),
-        medecinId: ordonnanceData['medecin_id'].toString(),
-        clinique: ordonnanceData['clinique']?.toString() ?? '',
-        specialite: ordonnanceData['specialite']?.toString() ?? '',
-        date: date,
-        medicaments: (ordonnanceData['medicaments'] as List)
-            .map((m) => Medicament.fromJson(m as Map<String, dynamic>))
-            .toList(),
+      final data = ordonnanceData.map(
+        (key, value) => MapEntry(key.toString(), value),
       );
-      return await ordonnance.generatePdf();
+      return await _apiService.generatePdfFromData(data);
     } catch (e) {
       _errorMessage = 'Erreur lors de la génération du PDF: $e';
       notifyListeners();
