@@ -119,7 +119,7 @@ def handle_new_report(ch, method, properties, body):
             )
 
             # Automatically queue for analysis if configured to do so
-            if Config.AUTO_ANALYZE_REPORTS:
+            if Config.auto_analyze_reports:
                 report_service.queue_report_for_analysis(report_id)
 
         # Acknowledge message

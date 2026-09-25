@@ -14,12 +14,12 @@ class RedisClient:
 
         # Initialize Redis client
         self.client = redis.Redis(
-            host=config.REDIS_HOST,
-            port=config.REDIS_PORT,
-            password=config.REDIS_PASSWORD,
+            host=config.redis_host,
+            port=config.redis_port,
+            password=config.redis_password,
             decode_responses=True,
         )
-        self.ttl = config.CACHE_TTL
+        self.ttl = config.cache_ttl
 
     def get(self, key):
         """Get value from cache"""

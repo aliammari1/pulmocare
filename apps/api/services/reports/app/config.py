@@ -36,6 +36,7 @@ class ReportsConfig(BaseConfig):
     pdf_export_path: str = Field(default="/tmp/exports", description="PDF export path")
     ocr_language: str = Field(default="fra+eng", description="Tesseract OCR languages")
     max_document_size: int = Field(default=50 * 1024 * 1024, description="Max document size (50MB)")
+    auto_analyze_reports: bool = Field(default=False, description="Queue incoming reports for AI analysis")
 
     # NLTK settings
     nltk_data_path: str = Field(default="/app/nltk_data", description="NLTK data path")
