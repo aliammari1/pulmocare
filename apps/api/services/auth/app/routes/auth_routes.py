@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, status
 
@@ -11,6 +12,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 # Initialize Keycloak service
 keycloak_service = KeycloakService()
+logger = logging.getLogger(__name__)
 
 
 def _realm_roles(user_info: dict) -> list[str]:
@@ -50,16 +52,13 @@ def _first_keycloak_attribute(attributes: dict, name: str) -> str:
 )
 async def login(request: LoginRequest):
     try:
-        # Log the login attempt (without password)
-        print(f"Login attempt for user: {request.email}")
 
         try:
             # Use KeycloakService for login
             result = keycloak_service.login(request.email, request.password)
-            print(f"Login successful for user: {request.email}")
             return result
         except Exception as e:
-            print(f"Keycloak login failed: {e!s}")
+            logger.info("Login rejected by identity provider")
 
             # Provide user-friendly error message
             raise HTTPException(
@@ -70,7 +69,7 @@ async def login(request: LoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Login error: {e!s}", exc_info=True)
+        logger.exception("Unexpected login failure")
         raise HTTPException(status_code=500, detail=f"Authentication failed: {e!s}")
 
 
@@ -79,13 +78,11 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
     """Verify JWT token and return user information"""
     try:
         token = request.token
-        print(f"Verifying token: {token[:15]}...")
 
         try:
             # Verify token and get payload
             payload = keycloak_service.verify_token(token)
-            print(f"Decoded token info: {payload}")
-
+    
             # Get all realm roles from the token
             all_realm_roles = payload.get("realm_access", {}).get("roles", [])
 
@@ -114,16 +111,15 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
                         break
 
             user_data["primary_role"] = primary_role
-            print(f"Token verified for user: {user_data['email']}, role: {primary_role}")
-            return user_data
+                return user_data
 
         except Exception as e:
             error_msg = str(e).lower()
-            print(f"Token verification failed: {e!s}")
+            logger.info("Token verification rejected")
             return {"valid": False, "error": error_msg}
 
     except Exception as e:
-        print(f"Token verification error: {e!s}")
+        logger.exception("Unexpected token verification failure")
         raise HTTPException(status_code=500, detail=f"Verification failed: {e!s}")
 
 
@@ -143,7 +139,7 @@ async def refresh_token(request: RefreshTokenRequest):
         return result
 
     except Exception as e:
-        print(f"Token refresh error: {e!s}")
+        logger.info("Token refresh failed")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
@@ -172,7 +168,6 @@ async def register(request: RegisterRequest):
                 detail="Verification cannot be self-assigned during registration",
             )
 
-        print(f"Registration attempt for user: {request.email}")
 
         # Prepare user data for registration
         first_name, last_name = _split_name(request.name)
@@ -224,7 +219,7 @@ async def register(request: RegisterRequest):
         try:
             # Use KeycloakService for user registration
             user_id = keycloak_service.register(user_data)
-            print(f"User created successfully in Keycloak: {user_data['username']}")
+            logger.info("User account created in identity provider")
 
             # Try auto-login after registration
             try:
@@ -239,7 +234,7 @@ async def register(request: RegisterRequest):
                     "expires_in": login_result["expires_in"],
                 }
             except Exception as e:
-                print(f"Auto-login after registration failed: {e!s}")
+                logger.info("Automatic login after registration failed")
                 # Still return success without tokens
                 return {"message": "User registered successfully", "user_id": user_id}
 
@@ -249,7 +244,7 @@ async def register(request: RegisterRequest):
             if "409" in error_message or "conflict" in error_message or "already exists" in error_message:
                 raise HTTPException(status_code=409, detail="Email already registered")
             elif "403" in error_message or "permission" in error_message:
-                print("Permission denied. Check Keycloak client permissions.")
+                logger.error("Identity provider denied registration operation")
                 raise HTTPException(
                     status_code=500,
                     detail="User registration failed: Insufficient permissions. Contact the administrator.",
@@ -260,7 +255,7 @@ async def register(request: RegisterRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Registration error: {e!s}")
+        logger.exception("Unexpected registration failure")
         raise HTTPException(status_code=500, detail=f"Registration failed: {e!s}")
 
 
@@ -272,37 +267,32 @@ async def register(request: RegisterRequest):
 async def logout(request: LogoutRequest | None = None, authorization: str = Header(None)):
     try:
         # Log the logout attempt
-        print("Logout attempt received")
         refresh_token = None
 
         # Try to get refresh token from request body
         if request and hasattr(request, "refresh_token") and request.refresh_token:
             refresh_token = request.refresh_token
-            print(f"Logout with refresh token from body: {refresh_token[:10]}...")
         # If no refresh token in body, try to extract from Authorization header
         elif authorization:
             token = authorization.replace("Bearer ", "")
-            print(f"Trying to logout with token from header: {token[:10]}...")
             try:
                 # Attempt to use the access token to help with logout
                 keycloak_service.logout_from_access_token(token)
-                print("Logout from access token successful")
             except Exception as e:
-                print(f"Logout from access token failed: {e!s}")
+                logger.info("Access-token logout was not completed")
 
         # Use KeycloakService for logout if we have a refresh token
         if refresh_token:
             try:
                 keycloak_service.logout(refresh_token)
-                print("Logout with refresh token successful")
             except Exception as e:
-                print(f"Keycloak logout operation with refresh token failed: {e!s}")
+                logger.info("Refresh-token logout was not completed")
 
         # Always return success to client regardless of backend result
         return {"message": "Logged out successfully"}
 
     except Exception as e:
-        print(f"Logout error: {e!s}")
+        logger.exception("Unexpected logout failure")
         # Return success even if we couldn't process the request properly
         # This is to ensure the client can continue with their logout flow
         return {"message": "Logged out successfully"}
@@ -319,7 +309,7 @@ async def forgot_password(request: ForgotPasswordRequest):
         keycloak_service.request_password_reset(request.email)
         return {"message": "Password reset email sent successfully"}
     except Exception as e:
-        print(f"Password reset error: {e!s}")
+        logger.info("Password-reset request was not completed")
         # For security, always return the same message regardless of outcome
         return {"message": "If your email is registered, you will receive a password reset link"}
 
@@ -334,7 +324,6 @@ async def forgot_password(request: ForgotPasswordRequest):
 )
 async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_current_user)):
     try:
-        print(f"Getting user info for user_id: {user_id}")
         # Check if requesting own info or has admin role
         if user_id != user_info.get("sub") and "admin" not in user_info.get("realm_access", {}).get("roles", []):
             raise HTTPException(status_code=403, detail="Unauthorized")
@@ -355,7 +344,7 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
             # For now, we'll use the roles from the token
             user_data["roles"] = user_info.get("realm_access", {}).get("roles", [])
         except Exception as e:
-            print(f"Failed to get user roles: {e!s}")
+            logger.info("Unable to read user roles from identity provider")
             user_data["roles"] = []
 
         return user_data
@@ -363,7 +352,7 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Get user error: {e!s}")
+        logger.exception("Unable to retrieve user profile")
         raise HTTPException(status_code=500, detail=f"Failed to get user info: {e!s}")
 
 
@@ -406,7 +395,7 @@ async def get_users_by_role(
                     realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
                     has_role = role_name in {item.get("name") for item in realm_roles}
                 except Exception:
-                    print("Unable to inspect user realm roles; checking role attribute")
+                    logger.debug("Falling back to legacy role attribute")
 
                 if not has_role:
                     # Fall back to the explicit role attribute for older accounts.
@@ -447,7 +436,7 @@ async def get_users_by_role(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Get users error: {e!s}")
+        logger.exception("Unable to retrieve user directory")
         raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
 
@@ -601,7 +590,6 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
         if not user_id:
             raise HTTPException(status_code=404, detail="User ID not found in token")
 
-        print(f"Getting profile for user: {user_id}")
 
         # Use KeycloakService to get user information
         user_data = keycloak_service.get_user_info_by_id(user_id)
@@ -640,7 +628,7 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Get profile error: {e!s}")
+        logger.exception("Unable to retrieve authenticated profile")
         raise HTTPException(status_code=500, detail=f"Failed to get profile: {e!s}")
 
 
