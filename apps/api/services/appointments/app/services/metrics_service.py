@@ -24,14 +24,14 @@ class MetricsService:
             # Create a Resource to identify the service
             resource = Resource.create(
                 {
-                    "service.name": Config.SERVICE_NAME,
+                    "service.name": Config.service_name,
                     "service.instance.id": socket.gethostname(),
                 }
             )
 
             # Create the metric exporter
             exporter = OTLPMetricExporter(
-                endpoint=f"http://{'localhost' if Config.ENV == 'development' else 'otel-collector'}:4317",
+                endpoint=Config.otel_exporter_otlp_endpoint,
                 insecure=True,
             )
 
@@ -45,7 +45,7 @@ class MetricsService:
             metrics.set_meter_provider(meter_provider)
 
             # Create a meter
-            self.meter = metrics.get_meter(Config.SERVICE_NAME)
+            self.meter = metrics.get_meter(Config.service_name)
 
             # Create some basic counters and gauges
             self.request_counter = self.meter.create_counter(name="request_counter", description="Counts the number of requests")
