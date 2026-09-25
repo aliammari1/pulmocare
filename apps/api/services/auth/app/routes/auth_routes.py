@@ -32,6 +32,13 @@ def _split_name(name: str) -> tuple[str, str]:
     return parts[0], " ".join(parts[1:])
 
 
+def _first_keycloak_attribute(attributes: dict, name: str) -> str:
+    value = attributes.get(name)
+    if isinstance(value, list):
+        return str(value[0]) if value else ""
+    return str(value) if value is not None else ""
+
+
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -544,12 +551,6 @@ async def get_provider_directory(
             )
             attributes = user.get("attributes", {}) or {}
 
-            def first_attribute(name: str) -> str:
-                value = attributes.get(name)
-                if isinstance(value, list):
-                    return str(value[0]) if value else ""
-                return str(value) if value is not None else ""
-
             display_name = " ".join(
                 part
                 for part in (
@@ -566,8 +567,8 @@ async def get_provider_directory(
                     "id": user_id,
                     "name": display_name,
                     "provider_type": provider_role,
-                    "specialty": first_attribute("specialty"),
-                    "hospital": first_attribute("hospital"),
+                    "specialty": _first_keycloak_attribute(attributes, "specialty"),
+                    "hospital": _first_keycloak_attribute(attributes, "hospital"),
                 }
             )
 
