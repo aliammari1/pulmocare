@@ -197,8 +197,9 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
 
   static String _errorMessage(DioException error) {
     final data = error.response?.data;
-    if (data is Map && data['detail'] is String)
+    if (data is Map && data['detail'] is String) {
       return data['detail'] as String;
+    }
     return 'Unable to load reports from the server.';
   }
 }

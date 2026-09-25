@@ -32,7 +32,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   String _lastRecognizedWords = '';
-  double _currentSoundLevel = 0.0;
   Timer? _silenceTimer;
   final List<double> _soundLevels = List.filled(30, 0.0);
 
@@ -118,7 +117,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
   void _onSpeechError(dynamic error) {
     setState(() {
       _isListening = false;
-      _currentSoundLevel = 0;
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +157,6 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
   void _onSpeechResult(SpeechRecognitionResult result) {
     setState(() {
       _lastRecognizedWords = result.recognizedWords;
-      _currentSoundLevel = result.confidence;
 
       if (result.finalResult) {
         _insertTextAtCursor(result.recognizedWords);

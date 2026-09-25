@@ -13,7 +13,7 @@ class DoctorScreen extends StatefulWidget {
   const DoctorScreen({super.key});
 
   @override
-  _DoctorScreenState createState() => _DoctorScreenState();
+  State<DoctorScreen> createState() => _DoctorScreenState();
 }
 
 class _DoctorScreenState extends State<DoctorScreen> {

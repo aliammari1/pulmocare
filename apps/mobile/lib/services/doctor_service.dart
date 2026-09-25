@@ -9,8 +9,7 @@ class DoctorService {
     try {
       final response = await _dio.get('/doctors');
       return List<Map<String, dynamic>>.from(response.data);
-    } catch (e) {
-      print("❌ Erreur lors de la récupération des docteurs : $e");
+    } catch (_) {
       throw 'Impossible de récupérer les docteurs';
     }
   }
@@ -23,8 +22,7 @@ class DoctorService {
         queryParameters: {'id': doctorId},
       );
       return response.data;
-    } catch (e) {
-      print("❌ Erreur lors de la récupération du profil du docteur : $e");
+    } catch (_) {
       throw 'Impossible de récupérer le profil du docteur';
     }
   }

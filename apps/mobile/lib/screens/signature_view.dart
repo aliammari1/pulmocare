@@ -113,7 +113,7 @@ class _SignatureViewState extends State<SignatureView> {
                       ? null
                       : () async {
                           await _handleSave();
-                          if (mounted &&
+                          if (context.mounted &&
                               context
                                   .read<AuthViewModel>()
                                   .errorMessage
@@ -167,6 +167,7 @@ class _SignatureViewState extends State<SignatureView> {
     try {
       final data = await _controller.toPngBytes();
       if (data == null) return;
+      if (!mounted) return;
 
       final base64String = base64Encode(data);
 

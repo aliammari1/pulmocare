@@ -8,7 +8,7 @@ class MapSelectionDialog extends StatefulWidget {
   const MapSelectionDialog({super.key, this.initialAddress = ''});
 
   @override
-  _MapSelectionDialogState createState() => _MapSelectionDialogState();
+  State<MapSelectionDialog> createState() => _MapSelectionDialogState();
 }
 
 class _MapSelectionDialogState extends State<MapSelectionDialog> {
@@ -131,7 +131,8 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                     child: GoogleMap(
                       onMapCreated: (controller) {
                         _mapController = controller;
-                        controller.setMapStyle('''
+                      },
+                      style: '''
                           [
                             {
                               "featureType": "poi",
@@ -155,8 +156,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                               ]
                             }
                           ]
-                        ''');
-                      },
+                        ''',
                       initialCameraPosition: CameraPosition(
                         target:
                             _selectedLocation ??

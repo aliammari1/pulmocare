@@ -13,7 +13,7 @@ class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
 
   @override
-  _ArchiveScreenState createState() => _ArchiveScreenState();
+  State<ArchiveScreen> createState() => _ArchiveScreenState();
 }
 
 class _ArchiveScreenState extends State<ArchiveScreen> {

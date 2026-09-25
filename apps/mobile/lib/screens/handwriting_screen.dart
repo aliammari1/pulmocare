@@ -187,19 +187,25 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
         final ByteData? byteData = await image.toByteData(
           format: ui.ImageByteFormat.png,
         );
+        if (byteData == null) {
+          throw StateError('Unable to capture drawing');
+        }
 
         if (result.isEmpty) {
           result = "[Handwritten note - Image captured]";
         }
-      } catch (e) {
+      } catch (_) {
+        if (!context.mounted) return;
         // Handle error
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error saving drawing: $e')));
+        ).showSnackBar(const SnackBar(content: Text('Error saving drawing')));
       } finally {
-        setState(() => _isDrawingLoading = false);
+        if (mounted) setState(() => _isDrawingLoading = false);
       }
     }
+
+    if (!context.mounted) return;
 
     if (result.isNotEmpty) {
       Navigator.pop(context, result);

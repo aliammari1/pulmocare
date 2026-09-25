@@ -51,6 +51,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
 
   final ApiService _api = ApiService();
   bool _isSaving = false;
+  bool _allowPop = false;
   String _generatedId = '';
   final _uuid = const Uuid();
 
@@ -438,31 +439,37 @@ class _CreateReportScreenState extends State<CreateReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_hasUnsavedChanges()) {
-          final result = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Discard Changes?'),
-              content: const Text(
-                'You have unsaved changes. Are you sure you want to discard them?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Discard'),
-                ),
-              ],
-            ),
-          );
-          return result ?? false;
-        }
-        return true;
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final result =
+            !_hasUnsavedChanges() ||
+            (await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Discard Changes?'),
+                    content: const Text(
+                      'You have unsaved changes. Are you sure you want to discard them?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Discard'),
+                      ),
+                    ],
+                  ),
+                ) ??
+                false);
+        if (result != true || !mounted) return;
+        setState(() => _allowPop = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).pop();
+        });
       },
       child: Scaffold(
         appBar: AppBar(

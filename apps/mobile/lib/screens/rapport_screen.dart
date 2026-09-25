@@ -8,7 +8,7 @@ class RapportScreen extends StatefulWidget {
   const RapportScreen({super.key});
 
   @override
-  _RapportScreenState createState() => _RapportScreenState();
+  State<RapportScreen> createState() => _RapportScreenState();
 }
 
 class _RapportScreenState extends State<RapportScreen> {
@@ -73,6 +73,7 @@ CONCLUSION URGENTE :
           reportType: _selectedReportType,
           content: _contentController.text,
         );
+        if (!mounted) return;
 
         // Ajoutez une notification
         context.read<NotificationProvider>().addRapportNotification();
@@ -100,7 +101,8 @@ CONCLUSION URGENTE :
           _selectedReportType = 'Standard';
           _contentController.text = _reportTemplates['Standard'] ?? '';
         });
-      } catch (e) {
+      } catch (_) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(

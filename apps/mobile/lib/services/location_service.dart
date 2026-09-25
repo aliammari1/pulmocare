@@ -47,8 +47,7 @@ class LocationService {
         return countryCode;
       }
       return null;
-    } catch (e) {
-      print('Error getting location: $e');
+    } catch (_) {
       // Return cached value as fallback if available
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_cachedCountryCodeKey);
