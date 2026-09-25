@@ -13,7 +13,7 @@ class AuthRadioViewModel extends ChangeNotifier {
   String errorMessage = '';
   String? authToken;
   final Dio dio = DioHttpClient().dio;
-  static const String baseUrl = Config.apiBaseUrl;
+  static final String baseUrl = Config.apiBaseUrl;
   Future<void> login(String email, String password) async {
     try {
       print('Attempting login with: $email'); // Add debug log

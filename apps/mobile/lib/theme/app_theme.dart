@@ -99,7 +99,7 @@ class AppTheme {
         foregroundColor: dark ? Colors.white : const Color(0xFF182230),
         centerTitle: false,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: scheme.surface,
         shape: RoundedRectangleBorder(

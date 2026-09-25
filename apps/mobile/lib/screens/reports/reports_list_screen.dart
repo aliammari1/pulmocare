@@ -134,7 +134,7 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFFE6F2F4),
                     child: Icon(
-                      Icons.clinical_notes_outlined,
+                      Icons.description_outlined,
                       color: AppTheme.primary,
                     ),
                   ),

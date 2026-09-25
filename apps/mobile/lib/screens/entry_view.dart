@@ -11,13 +11,13 @@ class EntryView extends StatelessWidget {
       role: 'doctor',
       title: 'Doctor',
       subtitle: 'Patients, reports and consultations',
-      icon: Icons.stethoscope_rounded,
+      icon: Icons.medical_services_rounded,
     ),
     (
       role: 'radiologist',
       title: 'Radiologist',
       subtitle: 'Imaging workflow and clinical reports',
-      icon: Icons.radiology_rounded,
+      icon: Icons.monitor_heart_outlined,
     ),
     (
       role: 'patient',

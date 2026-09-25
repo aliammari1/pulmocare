@@ -15,7 +15,7 @@ class ApiService {
   static const String openFdaBaseUrl = 'https://api.fda.gov/drug';
   // Mise à jour de la clé API FDA
   static const String apiKey = '4DpshbRmBvQ4k0hg27yZT2zEEFvYVHbqa8WHlhan';
-  static const String _apiUrl = Config.apiBaseUrl;
+  static final String _apiUrl = Config.apiBaseUrl;
   final Dio dio = DioHttpClient().dio;
   Future<List<Medicament>> searchMedicaments(String query) async {
     try {

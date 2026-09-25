@@ -10,6 +10,15 @@ class PermissionService {
   Future<bool> requestNotificationPermission() async =>
       (await Permission.notification.request()).isGranted;
 
+  Future<bool> requestAllPermissions() async {
+    final statuses = await <Permission>[
+      Permission.camera,
+      Permission.microphone,
+      Permission.notification,
+    ].request();
+    return statuses.values.every((status) => status.isGranted);
+  }
+
   Future<Map<Permission, bool>> checkPermissions() async {
     return {
       Permission.camera: await Permission.camera.isGranted,

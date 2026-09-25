@@ -150,7 +150,7 @@ class AuthViewModel extends ChangeNotifier {
         return true;
       }
 
-      return login(email, password, expectedRole: 'patient');
+      return await login(email, password, expectedRole: 'patient');
     } on DioException catch (error) {
       errorMessage =
           _messageFromDio(error, fallback: 'Unable to create the account.');
