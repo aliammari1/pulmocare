@@ -1,6 +1,6 @@
 [project]
 name = "auth-service"
-version = "1.0.0"
+version = "1.1.0"
 description = "PulmoCare Authentication Service"
 readme = "README.md"
 requires-python = ">=3.12"
