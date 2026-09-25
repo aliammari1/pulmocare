@@ -155,7 +155,9 @@ class RabbitMQClient:
                     ),
                 )
 
-                logger_service.info(f"Successfully republished message after reconnect to {exchange}, routing_key={routing_key}")
+                logger_service.info(
+                    f"Successfully republished message after reconnect to {exchange}, routing_key={routing_key}"
+                )
                 return True
             except Exception as retry_error:
                 logger_service.error(f"Failed to republish message after reconnect: {retry_error}")

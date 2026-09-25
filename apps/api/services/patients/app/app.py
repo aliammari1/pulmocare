@@ -8,10 +8,9 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.security import HTTPBearer
 
-from pulmocare_shared import RedisClient, RabbitMQClient, setup_cors, setup_telemetry
-from pulmocare_shared.middleware import create_health_router
-
 from config import Config
+from pulmocare_shared import RabbitMQClient, RedisClient, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import create_health_router
 from routes.integration_routes import router as integration_router
 from routes.patients_routes import router as patients_router
 

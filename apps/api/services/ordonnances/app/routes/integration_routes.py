@@ -27,68 +27,53 @@ ordonnances_collection = mongodb_client.db.ordonnances
 http_client = httpx.AsyncClient(timeout=10.0)
 
 
-async def get_current_doctor(
+async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
-    """
-    Get current doctor information directly from auth service
-
-    Returns:
-        Dict: The doctor information with user_id and roles
-
-    Raises:
-        HTTPException: If the token is invalid or user is not a doctor
-    """
+    """Validate the bearer token through the auth service."""
+    token = credentials.credentials
     try:
-        token = credentials.credentials
-
-        # Call auth service directly to verify token and get user info
-        auth_url = f"{Config.AUTH_SERVICE_URL}/api/auth/token/verify"
-        headers = {"Authorization": f"Bearer {token}"}
-        # Include the token in the request body as well
-        body = {"token": token}
-
-        async with http_client as client:
-            response = await client.post(auth_url, headers=headers, json=body)
-
-            if response.status_code != 200:
-                logger_service.error(f"Failed to verify token: {response.status_code} - {response.text}")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authentication token",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-            # Get user info from response
-            user_info = response.json()
-
-            # Check if the user has the doctor role
-            roles = user_info.get("roles", [])
-            if "doctor" not in roles and "admin" not in roles:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Doctor role required",
-                )
-
-            # Add token to user info for convenience
-            user_info["token"] = token
-
-            return user_info
-
-    except httpx.RequestError as e:
-        logger_service.error(f"Error connecting to auth service: {e!s}")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{Config.AUTH_SERVICE_URL}/api/auth/token/verify",
+                json={"token": token},
+            )
+    except httpx.RequestError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable",
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger_service.error(f"Unexpected error during authentication: {e!s}")
+        ) from exc
+
+    if response.status_code != 200:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication error",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    user_info = response.json()
+    if not user_info.get("valid"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_info["token"] = token
+    return user_info
+
+
+async def get_current_doctor(
+    user_info: dict = Depends(get_current_user),
+) -> dict:
+    """Require a doctor/admin role for prescription authoring."""
+    roles = set(user_info.get("roles", []))
+    if roles.isdisjoint({"doctor", "admin"}):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor role required",
+        )
+    return user_info
 
 
 @router.post(

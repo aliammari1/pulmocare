@@ -30,7 +30,7 @@ class AppointmentService:
             config = Config()
 
         self.config = config
-        self.timeout = httpx.Timeout(config.REQUEST_TIMEOUT)
+        self.timeout = httpx.Timeout(config.request_timeout)
         self.client = httpx.AsyncClient(timeout=self.timeout)
 
         # Initialize services
@@ -61,8 +61,6 @@ class AppointmentService:
 
                 if auth_token:
                     auth_header = f"Bearer {auth_token}"
-                    # Log for debugging
-                    logger_service.info(f"Using auth token (first 10 chars): {auth_token[:10]}...")
                 else:
                     logger_service.warning(f"No auth token found in current_user: {current_user.keys()}")
 
@@ -73,11 +71,20 @@ class AppointmentService:
                 logger_service.error(f"Provider {appointment_data.provider_id} not found")
                 raise Exception(f"Provider {appointment_data.provider_id} not found")
 
-            # Validate that the patient exists
-            patient_exists = await self.patient_service.verify_patient_exists(appointment_data.patient_id, auth_header)
+            # A patient creating an appointment for themselves is already
+            # verified by the route dependency. Other workflows still validate
+            # the patient through the patients service.
+            roles = {str(role) for role in current_user.get("roles", [])}
+            requester_id = str(current_user.get("user_id", ""))
+            patient_exists = "patient" in roles and appointment_data.patient_id == requester_id
+            if not patient_exists:
+                patient_exists = await self.patient_service.verify_patient_exists(
+                    appointment_data.patient_id,
+                    auth_header,
+                )
             if not patient_exists:
                 logger_service.error(f"Patient {appointment_data.patient_id} not found")
-                raise Exception(f"Patient {appointment_data.patient_id} not found")
+                raise ValueError("Patient not found")
 
             # Create a new appointment object
             appointment = Appointment(
@@ -87,6 +94,7 @@ class AppointmentService:
                 appointment_type=appointment_data.appointment_type,
                 appointment_date=appointment_data.appointment_date,
                 duration_minutes=appointment_data.duration_minutes,
+                reason=appointment_data.reason,
                 notes=appointment_data.notes,
                 virtual=appointment_data.virtual,
                 meeting_link=appointment_data.meeting_link,
@@ -131,7 +139,9 @@ class AppointmentService:
                     auth_header=auth_header,
                 )
 
-                logger_service.info(f"Created appointment {appointment.appointment_id} for patient {appointment.patient_id}")
+                logger_service.info(
+                    f"Created appointment {appointment.appointment_id} for patient {appointment.patient_id}"
+                )
                 return appointment
             else:
                 logger_service.error("Failed to create appointment")
@@ -223,7 +233,9 @@ class AppointmentService:
             logger_service.error(f"Error in list_appointments: {e!s}")
             return {"items": [], "total": 0, "page": page, "limit": limit, "pages": 0}
 
-    async def update_appointment(self, appointment_id: str, appointment_update: AppointmentUpdate) -> Appointment | None:
+    async def update_appointment(
+        self, appointment_id: str, appointment_update: AppointmentUpdate
+    ) -> Appointment | None:
         """
         Update an existing appointment
         """
@@ -292,7 +304,9 @@ class AppointmentService:
             logger_service.error(f"Error in update_appointment: {e!s}")
             return None
 
-    async def process_appointment_request(self, patient_id: str, doctor_id: str, appointment_data: dict[str, Any]) -> str:
+    async def process_appointment_request(
+        self, patient_id: str, doctor_id: str, appointment_data: dict[str, Any]
+    ) -> str:
         """
         Process an appointment request from a patient
         """
@@ -376,7 +390,9 @@ class AppointmentService:
             appointment = await self.get_appointment(appointment_id)
 
             if not appointment or appointment.provider_id != doctor_id:
-                logger_service.warning(f"Doctor {doctor_id} attempted to respond to appointment {appointment_id} that doesn't exist or belong to them")
+                logger_service.warning(
+                    f"Doctor {doctor_id} attempted to respond to appointment {appointment_id} that doesn't exist or belong to them"
+                )
                 return False
 
             # Update appointment status based on response
@@ -680,7 +696,9 @@ class AppointmentService:
                             # Check if slot overlaps with existing appointments
                             slot_available = True
                             for appt in existing_appointments:
-                                if appt.provider_id == provider_id and appt.appointment_date <= slot_time < (appt.appointment_date + timedelta(minutes=appt.duration_minutes)):
+                                if appt.provider_id == provider_id and appt.appointment_date <= slot_time < (
+                                    appt.appointment_date + timedelta(minutes=appt.duration_minutes)
+                                ):
                                     slot_available = False
                                     break
 
@@ -731,7 +749,9 @@ class AppointmentService:
         Send notifications about an appointment status change
         """
         try:
-            logger_service.info(f"Sending notification for appointment {appointment.appointment_id} status change to {new_status}")
+            logger_service.info(
+                f"Sending notification for appointment {appointment.appointment_id} status change to {new_status}"
+            )
 
             # Notify about the status change
             self.rabbitmq_client.notify_appointment_status_change(

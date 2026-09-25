@@ -1,55 +1,66 @@
-import 'package:flutter/material.dart';
-import 'package:medapp/widgets/chat_dialog.dart';
-import 'gemini_service.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+
+import '../models/chat_message.dart';
+import 'assistant_service.dart';
 
 class ChatViewModel extends ChangeNotifier {
-  final GeminiService _geminiService = GeminiService();
+  ChatViewModel({AssistantService? assistant})
+      : _assistant = assistant ?? AssistantService();
+
+  final AssistantService _assistant;
+  final List<ChatMessage> _messages = [];
 
   bool _isLoading = false;
   String _error = '';
-  final List<ChatMessage> _messages = [];
+  String? _disclaimer;
+  String? _model;
 
   bool get isLoading => _isLoading;
   String get error => _error;
-  List<ChatMessage> get messages => _messages;
+  String? get disclaimer => _disclaimer;
+  String? get model => _model;
+  List<ChatMessage> get messages => List.unmodifiable(_messages);
 
-  Future<void> sendMessage(String message, {String? imagePath}) async {
+  Future<bool> sendMessage(String message, {String? context}) async {
+    final text = message.trim();
+    if (text.isEmpty || _isLoading) return false;
+
+    _error = '';
     _isLoading = true;
+    _messages.add(
+      ChatMessage(
+        id: 'user-${DateTime.now().microsecondsSinceEpoch}',
+        content: text,
+        isAssistant: false,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
 
     try {
-      // Add user message
-      final userMessage = ChatMessage(
-        id: DateTime.now().toString(),
-        content: message,
-        isBot: false,
-        timestamp: DateTime.now(),
-        imageUrl: null,
+      final reply = await _assistant.send(message: text, context: context);
+      _model = reply.model;
+      _disclaimer = reply.disclaimer;
+      _messages.add(
+        ChatMessage(
+          id: 'assistant-${DateTime.now().microsecondsSinceEpoch}',
+          content: reply.response,
+          isAssistant: true,
+          timestamp: DateTime.now(),
+        ),
       );
-      _messages.add(userMessage);
-      notifyListeners();
-
-      // Get AI response
-      String aiResponse;
-      try {
-        aiResponse = await _geminiService.getMedicalResponse(message);
-      } catch (e) {
-        aiResponse =
-            "I apologize, but I'm having trouble generating a response right now. Please try again in a moment.";
-        _error = e.toString();
-      }
-
-      // Add AI message
-      final aiMessage = ChatMessage(
-        id: DateTime.now().toString(),
-        content: aiResponse,
-        isBot: true,
-        timestamp: DateTime.now(),
-        imageUrl: null,
-      );
-      _messages.add(aiMessage);
-    } catch (e) {
-      _error = 'Error: $e';
+      return true;
+    } on DioException catch (error) {
+      final data = error.response?.data;
+      final detail = data is Map ? data['detail']?.toString() : null;
+      _error = detail?.isNotEmpty == true
+          ? detail!
+          : 'The clinical assistant is temporarily unavailable.';
+      return false;
+    } catch (_) {
+      _error = 'The clinical assistant is temporarily unavailable.';
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -58,6 +69,7 @@ class ChatViewModel extends ChangeNotifier {
 
   void clearMessages() {
     _messages.clear();
+    _error = '';
     notifyListeners();
   }
 }

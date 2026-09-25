@@ -1,392 +1,250 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:io';
-import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
-import 'package:http_parser/http_parser.dart';
-import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_email_sender/flutter_email_sender.dart';
+
 import '../models/medicament.dart';
 import '../models/ordonnance.dart';
+import '../utils/DioClient.dart';
 
 class ApiService {
-  static const String openFdaBaseUrl = 'https://api.fda.gov/drug';
-  // Mise à jour de la clé API FDA
-  static const String apiKey = '4DpshbRmBvQ4k0hg27yZT2zEEFvYVHbqa8WHlhan';
-  static const String _apiUrl = Config.apiBaseUrl;
-  final Dio dio = DioHttpClient().dio;
+  ApiService({Dio? dio})
+      : dio = dio ?? DioHttpClient().dio,
+        _openFda = Dio(
+          BaseOptions(
+            baseUrl: 'https://api.fda.gov/drug/',
+            connectTimeout: const Duration(seconds: 12),
+            receiveTimeout: const Duration(seconds: 20),
+            headers: const {'Accept': 'application/json'},
+          ),
+        );
+
+  static const String _openFdaApiKey =
+      String.fromEnvironment('OPENFDA_API_KEY');
+
+  final Dio dio;
+  final Dio _openFda;
+
   Future<List<Medicament>> searchMedicaments(String query) async {
+    final value = query.trim();
+    if (value.length < 2) return const [];
+
     try {
-      print("Searching medications with query: $query");
-
-      // Construire la requête avec un OU logique pour le nom et le dosage
-      final searchQuery =
-          'openfda.brand_name:"$query" OR openfda.strength:"$query"';
-
-      final response = await dio.get(
-        '$openFdaBaseUrl/label.json'
-        '?api_key=$apiKey'
-        '&search=$searchQuery'
-        '&limit=20',
+      final response = await _openFda.get<Map<String, dynamic>>(
+        'label.json',
+        queryParameters: {
+          'search':
+              'openfda.brand_name:"$value" OR openfda.generic_name:"$value"',
+          'limit': 20,
+          if (_openFdaApiKey.isNotEmpty) 'api_key': _openFdaApiKey,
+        },
       );
+      final results = response.data?['results'];
+      if (results is! List) return const [];
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.data);
-        if (data['results'] != null) {
-          final results = data['results'] as List;
-          return results.map((item) {
-            final openfda = item['openfda'] ?? {};
+      return results.whereType<Map>().map((item) {
+        final data =
+            item.map((key, value) => MapEntry(key.toString(), value));
+        final openFda = data['openfda'] is Map
+            ? (data['openfda'] as Map).map(
+                (key, value) => MapEntry(key.toString(), value),
+              )
+            : const <String, dynamic>{};
 
-            // Extract more detailed information
-            final brandName = (openfda['brand_name'] as List?)?.first ?? '';
-            final genericName = (openfda['generic_name'] as List?)?.first ?? '';
-            final dosageForm = (openfda['dosage_form'] as List?)?.first ?? '';
-            final strength = (openfda['strength'] as List?)?.first ?? '';
-            final manufacturer =
-                (openfda['manufacturer_name'] as List?)?.first ?? '';
-
-            // Get detailed dosage instructions with fallback
-            String dosageInstructions = '';
-            if (item['dosage_and_administration'] != null) {
-              dosageInstructions = (item['dosage_and_administration'] as List)
-                  .map((instruction) => instruction.toString())
-                  .where((instruction) => instruction.isNotEmpty)
-                  .join('\n');
-            } else if (item['dosage_forms_and_strengths'] != null) {
-              dosageInstructions = (item['dosage_forms_and_strengths'] as List)
-                  .map((instruction) => instruction.toString())
-                  .where((instruction) => instruction.isNotEmpty)
-                  .join('\n');
-            }
-
-            // Get route of administration
-            final route = (openfda['route'] as List?)?.first ?? '';
-
-            // Combine dosage form and strength if available
-            final dosage = [dosageForm, strength]
-                .where((element) => element.isNotEmpty)
-                .join(' ');
-
-            return Medicament(
-              name: brandName,
-              usage: genericName,
-              dosage: dosage,
-              posologie: _formatPosologie(dosageInstructions),
-              laboratoire: manufacturer,
-              route: route,
-              warning: _extractWarnings(item['warnings'] ?? []),
-            );
-          }).toList()
-            ..sort((a, b) => a.name.compareTo(b.name)); // Sort alphabetically
+        String first(dynamic value) {
+          if (value is List && value.isNotEmpty) {
+            return value.first?.toString() ?? '';
+          }
+          return value?.toString() ?? '';
         }
-      }
-    } catch (e) {
-      print('Erreur recherche OpenFDA: $e');
-    }
-    return [];
-  }
 
-  String _formatPosologie(String instructions) {
-    if (instructions.isEmpty) return '';
+        String joined(dynamic value) {
+          if (value is! List) return '';
+          return value
+              .map((entry) => entry.toString().trim())
+              .where((entry) => entry.isNotEmpty)
+              .join('\n');
+        }
 
-    // Clean up and format the instructions
-    return instructions
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .join('\n• ');
-  }
+        final brand = first(openFda['brand_name']);
+        final generic = first(openFda['generic_name']);
+        final dosageForm = first(openFda['dosage_form']);
+        final strength = first(openFda['strength']);
+        final dosage = [dosageForm, strength]
+            .where((entry) => entry.isNotEmpty)
+            .join(' ');
 
-  String _extractWarnings(List<dynamic> warnings) {
-    return warnings
-        .map((w) => w.toString())
-        .where((w) => w.isNotEmpty)
-        .join('\n• ');
-  }
+        final administration = joined(data['dosage_and_administration']);
+        final fallbackAdministration =
+            joined(data['dosage_forms_and_strengths']);
 
-  Future<bool> validateOrdonnance(Ordonnance ordonnance) async {
-    if (ordonnance.patientId.isEmpty || ordonnance.medecinId.isEmpty) {
-      throw Exception('ID patient et ID médecin sont requis');
-    }
-    if (ordonnance.medicaments.isEmpty) {
-      throw Exception('Au moins un médicament est requis');
-    }
-    return true;
-  }
-
-  Future<Map<String, dynamic>> createOrdonnance(Ordonnance ordonnance) async {
-    try {
-      print('\n=== ENVOI DE LA REQUÊTE ===');
-      final url = '$_apiUrl/ordonnances';
-      final body = jsonEncode(ordonnance.toJson());
-
-      print('URL: $url');
-      print('Body: $body');
-
-      final response = await dio
-          .post(
-            url,
-            options: Options(
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-            ),
-            data: body,
-          )
-          .timeout(const Duration(seconds: 30));
-
-      print('\n=== RÉPONSE DU SERVEUR ===');
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.data}');
-
-      if (response.statusCode == 201) {
-        return json.decode(response.data);
-      }
-
-      throw Exception('Erreur HTTP ${response.statusCode}: ${response.data}');
-    } catch (e) {
-      print('\n=== ERREUR DE CRÉATION ===');
-      print('Type: ${e.runtimeType}');
-      print('Message: $e');
-      rethrow;
+        return Medicament(
+          name: brand.isNotEmpty ? brand : generic,
+          usage: generic,
+          dosage: dosage,
+          posologie: administration.isNotEmpty
+              ? administration
+              : fallbackAdministration,
+          laboratoire: first(openFda['manufacturer_name']),
+          route: first(openFda['route']),
+          warning: joined(data['warnings']),
+        );
+      }).where((medication) => medication.name.isNotEmpty).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    } on DioException {
+      return const [];
     }
   }
 
-  Future<List<Ordonnance>> getDoctorOrdonnances(String medecinId) async {
-    final response = await dio.get(
-      '$_apiUrl/ordonnances/doctor/$medecinId',
+  Future<Map<String, dynamic>> createOrdonnance(
+    Ordonnance ordonnance,
+  ) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      'ordonnances',
+      data: ordonnance.toJson(),
     );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.data);
-      return data.map((json) => Ordonnance.fromJson(json)).toList();
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('Prescription API returned no data');
     }
-    throw Exception('Erreur lors de la récupération des ordonnances');
+    return data;
   }
 
-  Future<String> savePdf(
-      String medecinId, String ordonnanceId, Uint8List pdfBytes) async {
-    try {
-      FormData formData = FormData.fromMap({
-        'pdf': MultipartFile.fromBytes(
-          pdfBytes,
-          filename: 'ordonnance.pdf',
-          contentType: MediaType('application', 'pdf'),
-        ),
-        'medecin_id': medecinId,
-        'ordonnance_id': ordonnanceId,
-      });
-
-      final response = await dio.post(
-        '$_apiUrl/pdfs/save',
-        data: formData,
-      );
-
-      if (response.statusCode == 201) {
-        return response.data['filename'];
-      }
-      throw Exception(response.data['error']);
-    } catch (e) {
-      throw Exception('Erreur lors de la sauvegarde du PDF: $e');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getMedecinPdfs(String medecinId) async {
-    final response = await dio.get('$_apiUrl/pdfs/medecin/$medecinId');
-
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(response.data);
-    }
-    throw Exception('Erreur lors de la récupération des PDFs');
-  }
-
-  Future<Uint8List> downloadPdf(String filename) async {
-    final response = await dio.get(
-      '$_apiUrl/pdfs/download/$filename',
-      options: Options(responseType: ResponseType.bytes),
+  Future<List<Ordonnance>> getDoctorOrdonnances(String doctorId) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      'ordonnances',
+      queryParameters: {'doctor_id': doctorId, 'limit': 100},
     );
-
-    if (response.statusCode == 200) {
-      return Uint8List.fromList(response.data);
-    }
-    throw Exception('Erreur lors du téléchargement du PDF');
+    final items = response.data?['items'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => Ordonnance.fromJson(
+            item.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        )
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> getMedecinOrdonnances(
-      String medecinId) async {
-    try {
-      print("Fetching ordonnances for medecin: $medecinId");
-      final response = await dio.get(
-        '$_apiUrl/ordonnances/medecin/$medecinId/ordonnances',
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        ),
-      );
-
-      print("Response status: ${response.statusCode}");
-      print("Response data: ${response.data}");
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        return List<Map<String, dynamic>>.from(data);
-      } else {
-        throw Exception('Erreur HTTP: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("Error in API service: $e");
-      throw Exception('Erreur de connexion: $e');
-    }
+    String doctorId,
+  ) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      'ordonnances',
+      queryParameters: {'doctor_id': doctorId, 'limit': 100},
+    );
+    final items = response.data?['items'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => item.map(
+            (key, value) => MapEntry(key.toString(), value),
+          ),
+        )
+        .toList();
   }
 
-  Future<String> saveOrdonnancePdf(
-      String ordonnanceId, Uint8List pdfBytes) async {
+  Future<Map<String, dynamic>?> getMedecinOrdonnance(
+    String ordonnanceId,
+  ) =>
+      getSingleOrdonnance(ordonnanceId);
+
+  Future<Map<String, dynamic>?> getSingleOrdonnance(
+    String ordonnanceId,
+  ) async {
     try {
-      FormData formData = FormData.fromMap({
-        'pdf': MultipartFile.fromBytes(
-          pdfBytes,
-          filename: 'ordonnance.pdf',
-          contentType: MediaType('application', 'pdf'),
-        ),
-      });
-
-      final response = await dio.post(
-        '$_apiUrl/ordonnances/$ordonnanceId/pdf',
-        data: formData,
+      final response = await dio.get<Map<String, dynamic>>(
+        'ordonnances/$ordonnanceId',
       );
-
-      if (response.statusCode == 201) {
-        return response.data['filename'];
-      }
-      throw Exception(response.data['error']);
-    } catch (e) {
-      throw Exception('Erreur lors de la sauvegarde du PDF: $e');
+      return response.data;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 404) return null;
+      rethrow;
     }
   }
 
   Future<Uint8List?> getOrdonnancePdf(String ordonnanceId) async {
     try {
-      final response = await dio.get(
-        '$_apiUrl/ordonnances/$ordonnanceId/pdf',
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          responseType: ResponseType.bytes,
-        ),
+      final response = await dio.get<List<int>>(
+        'generate-pdf/$ordonnanceId',
+        options: Options(responseType: ResponseType.bytes),
       );
-
-      if (response.statusCode == 200) {
-        return Uint8List.fromList(response.data);
-      }
-      print("Failed to get PDF: ${response.statusCode}");
-      return null;
-    } catch (e) {
-      print("Error getting PDF: $e");
+      final bytes = response.data;
+      return bytes == null ? null : Uint8List.fromList(bytes);
+    } on DioException {
       return null;
     }
   }
 
-  Future<Map<String, dynamic>?> getMedecinOrdonnance(
-      String ordonnanceId) async {
-    try {
-      print("Fetching ordonnance: $ordonnanceId");
-      final response = await dio.get('$_apiUrl/ordonnances/$ordonnanceId');
+  Future<String> saveOrdonnancePdf(
+    String ordonnanceId,
+    Uint8List pdfBytes,
+  ) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File(
+      '${directory.path}/prescription_$ordonnanceId.pdf',
+    );
+    await file.writeAsBytes(pdfBytes, flush: true);
+    return file.path;
+  }
 
-      if (response.statusCode == 200) {
-        return response.data;
-      }
-      return null;
-    } catch (e) {
-      print('Error getting ordonnance: $e');
-      return null;
+  Future<String> savePdf(
+    String doctorId,
+    String ordonnanceId,
+    Uint8List pdfBytes,
+  ) {
+    return saveOrdonnancePdf(ordonnanceId, pdfBytes);
+  }
+
+  Future<List<Map<String, dynamic>>> getMedecinPdfs(
+    String doctorId,
+  ) async {
+    final prescriptions = await getMedecinOrdonnances(doctorId);
+    return prescriptions
+        .map(
+          (item) => {
+            'ordonnance_id': (item['id'] ?? item['_id'] ?? '').toString(),
+            'patient_id': (item['patient_id'] ?? '').toString(),
+            'date': item['date'],
+            'available': true,
+          },
+        )
+        .toList();
+  }
+
+  Future<Uint8List> downloadPdf(String filename) async {
+    final match = RegExp(r'prescription_(.+)\.pdf$').firstMatch(filename);
+    if (match == null) {
+      throw ArgumentError('Invalid prescription PDF filename');
     }
+    final bytes = await getOrdonnancePdf(match.group(1)!);
+    if (bytes == null) {
+      throw StateError('Prescription PDF is unavailable');
+    }
+    return bytes;
   }
 
   Future<Uint8List?> generatePdfFromData(
-      Map<String, dynamic> ordonnance) async {
+    Map<String, dynamic> ordonnance,
+  ) async {
     try {
-      final response = await dio.post(
-        '$_apiUrl/generate-pdf',
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-          responseType: ResponseType.bytes,
-        ),
-        data: ordonnance,
-      );
-
-      if (response.statusCode == 200) {
-        return Uint8List.fromList(response.data);
-      }
-      return null;
-    } catch (e) {
-      print('Error generating PDF: $e');
+      return await Ordonnance.fromJson(ordonnance).generatePdf();
+    } catch (_) {
       return null;
     }
-  }
-
-  Future<Map<String, dynamic>?> getSingleOrdonnance(String ordonnanceId) async {
-    try {
-      print("Fetching ordonnance: $ordonnanceId");
-      final response = await dio.get('$_apiUrl/ordonnances/$ordonnanceId');
-
-      if (response.statusCode == 200) {
-        return response.data;
-      }
-      print(
-          'Failed to get ordonnance: ${response.statusCode} - ${response.data}');
-      return null;
-    } catch (e) {
-      print('Error getting ordonnance: $e');
-      return null;
-    }
-  }
-
-  bool isValidEmail(String email) {
-    final emailRegExp = RegExp(r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+');
-    return emailRegExp.hasMatch(email);
   }
 
   Future<Map<String, String>> getPatientEmail(String patientId) async {
-    try {
-      final response = await dio.get('$_apiUrl/patients/$patientId/email');
-
-      if (response.statusCode == 200) {
-        return Map<String, String>.from(response.data);
-      }
-      return {};
-    } catch (e) {
-      print('Error getting patient email: $e');
-      return {};
-    }
-  }
-
-  Future<bool> sendOrdonnancePdf(
-      String emailAddress, Uint8List pdfBytes, String patientId) async {
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/ordonnance_$patientId.pdf');
-      await file.writeAsBytes(pdfBytes);
-
-      final email = Email(
-        body: 'Veuillez trouver ci-joint votre ordonnance médicale.',
-        subject: 'Votre ordonnance médicale',
-        recipients: [emailAddress],
-        attachmentPaths: [file.path],
-      );
-
-      await FlutterEmailSender.send(email);
-      await file.delete();
-      return true;
-    } catch (e) {
-      print('Error sending PDF: $e');
-      return false;
-    }
+    final response = await dio.get<Map<String, dynamic>>(
+      'auth/patients/$patientId/contact',
+    );
+    final data = response.data ?? const <String, dynamic>{};
+    return {
+      'email': data['email']?.toString() ?? '',
+      'name': data['name']?.toString() ?? '',
+    };
   }
 }

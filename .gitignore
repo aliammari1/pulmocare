@@ -1,8 +1,13 @@
 node_modules/
 .DS_Store
+
+# Real environment files (secrets) — never commit. Tracked .env.example and
+# the ansible *.j2 jinja templates are explicitly kept below.
 .env
 .env.*
 !.env.example
+!*.env.example
+!.env.*.j2
 build/
 dist/
 coverage/
@@ -34,6 +39,12 @@ MANIFEST
 .venv/
 venv/
 .pytest_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+
+# Docs (mkdocs)
+/site/
 
 # Flutter/Dart
 .dart_tool/
@@ -48,3 +59,11 @@ app-core-*.tgz
 .vscode/
 *.swp
 *.iml
+
+# Internal growth/marketing notes (not for public)
+GROWTH.md
+BANNER.md
+SUBMITTING_TO_AWESOME.md
+launch-kit.md
+star-strategy.md
+modernization-backlog.md

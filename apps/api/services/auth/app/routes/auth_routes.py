@@ -1,3 +1,6 @@
+import json
+import logging
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, status
 
 from middleware.keycloak_auth import get_current_user
@@ -9,6 +12,33 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 # Initialize Keycloak service
 keycloak_service = KeycloakService()
+logger = logging.getLogger(__name__)
+
+
+def _realm_roles(user_info: dict) -> list[str]:
+    return [str(role) for role in user_info.get("realm_access", {}).get("roles", [])]
+
+
+def _primary_role(user_info: dict) -> Role | None:
+    roles = set(_realm_roles(user_info))
+    for role in (Role.ADMIN, Role.DOCTOR, Role.RADIOLOGIST, Role.PATIENT):
+        if role.value in roles:
+            return role
+    return None
+
+
+def _split_name(name: str) -> tuple[str, str]:
+    parts = name.strip().split()
+    if not parts:
+        return "", ""
+    return parts[0], " ".join(parts[1:])
+
+
+def _first_keycloak_attribute(attributes: dict, name: str) -> str:
+    value = attributes.get(name)
+    if isinstance(value, list):
+        return str(value[0]) if value else ""
+    return str(value) if value is not None else ""
 
 
 @router.post(
@@ -22,16 +52,12 @@ keycloak_service = KeycloakService()
 )
 async def login(request: LoginRequest):
     try:
-        # Log the login attempt (without password)
-        print(f"Login attempt for user: {request.email}")
-
         try:
             # Use KeycloakService for login
             result = keycloak_service.login(request.email, request.password)
-            print(f"Login successful for user: {request.email}")
             return result
-        except Exception as e:
-            print(f"Keycloak login failed: {e!s}")
+        except Exception:
+            logger.info("Login rejected by identity provider")
 
             # Provide user-friendly error message
             raise HTTPException(
@@ -42,7 +68,7 @@ async def login(request: LoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Login error: {e!s}", exc_info=True)
+        logger.exception("Unexpected login failure")
         raise HTTPException(status_code=500, detail=f"Authentication failed: {e!s}")
 
 
@@ -51,12 +77,10 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
     """Verify JWT token and return user information"""
     try:
         token = request.token
-        print(f"Verifying token: {token[:15]}...")
 
         try:
             # Verify token and get payload
             payload = keycloak_service.verify_token(token)
-            print(f"Decoded token info: {payload}")
 
             # Get all realm roles from the token
             all_realm_roles = payload.get("realm_access", {}).get("roles", [])
@@ -86,17 +110,19 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
                         break
 
             user_data["primary_role"] = primary_role
-            print(f"Token verified for user: {user_data['email']}, role: {primary_role}")
             return user_data
 
         except Exception as e:
             error_msg = str(e).lower()
-            print(f"Token verification failed: {e!s}")
+            logger.info("Token verification rejected")
             return {"valid": False, "error": error_msg}
 
     except Exception as e:
-        print(f"Token verification error: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Verification failed: {e!s}")
+        logger.exception("Unexpected token verification failure")
+        raise HTTPException(
+            status_code=500,
+            detail="Token verification failed",
+        ) from e
 
 
 @router.post(
@@ -114,8 +140,8 @@ async def refresh_token(request: RefreshTokenRequest):
         result = keycloak_service.refresh_token(request.refresh_token)
         return result
 
-    except Exception as e:
-        print(f"Token refresh error: {e!s}")
+    except Exception:
+        logger.info("Token refresh failed")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
@@ -131,53 +157,54 @@ async def refresh_token(request: RefreshTokenRequest):
 )
 async def register(request: RegisterRequest):
     try:
-        print(f"Registering user: {request}")
+        # Public registration is patient-only. Provider/admin roles and verification
+        # are provisioned through an authenticated administrative workflow.
+        if request.role not in (None, Role.PATIENT):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Clinical staff accounts must be provisioned by an administrator",
+            )
+        if request.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification cannot be self-assigned during registration",
+            )
 
-        # Log registration attempt
-        print(f"Registration attempt for user: {request.email}")
-
-        # Prepare user data for registration
+        # Only patient-facing fields are accepted by public registration.
+        # Provider credentials/verification are provisioned through admin flows.
+        first_name, last_name = _split_name(request.name)
         user_data = {
             "email": request.email,
             "username": request.username or request.email,
             "password": request.password,
-            "firstName": (request.name if request.name else ""),
-            "lastName": (request.name if request.name else ""),
-            "phone": (request.phone if request.phone else ""),
-            "specialty": request.specialty if request.specialty else "",
-            "address": request.address if request.address else "",
-            "role": request.role if request.role else "patient",
-            "bio": request.bio if request.bio else "",
-            "license_number": request.license_number if request.license_number else "",
-            "hospital": request.hospital if request.hospital else "",
-            "education": request.education if request.education else "",
-            "experience": request.experience if request.experience else "",
-            "signature": request.signature if request.signature else "",
-            "is_verified": (str(request.is_verified).lower() if request.is_verified is not None else "false"),
-            "verification_details": (request.verification_details if request.verification_details else None),
-            # Add new patient fields - handle both frontend and backend field naming
-            "date_of_birth": request.date_of_birth or request.date_of_birth if hasattr(request, "date_of_birth") else "",
-            "blood_type": request.blood_type or request.blood_type if hasattr(request, "blood_type") else "",
-            "social_security_number": (request.social_security_number if request.social_security_number else ""),
-            "medical_history": (
-                request.medical_history
-                if request.medical_history
-                else (
-                    [request.medical_history]
-                    if hasattr(request, "medical_history") and isinstance(request.medical_history, str)
-                    else (request.medical_history if hasattr(request, "medical_history") else [])
-                )
-            ),
-            "allergies": request.allergies if request.allergies else [],
-            "height": str(request.height or request.height) if hasattr(request, "height") and request.height is not None else "",
-            "weight": str(request.weight or request.weight) if hasattr(request, "weight") and request.weight is not None else "",
-            "medical_files": request.medical_files if hasattr(request, "medical_files") and request.medical_files else [],
+            "firstName": first_name,
+            "lastName": last_name,
+            "phone": request.phone or "",
+            "address": request.address or "",
+            "role": Role.PATIENT.value,
+            "specialty": "",
+            "bio": "",
+            "license_number": "",
+            "hospital": "",
+            "education": "",
+            "experience": "",
+            "signature": "",
+            "is_verified": "false",
+            "verification_details": None,
+            "date_of_birth": request.date_of_birth or "",
+            "blood_type": request.blood_type or "",
+            "social_security_number": request.social_security_number or "",
+            "medical_history": request.medical_history or [],
+            "allergies": request.allergies or [],
+            "height": "" if request.height is None else str(request.height),
+            "weight": "" if request.weight is None else str(request.weight),
+            "medical_files": request.medical_files or [],
         }
 
         try:
             # Use KeycloakService for user registration
             user_id = keycloak_service.register(user_data)
-            print(f"User created successfully in Keycloak: {user_data['username']}")
+            logger.info("User account created in identity provider")
 
             # Try auto-login after registration
             try:
@@ -191,8 +218,8 @@ async def register(request: RegisterRequest):
                     "refresh_token": login_result["refresh_token"],
                     "expires_in": login_result["expires_in"],
                 }
-            except Exception as e:
-                print(f"Auto-login after registration failed: {e!s}")
+            except Exception:
+                logger.info("Automatic login after registration failed")
                 # Still return success without tokens
                 return {"message": "User registered successfully", "user_id": user_id}
 
@@ -202,19 +229,26 @@ async def register(request: RegisterRequest):
             if "409" in error_message or "conflict" in error_message or "already exists" in error_message:
                 raise HTTPException(status_code=409, detail="Email already registered")
             elif "403" in error_message or "permission" in error_message:
-                print("Permission denied. Check Keycloak client permissions.")
+                logger.error("Identity provider denied registration operation")
                 raise HTTPException(
                     status_code=500,
                     detail="User registration failed: Insufficient permissions. Contact the administrator.",
                 )
             else:
-                raise HTTPException(status_code=500, detail=f"User registration failed: {error_message}")
+                logger.exception("Identity provider failed to create user")
+                raise HTTPException(
+                    status_code=500,
+                    detail="User registration failed",
+                ) from e
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Registration error: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Registration failed: {e!s}")
+        logger.exception("Unexpected registration failure")
+        raise HTTPException(
+            status_code=500,
+            detail="Registration failed",
+        ) from e
 
 
 @router.post(
@@ -225,37 +259,32 @@ async def register(request: RegisterRequest):
 async def logout(request: LogoutRequest | None = None, authorization: str = Header(None)):
     try:
         # Log the logout attempt
-        print("Logout attempt received")
         refresh_token = None
 
         # Try to get refresh token from request body
         if request and hasattr(request, "refresh_token") and request.refresh_token:
             refresh_token = request.refresh_token
-            print(f"Logout with refresh token from body: {refresh_token[:10]}...")
         # If no refresh token in body, try to extract from Authorization header
         elif authorization:
             token = authorization.replace("Bearer ", "")
-            print(f"Trying to logout with token from header: {token[:10]}...")
             try:
                 # Attempt to use the access token to help with logout
                 keycloak_service.logout_from_access_token(token)
-                print("Logout from access token successful")
-            except Exception as e:
-                print(f"Logout from access token failed: {e!s}")
+            except Exception:
+                logger.info("Access-token logout was not completed")
 
         # Use KeycloakService for logout if we have a refresh token
         if refresh_token:
             try:
                 keycloak_service.logout(refresh_token)
-                print("Logout with refresh token successful")
-            except Exception as e:
-                print(f"Keycloak logout operation with refresh token failed: {e!s}")
+            except Exception:
+                logger.info("Refresh-token logout was not completed")
 
         # Always return success to client regardless of backend result
         return {"message": "Logged out successfully"}
 
-    except Exception as e:
-        print(f"Logout error: {e!s}")
+    except Exception:
+        logger.exception("Unexpected logout failure")
         # Return success even if we couldn't process the request properly
         # This is to ensure the client can continue with their logout flow
         return {"message": "Logged out successfully"}
@@ -271,8 +300,8 @@ async def forgot_password(request: ForgotPasswordRequest):
         # Use KeycloakService for password reset
         keycloak_service.request_password_reset(request.email)
         return {"message": "Password reset email sent successfully"}
-    except Exception as e:
-        print(f"Password reset error: {e!s}")
+    except Exception:
+        logger.info("Password-reset request was not completed")
         # For security, always return the same message regardless of outcome
         return {"message": "If your email is registered, you will receive a password reset link"}
 
@@ -287,11 +316,9 @@ async def forgot_password(request: ForgotPasswordRequest):
 )
 async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_current_user)):
     try:
-        print(f"Getting user info for user_id: {user_id}")
         # Check if requesting own info or has admin role
         if user_id != user_info.get("sub") and "admin" not in user_info.get("realm_access", {}).get("roles", []):
             raise HTTPException(status_code=403, detail="Unauthorized")
-
         # Use KeycloakService to get user information
         user_data = keycloak_service.get_user_info_by_id(user_id)
 
@@ -307,8 +334,8 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
             # This would require implementing a method in KeycloakService to get user roles
             # For now, we'll use the roles from the token
             user_data["roles"] = user_info.get("realm_access", {}).get("roles", [])
-        except Exception as e:
-            print(f"Failed to get user roles: {e!s}")
+        except Exception:
+            logger.info("Unable to read user roles from identity provider")
             user_data["roles"] = []
 
         return user_data
@@ -316,7 +343,7 @@ async def get_user(user_id: str = Path(...), user_info: dict = Depends(get_curre
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Get user error: {e!s}")
+        logger.exception("Unable to retrieve user profile")
         raise HTTPException(status_code=500, detail=f"Failed to get user info: {e!s}")
 
 
@@ -334,85 +361,248 @@ async def get_users_by_role(
     max: int = Query(10, ge=1, le=100),
     user_info: dict = Depends(get_current_user),
 ):
-    """
-    Get users filtered by role with pagination
+    """List users for authenticated clinical staff.
 
-    Args:
-        role: Optional role filter (e.g., 'doctor', 'patient')
-        first: Pagination offset
-        max: Maximum number of users to return
+    Raw Keycloak credential/access metadata is never returned. Patient accounts
+    may not enumerate other users.
     """
+    requester_roles = user_info.get("realm_access", {}).get("roles", [])
+    if not any(allowed in requester_roles for allowed in (Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinical staff role required",
+        )
+
     try:
-        print(f"Getting users with role: {role}, first: {first}, max: {max}")
+        if role:
+            role_name = role.value
+            users = keycloak_service.keycloak_admin.get_users({})
+            filtered_users = []
 
-        # If no role filter, just return all users with pagination
-        if not role:
-            print("No role specified, getting all users")
-            return keycloak_service.keycloak_admin.get_users({"first": first, "max": max})
-
-        role_name = role
-
-        print(f"Normalized role name: {role_name}")
-
-        # Get all users to check their roles (we'll apply pagination later)
-        all_users = keycloak_service.keycloak_admin.get_users({})
-        print(f"Total users found: {len(all_users)}")
-
-        # Filter users by role (check both realm roles and attributes)
-        filtered_users = []
-
-        for user in all_users:
-            user_id = user.get("id")
-            username = user.get("username")
-            has_role = False
-
-            # APPROACH 1: Check realm roles
-            try:
-                user_realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
-                realm_role_names = [r.get("name") for r in user_realm_roles]
-                print(f"User {username} realm roles: {realm_role_names}")
-
-                if role_name in realm_role_names:
-                    print(f"User {username} has {role_name} in realm roles")
-                    has_role = True
-
-            except Exception as e:
-                print(f"Error getting realm roles for user {username}: {e!s}")
-
-            # APPROACH 2: Check user attributes if realm role check didn't find a match
-            if not has_role:
+            for user in users:
+                user_id = user.get("id")
+                has_role = False
                 try:
+                    realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
+                    has_role = role_name in {item.get("name") for item in realm_roles}
+                except Exception:
+                    logger.debug("Falling back to legacy role attribute")
+
+                if not has_role:
+                    # Fall back to the explicit role attribute for older accounts.
                     attributes = user.get("attributes", {})
-                    print(f"User {username} attributes: {attributes}")
+                    attribute_role = attributes.get("role")
+                    if isinstance(attribute_role, list):
+                        attribute_role = attribute_role[0] if attribute_role else None
+                    has_role = attribute_role == role_name
 
-                    if attributes and "role" in attributes:
-                        attr_role = attributes["role"]
-                        # Handle both string and list values
-                        if isinstance(attr_role, list) and attr_role:
-                            attr_role = attr_role[0]
+                if has_role:
+                    filtered_users.append(user)
 
-                        # Compare with both formats of the role name
-                        if attr_role == role_name or attr_role == role:
-                            print(f"User {username} has {role_name} in attributes")
-                            has_role = True
+            users = filtered_users[first : first + max]
+        else:
+            users = keycloak_service.keycloak_admin.get_users({"first": first, "max": max})
 
-                except Exception as e:
-                    print(f"Error checking attributes for user {username}: {e!s}")
+        def _safe_directory_attributes(user: dict) -> dict:
+            attributes = user.get("attributes", {}) or {}
+            safe_attributes = {}
+            for key in ("phone",):
+                value = attributes.get(key)
+                if value is not None:
+                    safe_attributes[key] = value
+            return safe_attributes
 
-            # Add user to filtered list if either check passed
-            if has_role:
-                filtered_users.append(user)
+        return [
+            {
+                "id": user.get("id"),
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "firstName": user.get("firstName"),
+                "lastName": user.get("lastName"),
+                "enabled": user.get("enabled", True),
+                "attributes": _safe_directory_attributes(user),
+            }
+            for user in users
+        ]
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unable to retrieve user directory")
+        raise HTTPException(status_code=500, detail="Failed to retrieve users")
 
-        print(f"Found {len(filtered_users)} users with role {role_name}")
 
-        # Apply pagination to filtered results
-        start_idx = first
-        end_idx = min(first + max, len(filtered_users))
-        return filtered_users[start_idx:end_idx]
+@router.get("/patients/{patient_id}/contact")
+async def get_patient_contact(
+    patient_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return minimal patient contact data to authenticated clinical staff."""
+    requester_roles = set(_realm_roles(user_info))
+    if requester_roles.isdisjoint({Role.DOCTOR.value, Role.RADIOLOGIST.value, Role.ADMIN.value}):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinical staff role required",
+        )
 
-    except Exception as e:
-        print(f"Get users error: {e!s}")
-        raise HTTPException(status_code=500, detail=f"Failed to get users: {e!s}")
+    try:
+        patient = keycloak_service.get_user_info_by_id(patient_id)
+        patient_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(patient_id)
+        if Role.PATIENT.value not in {role.get("name") for role in patient_roles}:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Patient not found",
+            )
+
+        return {
+            "email": patient.get("email") or "",
+            "name": " ".join(
+                part
+                for part in (
+                    str(patient.get("firstName") or "").strip(),
+                    str(patient.get("lastName") or "").strip(),
+                )
+                if part
+            ).strip(),
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found",
+        )
+
+
+@router.get("/providers/{provider_id}")
+async def get_provider_directory_entry(
+    provider_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return one minimal provider-directory entry to an authenticated user."""
+    del user_info
+    try:
+        user = keycloak_service.keycloak_admin.get_user(provider_id)
+        if not user or not user.get("enabled", True):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Provider not found",
+            )
+
+        realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(provider_id)
+        roles = {item.get("name") for item in realm_roles}
+        if Role.DOCTOR.value in roles:
+            provider_role = Role.DOCTOR.value
+        elif Role.RADIOLOGIST.value in roles:
+            provider_role = Role.RADIOLOGIST.value
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Provider not found",
+            )
+
+        attributes = user.get("attributes", {}) or {}
+        display_name = " ".join(
+            part
+            for part in (
+                str(user.get("firstName") or "").strip(),
+                str(user.get("lastName") or "").strip(),
+            )
+            if part
+        ).strip()
+        if not display_name:
+            display_name = str(user.get("username") or "Clinical provider")
+
+        return {
+            "id": provider_id,
+            "name": display_name,
+            "provider_type": provider_role,
+            "specialty": _first_keycloak_attribute(attributes, "specialty"),
+            "hospital": _first_keycloak_attribute(attributes, "hospital"),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.info("Provider directory lookup failed")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Provider not found",
+        ) from exc
+
+
+@router.get("/providers")
+async def get_provider_directory(
+    provider_type: Role | None = None,
+    first: int = Query(0, ge=0),
+    max: int = Query(50, ge=1, le=100),
+    user_info: dict = Depends(get_current_user),
+):
+    """Return a minimal authenticated directory of clinical providers."""
+    del user_info
+
+    if provider_type not in (None, Role.DOCTOR, Role.RADIOLOGIST):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="provider_type must be doctor or radiologist",
+        )
+
+    requested_roles = (
+        {provider_type.value} if provider_type is not None else {Role.DOCTOR.value, Role.RADIOLOGIST.value}
+    )
+
+    try:
+        users = keycloak_service.keycloak_admin.get_users({})
+        providers = []
+        for user in users:
+            user_id = user.get("id")
+            if not user_id or not user.get("enabled", True):
+                continue
+
+            try:
+                realm_roles = keycloak_service.keycloak_admin.get_realm_roles_of_user(user_id)
+                roles = {item.get("name") for item in realm_roles}
+            except Exception:
+                roles = set()
+                attribute_role = (user.get("attributes", {}) or {}).get("role")
+                if isinstance(attribute_role, list):
+                    roles.update(str(value) for value in attribute_role)
+                elif attribute_role:
+                    roles.add(str(attribute_role))
+
+            matched_roles = requested_roles & roles
+            if not matched_roles:
+                continue
+
+            provider_role = Role.DOCTOR.value if Role.DOCTOR.value in matched_roles else Role.RADIOLOGIST.value
+            attributes = user.get("attributes", {}) or {}
+
+            display_name = " ".join(
+                part
+                for part in (
+                    str(user.get("firstName") or "").strip(),
+                    str(user.get("lastName") or "").strip(),
+                )
+                if part
+            ).strip()
+            if not display_name:
+                display_name = str(user.get("username") or "Clinical provider")
+
+            providers.append(
+                {
+                    "id": user_id,
+                    "name": display_name,
+                    "provider_type": provider_role,
+                    "specialty": _first_keycloak_attribute(attributes, "specialty"),
+                    "hospital": _first_keycloak_attribute(attributes, "hospital"),
+                }
+            )
+
+        providers.sort(key=lambda item: item["name"].lower())
+        return providers[first : first + max]
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve provider directory",
+        )
 
 
 @router.get(
@@ -434,8 +624,6 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
         user_id = user_info.get("user_id")
         if not user_id:
             raise HTTPException(status_code=404, detail="User ID not found in token")
-
-        print(f"Getting profile for user: {user_id}")
 
         # Use KeycloakService to get user information
         user_data = keycloak_service.get_user_info_by_id(user_id)
@@ -464,16 +652,187 @@ async def get_profile(user_info: dict = Depends(get_current_user)):
         # Replace attributes with formatted version
         user_data["attributes"] = formatted_attributes
 
-        # Add roles information
-        user_data["roles"] = user_info.get("roles", [])
-
-        # Add role information
-        user_data["role"] = user_info.get("primary_role")
+        # Add normalized role information from the verified JWT.
+        user_data["roles"] = _realm_roles(user_info)
+        primary_role = _primary_role(user_info)
+        user_data["role"] = primary_role.value if primary_role else None
 
         return user_data
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Get profile error: {e!s}")
+        logger.exception("Unable to retrieve authenticated profile")
         raise HTTPException(status_code=500, detail=f"Failed to get profile: {e!s}")
+
+
+@router.put("/profile", response_model=MessageResponse)
+async def update_profile(
+    request: ProfileUpdateRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
+
+    update_data: dict[str, object] = {}
+    if request.name is not None:
+        first_name, last_name = _split_name(request.name)
+        update_data["firstName"] = first_name
+        update_data["lastName"] = last_name
+    if request.phone is not None:
+        update_data["phone"] = request.phone.strip()
+    if request.address is not None:
+        update_data["address"] = request.address.strip()
+    if request.profile_image is not None:
+        update_data["profile_image"] = request.profile_image
+
+    role = _primary_role(user_info)
+    if request.specialty is not None:
+        if role not in (Role.DOCTOR, Role.RADIOLOGIST, Role.ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only clinical staff can set a specialty",
+            )
+        update_data["specialty"] = request.specialty.strip()
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No profile changes supplied")
+
+    try:
+        keycloak_service.update_user(user_id, update_data)
+        return {"message": "Profile updated successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+
+@router.put("/profile/signature", response_model=MessageResponse)
+async def update_signature(
+    request: SignatureUpdateRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    role = _primary_role(user_info)
+    if role not in (Role.DOCTOR, Role.RADIOLOGIST, Role.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A clinical staff role is required to store a signature",
+        )
+
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
+
+    try:
+        keycloak_service.update_user(user_id, {"signature": request.signature})
+        return {"message": "Signature updated successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update signature")
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    request: ChangePasswordRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    user_id = user_info.get("user_id")
+    email = user_info.get("email") or user_info.get("preferred_username")
+    if not user_id or not email:
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user identity is incomplete",
+        )
+    if request.current_password == request.new_password:
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be different from the current password",
+        )
+
+    try:
+        keycloak_service.change_password(
+            user_id,
+            email,
+            request.current_password,
+            request.new_password,
+        )
+        return {"message": "Password updated successfully"}
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect or the new password was rejected",
+        )
+
+
+@router.post("/profile/verification", response_model=MessageResponse)
+async def submit_verification(
+    request: VerificationRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    role = _primary_role(user_info)
+    if role not in (Role.DOCTOR, Role.RADIOLOGIST):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only clinical staff accounts can submit verification documents",
+        )
+
+    user_id = user_info.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
+
+    details = {
+        "status": "pending",
+        "document_bucket": request.document_bucket,
+        "document_object_name": request.document_object_name,
+    }
+    try:
+        keycloak_service.update_user(
+            user_id,
+            {
+                "is_verified": False,
+                "verification_details": json.dumps(details),
+            },
+        )
+        return {"message": "Verification document submitted for review"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to submit verification")
+
+
+@router.post("/users/{user_id}/verification", response_model=MessageResponse)
+async def decide_verification(
+    request: VerificationDecisionRequest,
+    user_id: str = Path(...),
+    user_info: dict = Depends(get_current_user),
+):
+    if Role.ADMIN.value not in _realm_roles(user_info):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator role required",
+        )
+
+    details = {
+        "status": "approved" if request.approved else "rejected",
+        "review_note": request.note or "",
+        "reviewed_by": user_info.get("user_id"),
+    }
+    try:
+        keycloak_service.update_user(
+            user_id,
+            {
+                "is_verified": request.approved,
+                "verification_details": json.dumps(details),
+            },
+        )
+        return {"message": ("Provider verification approved" if request.approved else "Provider verification rejected")}
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update verification status",
+        )

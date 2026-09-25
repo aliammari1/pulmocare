@@ -153,7 +153,7 @@ class Ordonnance:
     def to_pydantic(self) -> OrdonnanceInDB:
         """Convert to Pydantic model for API responses"""
         return OrdonnanceInDB(
-            _id=str(self._id),
+            id=str(self._id),
             doctor_id=self.doctor_id,
             patient_id=self.patient_id,
             patient_name=self.patient_name,

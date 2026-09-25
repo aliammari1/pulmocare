@@ -10,11 +10,11 @@ import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
-from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
 from consumer import AppointmentConsumer
+from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from routes.appointments import router as appointments_router
 from routes.integration import router as integration_router
 from routes.scheduling import router as scheduling_router
@@ -143,4 +143,3 @@ if __name__ == "__main__":
         log_level="debug" if config.debug else "info",
         reload=config.is_development,
     )
-

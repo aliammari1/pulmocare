@@ -48,10 +48,12 @@ class BackupService {
       final data = reports.map((report) => _reportToJson(report)).toList();
       await file.writeAsString(jsonEncode(data));
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Medical Reports Backup',
-        subject: 'MediScribe Reports Export',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          text: 'Medical Reports Backup',
+          subject: 'PulmoCare Reports Export',
+        ),
       );
     } catch (e) {
       throw Exception('Failed to export reports: $e');

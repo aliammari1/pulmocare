@@ -166,10 +166,20 @@ class Patient:
             _id=user_data.get("id"),
             name=name,
             email=user_data.get("email", ""),
-            phone=(attributes.get("phone", [""])[0] if isinstance(attributes.get("phone", []), list) and attributes.get("phone", []) else attributes.get("phone", "")),
-            address=(attributes.get("address", [""])[0] if isinstance(attributes.get("address", []), list) and attributes.get("address", []) else attributes.get("address", "")),
+            phone=(
+                attributes.get("phone", [""])[0]
+                if isinstance(attributes.get("phone", []), list) and attributes.get("phone", [])
+                else attributes.get("phone", "")
+            ),
+            address=(
+                attributes.get("address", [""])[0]
+                if isinstance(attributes.get("address", []), list) and attributes.get("address", [])
+                else attributes.get("address", "")
+            ),
             date_of_birth=(
-                attributes.get("date_of_birth", [""])[0] if isinstance(attributes.get("date_of_birth", []), list) and attributes.get("date_of_birth", []) else attributes.get("date_of_birth", "")
+                attributes.get("date_of_birth", [""])[0]
+                if isinstance(attributes.get("date_of_birth", []), list) and attributes.get("date_of_birth", [])
+                else attributes.get("date_of_birth", "")
             ),
         )
 

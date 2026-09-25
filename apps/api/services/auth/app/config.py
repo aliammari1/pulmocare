@@ -8,7 +8,6 @@ from pydantic import Field
 
 from pulmocare_shared.config import BaseConfig, load_env_file
 
-
 # Load environment-specific .env file
 load_env_file()
 

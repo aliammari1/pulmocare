@@ -36,6 +36,7 @@ plugins:
   - key-auth
   - basic-auth
   - limit-req
+  - limit-count
   - file-logger
 
 plugin_attr:

@@ -6,16 +6,17 @@ Handles medical file uploads, storage, and streaming with MinIO.
 
 import asyncio
 import base64
+import json
 import os
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
-from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
 from models.file_models import FileListResponse, FileMetadata, FileResponse
+from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from services.auth_service import get_current_user
 from services.minio_service import MinioService
 
@@ -44,6 +45,18 @@ app.include_router(health_router)
 
 minio_service = MinioService()
 
+ALLOWED_BUCKETS = {
+    "medicalimages",
+    "radiologyimages",
+    "patientdocuments",
+}
+
+
+def _require_bucket(bucket: str) -> str:
+    if bucket not in ALLOWED_BUCKETS:
+        raise HTTPException(status_code=400, detail="Unsupported storage bucket")
+    return bucket
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -68,18 +81,27 @@ async def upload_file(
     try:
         logger.info(f"Uploading file {file.filename} to bucket {bucket}")
 
-        if metadata is None:
-            metadata = {}
+        _require_bucket(bucket)
 
-        # Add user info to metadata
-        metadata["uploaded_by"] = user_info.get("user_id")
-        metadata["user_role"] = ",".join(user_info.get("roles", []))
+        parsed_metadata: dict = {}
+        if metadata:
+            try:
+                decoded = json.loads(metadata)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="metadata must be valid JSON")
+            if not isinstance(decoded, dict):
+                raise HTTPException(status_code=400, detail="metadata must be a JSON object")
+            parsed_metadata = decoded
+
+        # Add authenticated ownership information server-side.
+        parsed_metadata["uploaded_by"] = user_info.get("user_id")
+        parsed_metadata["user_role"] = ",".join(user_info.get("roles", []))
 
         result = await minio_service.upload_file(
             bucket_name=bucket,
             file_object=file,
             folder_path=folder,
-            metadata=metadata,
+            metadata=parsed_metadata,
         )
 
         logger.info(f"Successfully uploaded file {file.filename}")
@@ -99,6 +121,7 @@ async def get_file_info(
     Get information about a specific file including a download URL
     """
     try:
+        _require_bucket(bucket)
         logger.info(f"Getting file info for {object_path} from bucket {bucket}")
         file_info = await minio_service.get_file_info(bucket, object_path)
 
@@ -125,6 +148,7 @@ async def list_files(
     List files and folders in a bucket with optional prefix filtering, including download URLs
     """
     try:
+        _require_bucket(bucket)
         logger.info(f"Listing files in bucket {bucket} with prefix {prefix}")
         result = await minio_service.list_files(bucket, prefix, limit, recursive=recursive, marker=marker)
 
@@ -157,6 +181,7 @@ async def delete_file(
     Delete a file from storage
     """
     try:
+        _require_bucket(bucket)
         logger.info(f"Deleting file {object_path} from bucket {bucket}")
 
         # Check if user has admin role

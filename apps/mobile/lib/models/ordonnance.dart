@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,10 @@ class Ordonnance {
   String? id; // Changed from final to allow updating
   final String patientId;
   final String medecinId;
+  final String patientName;
+  final String doctorName;
+  final String diagnosis;
+  final String instructions;
   final String clinique;
   final String specialite;
   final DateTime date;
@@ -20,8 +25,12 @@ class Ordonnance {
     this.id,
     required this.patientId,
     required this.medecinId,
-    this.clinique = '', // Default value
-    this.specialite = '', // Default value
+    this.patientName = '',
+    this.doctorName = '',
+    this.diagnosis = '',
+    this.instructions = '',
+    this.clinique = '',
+    this.specialite = '',
     required this.date,
     required this.medicaments,
     this.signature,
@@ -31,31 +40,75 @@ class Ordonnance {
   Map<String, dynamic> toJson() {
     return {
       'patient_id': patientId,
-      'medecin_id': medecinId,
-      'medicaments': medicaments
-          .map((m) => {
-                'name': m.name,
-                'dosage': m.dosage ?? '',
-                'posologie': m.posologie ?? '',
-                'laboratoire': m.laboratoire ?? '',
-              })
+      'patient_name': patientName,
+      'doctor_name': doctorName,
+      'medications': medicaments
+          .map(
+            (medication) => {
+              'name': medication.name,
+              'dosage': medication.dosage ?? '',
+              'frequency': medication.posologie?.trim().isNotEmpty == true
+                  ? medication.posologie!.trim()
+                  : 'As directed',
+              'duration': null,
+            },
+          )
           .toList(),
-      'clinique': clinique,
-      'specialite': specialite,
-      'date': date.toIso8601String(),
+      'instructions': instructions,
+      'diagnosis': diagnosis,
+      if (signature != null)
+        'signature': 'data:image/png;base64,${base64Encode(signature!)}',
     };
   }
 
   factory Ordonnance.fromJson(Map<String, dynamic> json) {
+    final rawMedications =
+        (json['medications'] ?? json['medicaments']) as List? ?? const [];
+    Uint8List? signatureBytes;
+    final signatureValue = json['signature']?.toString();
+    if (signatureValue != null && signatureValue.isNotEmpty) {
+      try {
+        final encoded = signatureValue.contains(',')
+            ? signatureValue.substring(signatureValue.indexOf(',') + 1)
+            : signatureValue;
+        signatureBytes = base64Decode(encoded);
+      } catch (_) {
+        signatureBytes = null;
+      }
+    }
+
     return Ordonnance(
-      patientId: json['patient_id'],
-      medecinId: json['medecin_id'],
-      clinique: json['clinique'] ?? '',
-      specialite: json['specialite'] ?? '',
-      date: DateTime.parse(json['date']),
-      medicaments: (json['medicaments'] as List)
-          .map((m) => Medicament.fromJson(m))
+      id: (json['id'] ?? json['_id'])?.toString(),
+      patientId: (json['patient_id'] ?? '').toString(),
+      medecinId:
+          (json['doctor_id'] ?? json['medecin_id'] ?? '').toString(),
+      patientName: (json['patient_name'] ?? '').toString(),
+      doctorName: (json['doctor_name'] ?? '').toString(),
+      diagnosis: (json['diagnosis'] ?? '').toString(),
+      instructions: (json['instructions'] ?? '').toString(),
+      clinique: (json['clinique'] ?? '').toString(),
+      specialite: (json['specialite'] ?? '').toString(),
+      date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
+      medicaments: rawMedications
+          .whereType<Map>()
+          .map(
+            (item) {
+              final data =
+                  item.map((key, value) => MapEntry(key.toString(), value));
+              return Medicament(
+                name: (data['name'] ?? '').toString(),
+                dosage: data['dosage']?.toString(),
+                posologie:
+                    (data['frequency'] ?? data['posologie'])?.toString(),
+                usage: data['usage']?.toString(),
+                laboratoire: data['laboratoire']?.toString(),
+                route: data['route']?.toString(),
+                warning: data['warning']?.toString(),
+              );
+            },
+          )
           .toList(),
+      signature: signatureBytes,
     );
   }
 

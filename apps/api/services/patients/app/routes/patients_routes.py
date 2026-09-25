@@ -228,7 +228,9 @@ async def get_patient(patient_id: str, user_info: dict = Depends(get_current_pat
 
         # Only allow if the user is the patient themselves or a healthcare provider
         if patient_id != current_user_id and not is_healthcare_provider(roles):
-            logger_service.error(f"Access denied: user {current_user_id} with roles {roles} attempted to access patient {patient_id}")
+            logger_service.error(
+                f"Access denied: user {current_user_id} with roles {roles} attempted to access patient {patient_id}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to access this patient information",
@@ -287,10 +289,14 @@ async def request_appointment(
         is_healthcare_provider = any(role in roles for role in healthcare_provider_roles)
 
         # Log the appointment creation attempt for debugging
-        logger_service.info(f"Appointment request - User {user_info.get('user_id')} with roles {roles} creating appointment for patient {patient_id} with doctor {doctor_id}")
+        logger_service.info(
+            f"Appointment request - User {user_info.get('user_id')} with roles {roles} creating appointment for patient {patient_id} with doctor {doctor_id}"
+        )
 
         if not is_healthcare_provider and patient_id != user_info.get("user_id"):
-            logger_service.error(f"Unauthorized appointment creation: User {user_info.get('user_id')} with roles {roles} tried to create appointment for patient {patient_id}")
+            logger_service.error(
+                f"Unauthorized appointment creation: User {user_info.get('user_id')} with roles {roles} tried to create appointment for patient {patient_id}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only request appointments for yourself",
@@ -317,7 +323,9 @@ async def request_appointment(
                 requester_role = role
                 break
 
-        logger_service.info(f"Appointment request initiated by {requester_role} (user ID: {user_info.get('user_id')}) for patient {patient_id} with doctor {doctor_id}")
+        logger_service.info(
+            f"Appointment request initiated by {requester_role} (user ID: {user_info.get('user_id')}) for patient {patient_id} with doctor {doctor_id}"
+        )
 
         # Send appointment request via RabbitMQ
         message_published = rabbitmq_client.publish_appointment_request(
@@ -358,7 +366,9 @@ async def request_appointment(
             # Update user attributes in auth service
             await update_user_attributes(patient_id, attributes, token)
 
-            return MessageResponse(message=f"Appointment request sent successfully. Request ID: {appointment_request_id}")
+            return MessageResponse(
+                message=f"Appointment request sent successfully. Request ID: {appointment_request_id}"
+            )
         else:
             raise HTTPException(status_code=500, detail="Failed to send appointment request")
 

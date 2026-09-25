@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Python microservices: lint + format + type-check + tests, per service.
+  # Each service is an independent uv project (most under <svc>/app).
+  # ---------------------------------------------------------------------------
+  python:
+    name: "py: ${{ matrix.service.name }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: shared, dir: apps/api/services/shared }
+          - { name: auth, dir: apps/api/services/auth/app }
+          - { name: patients, dir: apps/api/services/patients/app }
+          - { name: appointments, dir: apps/api/services/appointments/app }
+          - { name: medecins, dir: apps/api/services/medecins/app }
+          - { name: medfiles, dir: apps/api/services/medfiles/app }
+          - { name: ordonnances, dir: apps/api/services/ordonnances/app }
+          - { name: radiologues, dir: apps/api/services/radiologues/app }
+          - { name: reports, dir: apps/api/services/reports/app }
+    defaults:
+      run:
+        working-directory: ${{ matrix.service.dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+        continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
+
+      - name: Ruff format check
+        run: uv run ruff format --check --diff .
+        continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
+
+      - name: Type-check (ty, blocking on typed core)
+        # Auth is the typed core. Reports still has legacy typing errors and is
+        # checked below until those diagnostics are resolved.
+        run: uv run ty check .
+        if: ${{ matrix.service.name == 'auth' }}
+
+      - name: Type-check (ty, best-effort)
+        continue-on-error: true
+        run: uv run ty check . || true
+        if: ${{ matrix.service.name == 'patients' || matrix.service.name == 'shared' || matrix.service.name == 'reports' }}
+
+      - name: Type-check (ty, best-effort without project dependency)
+        continue-on-error: true
+        run: uvx ty check . || true
+        if: ${{ matrix.service.name != 'auth' && matrix.service.name != 'reports' && matrix.service.name != 'patients' && matrix.service.name != 'shared' }}
+
+      - name: Tests
+        # The three services with real test suites enforce a coverage floor
+        # (--cov-fail-under) so coverage is a true gate, not just a report.
+        # The rest report "no tests ran" (exit 5) and stay non-blocking.
+        run: >-
+          uv run pytest --cov --cov-report=xml --cov-report=term-missing
+          ${{ (matrix.service.name == 'auth' || matrix.service.name == 'patients' || matrix.service.name == 'reports') && '--cov-fail-under=40' || '' }}
+        continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: ${{ matrix.service.dir }}/coverage.xml
+          flags: ${{ matrix.service.name }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # MedRAX agent: lint + LangGraph tool-routing tests (mocked, no GPU/weights).
+  # Note: testcontainers / schemathesis / GPU model tests are intentionally NOT
+  # run here.
+  # ---------------------------------------------------------------------------
+  medagent:
+    name: "py: medagent (MedRAX)"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api/services/medagent
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Ruff lint
+        run: uvx ruff check . || true
+      - name: Ruff format check
+        run: uvx ruff format --check . || true
+      # Full MedRAX deps include torch/transformers (heavy + GPU). Install only
+      # the LangGraph plumbing needed to exercise routing.
+      - name: Create routing test environment
+        run: uv venv .venv
+      - name: Install routing test deps
+        run: >-
+          uv pip install --python .venv/bin/python
+          langgraph langchain-core python-dotenv pytest pytest-asyncio
+      - name: Tool-routing tests
+        run: .venv/bin/pytest tests/test_agent_routing.py -q
+
+  # ---------------------------------------------------------------------------
+  # Flutter app: analyze + test.
+  # ---------------------------------------------------------------------------
+  flutter:
+    name: flutter
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze
+        # Keep language/type errors blocking while the legacy UI lint backlog is
+        # repaired incrementally. Warnings remain visible in the job log.
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+      - name: Tests
+        run: flutter test --coverage
+      - name: Android debug build
+        run: flutter build apk --debug
+      - name: Upload Flutter coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/mobile/coverage/lcov.info
+          flags: flutter
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true

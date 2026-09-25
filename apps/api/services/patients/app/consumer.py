@@ -55,7 +55,9 @@ def handle_appointment_response(ch, method, properties, body):
         status = message.get("status")
 
         # Log the appointment response
-        logger_service.info(f"Appointment {appointment_id} for patient {patient_id} with doctor {doctor_id} status: {status}")
+        logger_service.info(
+            f"Appointment {appointment_id} for patient {patient_id} with doctor {doctor_id} status: {status}"
+        )
 
         # Forward the response as a notification to the patient
         rabbitmq_client = RabbitMQClient(Config)

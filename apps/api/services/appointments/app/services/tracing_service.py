@@ -27,7 +27,7 @@ class TracingService:
         """Set up OpenTelemetry tracing"""
         try:
             # Create a resource identifying this service
-            service_name = os.getenv("OTEL_SERVICE_NAME", Config.SERVICE_NAME)
+            service_name = os.getenv("OTEL_SERVICE_NAME", Config.service_name)
             resource = Resource.create({"service.name": service_name})
 
             # Create a tracer provider with the resource
@@ -35,12 +35,12 @@ class TracingService:
             trace.set_tracer_provider(tracer_provider)
 
             # Create an OTLP exporter using config
-            otlp_endpoint = Config.OTEL_EXPORTER_OTLP_ENDPOINT
+            otlp_endpoint = Config.otel_exporter_otlp_endpoint
 
             logger_service.info(f"Configuring OpenTelemetry with endpoint: {otlp_endpoint}")
 
             # Use a shorter timeout in development mode to fail faster
-            timeout = 3 if Config.ENV == "development" else 10
+            timeout = 3 if Config.env == "development" else 10
 
             try:
                 # Create exporter with timeout
@@ -54,12 +54,12 @@ class TracingService:
                 logger_service.warning(f"Failed to configure OTLP exporter: {export_error!s}")
 
                 # In development mode, use console exporter as fallback
-                if Config.ENV == "development":
+                if Config.env == "development":
                     logger_service.info("Using console exporter as fallback in development mode")
                     tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
                 # Disable tracing completely if specified in config
-                if Config.OTEL_DISABLE_ON_ERROR:
+                if Config.otel_disable_on_error:
                     self.enabled = False
                     logger_service.warning("Tracing disabled due to connection error (OTEL_DISABLE_ON_ERROR=True)")
 

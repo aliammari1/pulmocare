@@ -7,6 +7,7 @@ Extends the shared BaseConfig with service-specific settings.
 from functools import lru_cache
 
 from pydantic import Field
+
 from pulmocare_shared import BaseConfig
 
 

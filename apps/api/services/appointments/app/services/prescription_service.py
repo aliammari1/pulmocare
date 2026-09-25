@@ -20,16 +20,16 @@ class PrescriptionService:
         self.cache_service = CacheService()
         self.circuit_breaker = CircuitBreaker(
             name="prescription_service",
-            failure_threshold=self.config.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recovery_timeout=self.config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+            failure_threshold=self.config.circuit_breaker_failure_threshold,
+            recovery_timeout=self.config.circuit_breaker_recovery_timeout,
         )
         self.api_base_url = self._get_service_url()
 
     def _get_service_url(self) -> str:
         """Get the URL for the prescription service from configuration or service discovery"""
         # In development, use the configured URL
-        if self.config.ENV == "development":
-            return f"http://{self.config.ORDONNANCES_SERVICE_HOST}:{self.config.ORDONNANCES_SERVICE_PORT}"
+        if self.config.env == "development":
+            return f"http://{self.config.ordonnances_service_host}:{self.config.ordonnances_service_port}"
 
         # In production, could use service discovery
         # return self._get_service_url_from_consul("ordonnances-service")
@@ -78,7 +78,7 @@ class PrescriptionService:
 
                 logger_service.debug(f"Fetching prescriptions from {url} with params {params}")
 
-                async with session.get(url, params=params, timeout=self.config.REQUEST_TIMEOUT) as response:
+                async with session.get(url, params=params, timeout=self.config.request_timeout) as response:
                     if response.status == 200:
                         # Record successful call
                         self.circuit_breaker.record_success()
@@ -88,7 +88,7 @@ class PrescriptionService:
                         self.cache_service.set(
                             cache_key,
                             json.dumps(prescriptions),
-                            ttl=self.config.CACHE_TTL,
+                            ttl=self.config.cache_ttl,
                         )
 
                         return prescriptions
@@ -139,7 +139,7 @@ class PrescriptionService:
 
                 logger_service.debug(f"Fetching prescription details from {url}")
 
-                async with session.get(url, timeout=self.config.REQUEST_TIMEOUT) as response:
+                async with session.get(url, timeout=self.config.request_timeout) as response:
                     if response.status == 200:
                         # Record successful call
                         self.circuit_breaker.record_success()
@@ -149,13 +149,15 @@ class PrescriptionService:
 
                         # Verify that the prescription belongs to the doctor
                         if prescription.get("doctor_id") != doctor_id:
-                            logger_service.warning(f"Doctor {doctor_id} attempted to access prescription {prescription_id} belonging to doctor {prescription.get('doctor_id')}")
+                            logger_service.warning(
+                                f"Doctor {doctor_id} attempted to access prescription {prescription_id} belonging to doctor {prescription.get('doctor_id')}"
+                            )
                             return None
 
                         self.cache_service.set(
                             cache_key,
                             json.dumps(prescription),
-                            ttl=self.config.CACHE_TTL,
+                            ttl=self.config.cache_ttl,
                         )
 
                         return prescription
@@ -167,7 +169,9 @@ class PrescriptionService:
 
                         # Log the error
                         error_text = await response.text()
-                        logger_service.error(f"Error getting prescription details: HTTP {response.status}, {error_text}")
+                        logger_service.error(
+                            f"Error getting prescription details: HTTP {response.status}, {error_text}"
+                        )
 
                         return None
 
@@ -188,7 +192,9 @@ class PrescriptionService:
         """
         try:
             # Get the original prescription first to verify ownership
-            original_prescription = await self.get_prescription_details(prescription_id=prescription_id, doctor_id=doctor_id)
+            original_prescription = await self.get_prescription_details(
+                prescription_id=prescription_id, doctor_id=doctor_id
+            )
 
             if not original_prescription:
                 logger_service.warning(f"Prescription {prescription_id} not found or not accessible")
@@ -233,7 +239,7 @@ class PrescriptionService:
 
             # Cache the new prescription
             cache_key = f"prescription:{renewal_id}"
-            self.cache_service.set(cache_key, json.dumps(renewed_prescription), ttl=self.config.CACHE_TTL)
+            self.cache_service.set(cache_key, json.dumps(renewed_prescription), ttl=self.config.cache_ttl)
 
             # Invalidate the doctor prescriptions cache
             self.cache_service.delete_pattern(f"doctor_prescriptions:{doctor_id}:*")
@@ -250,7 +256,9 @@ class PrescriptionService:
         """
         try:
             # Get the original prescription first to verify ownership
-            original_prescription = await self.get_prescription_details(prescription_id=prescription_id, doctor_id=doctor_id)
+            original_prescription = await self.get_prescription_details(
+                prescription_id=prescription_id, doctor_id=doctor_id
+            )
 
             if not original_prescription:
                 logger_service.warning(f"Prescription {prescription_id} not found or not accessible")

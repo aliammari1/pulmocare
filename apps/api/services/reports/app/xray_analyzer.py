@@ -91,9 +91,15 @@ class XRayAnalyzer:
         ]
 
         # Determine image quality metrics
-        contrast_quality = "poor" if image_stats["contrast"] < 50 else "good" if image_stats["contrast"] > 100 else "average"
-        sharpness_quality = "poor" if image_stats["sharpness"] < 100 else "good" if image_stats["sharpness"] > 500 else "average"
-        exposure_quality = "underexposed" if image_stats["mean"] < 80 else "overexposed" if image_stats["mean"] > 180 else "good"
+        contrast_quality = (
+            "poor" if image_stats["contrast"] < 50 else "good" if image_stats["contrast"] > 100 else "average"
+        )
+        sharpness_quality = (
+            "poor" if image_stats["sharpness"] < 100 else "good" if image_stats["sharpness"] > 500 else "average"
+        )
+        exposure_quality = (
+            "underexposed" if image_stats["mean"] < 80 else "overexposed" if image_stats["mean"] > 180 else "good"
+        )
 
         # Calculate overall quality score
         quality_scores = {

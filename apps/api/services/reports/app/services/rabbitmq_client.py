@@ -92,7 +92,9 @@ class RabbitMQClient:
             # Record metrics
             RABBITMQ_MESSAGES_PUBLISHED.labels(exchange=exchange, routing_key=routing_key).inc()
 
-            RABBITMQ_PUBLISH_LATENCY.labels(exchange=exchange, routing_key=routing_key).observe(time.time() - start_time)
+            RABBITMQ_PUBLISH_LATENCY.labels(exchange=exchange, routing_key=routing_key).observe(
+                time.time() - start_time
+            )
 
             logger_service.debug(f"Published message to {exchange}:{routing_key}")
 

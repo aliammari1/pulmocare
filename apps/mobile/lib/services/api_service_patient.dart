@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Use the correct localhost URL for your platform
-  static const String baseUrl = Config.apiBaseUrl;
+  static final String baseUrl = Config.apiBaseUrl;
   final Dio dio = DioHttpClient().dio;
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {

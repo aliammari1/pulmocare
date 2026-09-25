@@ -1,22 +1,23 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
+
 import '../theme/app_theme.dart';
-import 'dart:convert';
+import '../utils/DioClient.dart';
 
 class PatientsView extends StatefulWidget {
   const PatientsView({super.key});
 
   @override
-  _PatientsViewState createState() => _PatientsViewState();
+  State<PatientsView> createState() => _PatientsViewState();
 }
 
 class _PatientsViewState extends State<PatientsView> {
-  List<dynamic> _patients = [];
-  bool _isLoading = true;
+  final Dio _dio = DioHttpClient().dio;
+  final TextEditingController _search = TextEditingController();
+
+  List<_PatientSummary> _patients = const [];
+  bool _loading = true;
   String? _error;
-  final Dio dio = DioHttpClient().dio;
 
   @override
   void initState() {
@@ -24,203 +25,218 @@ class _PatientsViewState extends State<PatientsView> {
     _loadPatients();
   }
 
-  Future<void> _loadPatients() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
-      final response =
-          await dio.get('${Config.apiBaseUrl}/patient/list');
-      if (response.statusCode == 200) {
-        setState(() {
-          _patients = response.data;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = 'Failed to load patients: ${response.statusCode}';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+  Future<void> _loadPatients() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        'auth/users',
+        queryParameters: {'role': 'patient', 'first': 0, 'max': 100},
+      );
+
+      final patients = (response.data ?? const [])
+          .whereType<Map>()
+          .map(
+            (value) => _PatientSummary.fromJson(
+              value.map((key, item) => MapEntry(key.toString(), item)),
+            ),
+          )
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+      if (!mounted) return;
       setState(() {
-        _error = e.toString();
-        _isLoading = false;
+        _patients = patients;
+        _loading = false;
+      });
+    } on DioException catch (error) {
+      if (!mounted) return;
+      final data = error.response?.data;
+      setState(() {
+        _error = data is Map && data['detail'] is String
+            ? data['detail'] as String
+            : 'Unable to load patients from the identity service.';
+        _loading = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_error!, style: TextStyle(color: Colors.red)),
-            ElevatedButton(
-              onPressed: _loadPatients,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_patients.isEmpty) {
-      return Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: AppTheme.lightGray,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.people_outline,
-                  size: 64,
-                  color: AppTheme.turquoise,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No Patients Yet',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.turquoise,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your patient list will appear here',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/add-patient'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.turquoise,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text(
-                  'Add New Patient',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final query = _search.text.trim().toLowerCase();
+    final patients = query.isEmpty
+        ? _patients
+        : _patients
+            .where(
+              (patient) =>
+                  patient.name.toLowerCase().contains(query) ||
+                  patient.email.toLowerCase().contains(query),
+            )
+            .toList();
 
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _loadPatients,
-        child: ListView.builder(
-          itemCount: _patients.length + 1, // Add 1 for the button at the bottom
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) {
-            if (index == _patients.length) {
-              // This is the last item, show the button
-              return Padding(
-                padding: const EdgeInsets.only(
-                    top: 16, bottom: 72), // Added bottom padding for FAB
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/add-patient'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.turquoise,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    'Add New Patient',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            final patient = _patients[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: CircleAvatar(
-                  backgroundColor: AppTheme.turquoise.withOpacity(0.2),
-                  child: Text(
-                    patient['name'][0].toUpperCase(),
-                    style: TextStyle(
-                      color: AppTheme.turquoise,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  patient['name'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(patient['email']),
-                    if (patient['phoneNumber'] != null) ...[
-                      const SizedBox(height: 2),
-                      Text(patient['phoneNumber']),
+      appBar: AppBar(title: const Text('Patients')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? _ErrorState(message: _error!, onRetry: _loadPatients)
+              : RefreshIndicator(
+                  onRefresh: _loadPatients,
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      TextField(
+                        controller: _search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          hintText: 'Search patients',
+                          prefixIcon: Icon(Icons.search_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        '${patients.length} patient${patients.length == 1 ? '' : 's'}',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 10),
+                      if (patients.isEmpty)
+                        const _EmptyPatients()
+                      else
+                        for (final patient in patients)
+                          Card(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    AppTheme.primary.withValues(alpha: .10),
+                                child: Text(
+                                  patient.initials,
+                                  style: const TextStyle(
+                                    color: AppTheme.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              title: Text(patient.name),
+                              subtitle: Text(
+                                [
+                                  patient.email,
+                                  if (patient.phone != null) patient.phone!,
+                                ].join('\n'),
+                              ),
+                              isThreeLine: patient.phone != null,
+                            ),
+                          ),
                     ],
-                  ],
+                  ),
                 ),
-                onTap: () {
-                  // Navigate to patient details
-                  Navigator.pushNamed(
-                    context,
-                    '/patient-details',
-                    arguments: patient,
-                  );
-                },
-              ),
-            );
-          },
-        ),
+    );
+  }
+}
+
+class _PatientSummary {
+  const _PatientSummary({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.phone,
+  });
+
+  final String id;
+  final String name;
+  final String email;
+  final String? phone;
+
+  String get initials {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  factory _PatientSummary.fromJson(Map<String, dynamic> json) {
+    final first = json['firstName']?.toString().trim() ?? '';
+    final last = json['lastName']?.toString().trim() ?? '';
+    final combined = '$first $last'.trim();
+    final attributes = _map(json['attributes']);
+    final email = json['email']?.toString() ?? '';
+    final fallbackName =
+        json['username']?.toString().trim().isNotEmpty == true
+            ? json['username'].toString()
+            : email;
+
+    return _PatientSummary(
+      id: json['id']?.toString() ?? '',
+      name: combined.isNotEmpty ? combined : fallbackName,
+      email: email,
+      phone: _firstValue(attributes['phone']),
+    );
+  }
+
+  static Map<String, dynamic> _map(dynamic value) {
+    if (value is! Map) return const {};
+    return value.map((key, item) => MapEntry(key.toString(), item));
+  }
+
+  static String? _firstValue(dynamic value) {
+    if (value is List && value.isNotEmpty) return value.first?.toString();
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+}
+
+class _EmptyPatients extends StatelessWidget {
+  const _EmptyPatients();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 48),
+      child: Column(
+        children: [
+          Icon(Icons.groups_outlined, size: 52, color: AppTheme.primary),
+          SizedBox(height: 14),
+          Text('No patient accounts were returned.'),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.pushNamed(context, '/add-patient'),
-        backgroundColor: AppTheme.turquoise,
-        child: const Icon(Icons.add, color: Colors.white),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 52),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 18),
+            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       ),
     );
   }

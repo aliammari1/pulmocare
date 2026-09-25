@@ -43,51 +43,51 @@ class KeycloakMiddleware:
 
         # Cache for public key to avoid repeated requests
         self._public_key = None
-        self._jwks = None
+        self._jwks: dict[str, Any] | None = None
 
         # Well-known endpoints
         self.well_known_url = f"{self.keycloak_url}/realms/{self.realm}/.well-known/openid-configuration"
-        self.token_introspection_url = f"{self.keycloak_url}/realms/{self.realm}/protocol/openid-connect/token/introspect"
+        self.token_introspection_url = (
+            f"{self.keycloak_url}/realms/{self.realm}/protocol/openid-connect/token/introspect"
+        )
 
         print(f"Keycloak middleware initialized for realm {self.realm} with URL {self.keycloak_url}")
 
+    def _fetch_jwks(self):
+        response = requests.get(self.well_known_url, timeout=10)
+        response.raise_for_status()
+        jwks_uri = response.json().get("jwks_uri")
+        if not jwks_uri:
+            raise jwt.InvalidTokenError("Keycloak discovery document has no jwks_uri")
+
+        response = requests.get(jwks_uri, timeout=10)
+        response.raise_for_status()
+        self._jwks = response.json()
+
     def get_public_key(self, kid=None):
-        """
-        Get the public key for token verification.
-
-        Args:
-            kid: Key ID from the token header
-
-        Returns:
-            Public key in PEM format
-        """
+        """Resolve the signing key and refresh JWKS once on key rotation."""
         if not self._jwks:
-            try:
-                # Get the JWKS URL from the well-known endpoint
-                response = requests.get(self.well_known_url)
-                response.raise_for_status()
-                well_known = response.json()
-                jwks_uri = well_known.get("jwks_uri")
+            self._fetch_jwks()
 
-                # Get the JWKS
-                response = requests.get(jwks_uri)
-                response.raise_for_status()
-                self._jwks = response.json()
-            except Exception as e:
-                print(f"Error fetching JWKS: {e!s}")
-                raise
-
-        # Find the key with matching kid
+        jwks = self._jwks or {}
+        keys = jwks.get("keys", [])
         if kid:
-            for key in self._jwks.get("keys", []):
+            for key in keys:
                 if key.get("kid") == kid:
                     return RSAAlgorithm.from_jwk(json.dumps(key))
 
-        # If no kid specified or not found, return the first key
-        if self._jwks.get("keys"):
-            return RSAAlgorithm.from_jwk(json.dumps(self._jwks["keys"][0]))
+            # Keycloak may have rotated keys since the cache was populated.
+            self._fetch_jwks()
+            refreshed_jwks = self._jwks or {}
+            for key in refreshed_jwks.get("keys", []):
+                if key.get("kid") == kid:
+                    return RSAAlgorithm.from_jwk(json.dumps(key))
+            raise jwt.InvalidTokenError("Token signing key is not trusted")
 
-        raise Exception("No public key found in JWKS")
+        if len(keys) == 1:
+            return RSAAlgorithm.from_jwk(json.dumps(keys[0]))
+
+        raise jwt.InvalidTokenError("Token header does not identify a signing key")
 
     def verify_token(self, token):
         """
@@ -111,24 +111,20 @@ class KeycloakMiddleware:
             public_key = self.get_public_key(kid)
 
             # Verify the token
-            options = {
-                "verify_signature": True,
-                "verify_exp": True,
-                "verify_nbf": True,
-                "verify_iat": True,
-                "verify_aud": False,  # Skip audience verification
-                "verify_iss": True,
-                "require_exp": True,
-                "require_iat": True,
-                "require_nbf": False,
-            }
-
             payload = jwt.decode(
                 token,
                 public_key,
                 algorithms=["RS256"],
                 issuer=f"{self.keycloak_url}/realms/{self.realm}",
-                options=options,
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_nbf": True,
+                    "verify_iat": True,
+                    "verify_aud": False,
+                    "verify_iss": True,
+                    "require": ["exp", "iat"],
+                },
             )
 
             return payload
@@ -161,6 +157,7 @@ class KeycloakMiddleware:
                     "client_secret": self.client_secret,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
             )
             response.raise_for_status()
             result = response.json()
@@ -176,7 +173,7 @@ class KeycloakMiddleware:
     async def get_current_user(
         self,
         credentials: HTTPAuthorizationCredentials = Depends(security),
-        required_roles: list[Role] = None,
+        required_roles: list[Role] | None = None,
     ) -> dict[str, Any]:
         """
         FastAPI dependency to get the current authenticated user.
@@ -248,7 +245,7 @@ class KeycloakMiddleware:
         """
         Dependency to require doctor role.
         """
-        return await self.get_current_user(required_roles=[Role.Doctor])
+        return await self.get_current_user(required_roles=[Role.DOCTOR])
 
     async def get_patient_user(self, user=Depends(get_current_user)):
         """

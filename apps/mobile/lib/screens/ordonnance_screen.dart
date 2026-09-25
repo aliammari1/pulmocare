@@ -1,13 +1,19 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:typed_data';
-import '../services/navigation_service.dart';
+
 import '../models/medicament.dart';
-import '../services/ordonnance_viewmodel.dart';
-import '../widgets/signature_pad.dart';
-import '../widgets/cachet_medecin.dart';
 import '../models/ordonnance.dart';
-import '../theme/style_constants.dart';
+import '../models/patient_directory_entry.dart';
+import '../services/auth_view_model.dart';
+import '../services/ordonnance_viewmodel.dart';
+import '../theme/app_theme.dart';
+import '../widgets/cachet_medecin.dart';
+import '../widgets/patient_picker_dialog.dart';
+import '../widgets/signature_pad.dart';
+import 'pdf_actions_screen.dart';
 
 class OrdonnanceScreen extends StatefulWidget {
   const OrdonnanceScreen({super.key});
@@ -18,779 +24,548 @@ class OrdonnanceScreen extends StatefulWidget {
 
 class _OrdonnanceScreenState extends State<OrdonnanceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _patientIdController = TextEditingController();
-  final _medecinIdController = TextEditingController();
-  final _searchController = TextEditingController();
-  final _cliniqueController = TextEditingController();
-  final _specialiteController = TextEditingController();
-  List<Medicament> medicaments = [];
+  final _patientId = TextEditingController();
+  final _patientName = TextEditingController();
+  final _clinic = TextEditingController();
+  final _specialty = TextEditingController();
+  final _diagnosis = TextEditingController();
+  final _instructions = TextEditingController();
+  final _search = TextEditingController();
+
+  final List<Medicament> _medications = [];
   Uint8List? _signature;
-  Uint8List? _cachet;
-  bool isSearching = false;
+  Uint8List? _stamp;
+  Timer? _searchDebounce;
+  bool _searching = false;
+  bool _saving = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle Ordonnance')),
-      body: Consumer<OrdonnanceViewModel>(
-        builder: (context, viewModel, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildPatientInfo(),
-                  const SizedBox(height: 20),
-                  _buildMedicamentSearch(viewModel),
-                  const SizedBox(height: 20),
-                  _buildMedicamentsList(),
-                  const SizedBox(height: 20),
-                  _buildSignatureAndCachet(),
-                  const SizedBox(height: 20),
-                  _buildActionButtons(),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthViewModel>();
+      if (_specialty.text.isEmpty) {
+        _specialty.text = auth.currentDoctor?.specialty ?? '';
+      }
+    });
   }
 
-  Widget _buildPatientInfo() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildLogoHeader(),
-            const SizedBox(height: 20),
-            _buildInfoField(
-              controller: _patientIdController,
-              label: 'ID Patient',
-              hint: 'Entrez l\'ID du patient',
-              icon: StyleConstants.patientIcon,
-              required: true,
-            ),
-            const SizedBox(height: 16),
-            _buildInfoField(
-              controller: _medecinIdController,
-              label: 'ID Médecin',
-              hint: 'Entrez l\'ID du médecin',
-              icon: StyleConstants.medecinIdIcon,
-              required: true,
-            ),
-            const SizedBox(height: 16),
-            _buildInfoField(
-              controller: _cliniqueController,
-              label: 'Clinique',
-              hint: 'Nom de la clinique',
-              icon: StyleConstants.cliniqueIcon,
-            ),
-            const SizedBox(height: 16),
-            _buildInfoField(
-              controller: _specialiteController,
-              label: 'Spécialité',
-              hint: 'Spécialité du médecin',
-              icon: StyleConstants.specialiteIcon,
-            ),
-          ],
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _patientId.dispose();
+    _patientName.dispose();
+    _clinic.dispose();
+    _specialty.dispose();
+    _diagnosis.dispose();
+    _instructions.dispose();
+    _search.dispose();
+    super.dispose();
   }
 
-  Widget _buildLogoHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Image.asset(
-            'assets/logo.png',
-            height: 60,
-            width: 60,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Nouvelle Ordonnance',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: StyleConstants.primaryColor,
-            ),
-          ),
-        ],
-      ),
+  Future<void> _selectPatient() async {
+    final patient = await showDialog<PatientDirectoryEntry>(
+      context: context,
+      builder: (_) => const PatientPickerDialog(),
     );
+    if (patient == null || !mounted) return;
+
+    setState(() {
+      _patientId.text = patient.id;
+      _patientName.text = patient.name;
+    });
   }
 
-  Widget _buildInfoField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool required = false,
-  }) {
-    return Container(
-      decoration: StyleConstants.textFieldDecoration,
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: Icon(icon, color: StyleConstants.primaryColor),
-          suffixIcon: required
-              ? const Icon(Icons.star,
-                  size: 8, color: StyleConstants.errorColor)
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue.shade100),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue.shade100),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                const BorderSide(color: StyleConstants.primaryColor, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-        validator: required
-            ? (value) => value?.isEmpty ?? true ? 'Ce champ est requis' : null
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildMedicamentSearch(OrdonnanceViewModel viewModel) {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue.shade50, Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Barre de recherche élégante
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 2,
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un médicament...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.blue),
-                  suffixIcon: isSearching
-                      ? Container(
-                          width: 24,
-                          height: 24,
-                          padding: const EdgeInsets.all(6),
-                          child:
-                              const CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                ),
-                onChanged: (value) => _searchMedicaments(value, viewModel),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Résultats de recherche
-            if (viewModel.searchResults?.isNotEmpty ?? false)
-              Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: viewModel.searchResults!.length,
-                  itemBuilder: (context, index) {
-                    final med = viewModel.searchResults![index];
-                    return _buildMedicamentCard(med);
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMedicamentCard(Medicament med) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _showMedicamentDetails(med),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              colors: [Colors.white, Colors.blue.shade50],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          med.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        if (med.laboratoire != null)
-                          Text(
-                            med.laboratoire!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  _buildAddButton(med),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (med.dosage != null) ...[
-                _buildInfoRow(Icons.medical_services, 'Dosage:', med.dosage!),
-              ],
-              if (med.posologie != null) ...[
-                const SizedBox(height: 4),
-                _buildInfoRow(Icons.schedule, 'Posologie:', med.posologie!),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddButton(Medicament med) {
-    final bool isAdded = medicaments.any((m) => m.name == med.name);
-    return Material(
-      color: isAdded ? Colors.green : Colors.blue,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: () => _addMedicament(med),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isAdded ? Icons.check : Icons.add,
-                color: Colors.white,
-                size: 20,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isAdded ? 'Ajouté' : 'Ajouter',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.blue[300]),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 14),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _searchMedicaments(String value, OrdonnanceViewModel viewModel) async {
-    if (value.isEmpty) {
-      viewModel.clearResults();
+  void _searchMedications(String value) {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 2) {
+      context.read<OrdonnanceViewModel>().clearResults();
+      if (_searching) setState(() => _searching = false);
       return;
     }
 
-    setState(() => isSearching = true);
-    await viewModel.fetchMedicaments(value);
-    setState(() => isSearching = false);
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      if (!mounted) return;
+      setState(() => _searching = true);
+      await context.read<OrdonnanceViewModel>().fetchMedicaments(query);
+      if (mounted) setState(() => _searching = false);
+    });
   }
 
-  void _showMedicamentDetails(Medicament med) {
-    showDialog(
+  Future<void> _addMedication(Medicament source) async {
+    final edited = await showDialog<Medicament>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(med.name),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _infoRow('Usage', med.usage),
-              _infoRow('Dosage', med.dosage),
-              _infoRow('Route', med.route),
-              _infoRow('Posologie', med.posologie),
-              _infoRow('Laboratoire', med.laboratoire),
-              if (med.warning != null) ...[
-                const Divider(),
-                const Text('Avertissements:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(med.warning!),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
+      builder: (_) => _MedicationEditorDialog(medication: source),
     );
+    if (edited == null || !mounted) return;
+
+    setState(() {
+      final existing =
+          _medications.indexWhere((item) => item.name == edited.name);
+      if (existing >= 0) {
+        _medications[existing] = edited;
+      } else {
+        _medications.add(edited);
+      }
+      _search.clear();
+      context.read<OrdonnanceViewModel>().clearResults();
+    });
   }
 
-  Widget _infoRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
-        ],
-      ),
-    );
-  }
+  Future<void> _save() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
 
-  Widget _buildMedicamentsList() {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(15)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.medical_services, color: Colors.blue.shade700),
-                const SizedBox(width: 8),
-                Text(
-                  'Médicaments Prescrits',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (medicaments.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(
-                child: Text(
-                  'Aucun médicament sélectionné',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: medicaments.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) =>
-                  _buildMedicamentItem(medicaments[index]),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicamentItem(Medicament med) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Nom du médicament
-                    Text(
-                      med.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    if (med.laboratoire != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Laboratoire: ${med.laboratoire}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _showDeleteConfirmation(med),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Détails du médicament
-          _buildDetailRow('Dosage', med.dosage),
-          _buildDetailRow('Posologie', med.posologie),
-          if (med.route != null)
-            _buildDetailRow('Voie d\'administration', med.route),
-          if (med.warning != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber,
-                      color: Colors.orange.shade800, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      med.warning!,
-                      style: TextStyle(
-                        color: Colors.orange.shade900,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDeleteConfirmation(Medicament med) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous retirer ${med.name} de l\'ordonnance ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() => medicaments.remove(med));
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${med.name} retiré de l\'ordonnance'),
-                  action: SnackBarAction(
-                    label: 'Annuler',
-                    onPressed: () => setState(() => medicaments.add(med)),
-                  ),
-                ),
-              );
-            },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignatureAndCachet() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              const Text('Signature'),
-              const SizedBox(height: 8),
-              SignaturePad(
-                onSigned: (data) {
-                  setState(() => _signature = data);
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            children: [
-              const Text('Cachet'),
-              const SizedBox(height: 8),
-              CachetMedecin(
-                imageBytes: _cachet,
-                onSelect: (Uint8List bytes) {
-                  setState(() => _cachet = bytes);
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ElevatedButton.icon(
-          icon: const Icon(StyleConstants.saveIcon),
-          label: const Text('Sauvegarder'),
-          onPressed: _saveOrdonnance,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: StyleConstants.primaryColor,
-          ),
-        ),
-        ElevatedButton.icon(
-          icon: const Icon(StyleConstants.ordonnanceIcon),
-          label: const Text('Mes Ordonnances'),
-          onPressed: () => Navigator.pushNamed(context, '/ordonnances-list'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: StyleConstants.secondaryColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _saveOrdonnance() async {
-    if (!_formKey.currentState!.validate()) {
+    final auth = context.read<AuthViewModel>();
+    final providerId = auth.userId;
+    final role = auth.userRole;
+    if (providerId == null ||
+        providerId.isEmpty ||
+        (role != 'doctor' && role != 'admin')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez remplir tous les champs requis'),
-          backgroundColor: Colors.red,
+          content: Text('A doctor account is required to prescribe medication.'),
         ),
       );
       return;
     }
+    if (_medications.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add at least one medication.')),
+      );
+      return;
+    }
 
+    setState(() => _saving = true);
     try {
-      NavigationService.showTransitionDialog(context);
-
-      final ordonnance = Ordonnance(
-        patientId: _patientIdController.text,
-        medecinId: _medecinIdController.text,
-        clinique: _cliniqueController.text,
-        specialite: _specialiteController.text,
-        medicaments: medicaments,
+      final prescription = Ordonnance(
+        patientId: _patientId.text,
+        patientName: _patientName.text,
+        medecinId: providerId,
+        doctorName: auth.displayName ?? auth.userEmail ?? 'Doctor',
+        clinique: _clinic.text,
+        specialite: _specialty.text,
+        diagnosis: _diagnosis.text,
+        instructions: _instructions.text,
         date: DateTime.now(),
+        medicaments: List.unmodifiable(_medications),
         signature: _signature,
-        cachet: _cachet,
+        cachet: _stamp,
       );
 
       final viewModel = context.read<OrdonnanceViewModel>();
-      final success = await viewModel.createOrdonnance(ordonnance);
+      final created = await viewModel.createOrdonnance(prescription);
+      if (!mounted) return;
 
-      if (context.mounted) {
-        Navigator.pop(context); // Fermer le dialogue de transition
-
-        if (success) {
-          await NavigationService.navigateToPdfActions(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Échec de la création de l\'ordonnance'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // Fermer le dialogue de transition
+      if (!created) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: Colors.red,
+            content: Text(
+              viewModel.errorMessage ?? 'Unable to create prescription.',
+            ),
           ),
         );
+        return;
       }
+
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const PdfActionsScreen()),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
-  void _addMedicament(Medicament medicament) {
-    setState(() {
-      // Vérifier si le médicament n'est pas déjà dans la liste
-      if (!medicaments.any((med) => med.name == medicament.name)) {
-        medicaments.add(medicament);
-        _searchController.clear();
-        context.read<OrdonnanceViewModel>().clearResults();
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<OrdonnanceViewModel>();
+    final results = viewModel.searchResults ?? const <Medicament>[];
 
-        // Afficher un message de confirmation
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${medicament.name} ajouté à l\'ordonnance'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'Annuler',
-              textColor: Colors.white,
-              onPressed: () {
-                setState(() => medicaments.remove(medicament));
-              },
+    return Scaffold(
+      appBar: AppBar(title: const Text('New prescription')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+          children: [
+            _SectionCard(
+              title: 'Patient',
+              icon: Icons.person_outline_rounded,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: _saving ? null : _selectPatient,
+                    icon: const Icon(Icons.person_search_rounded),
+                    label: Text(
+                      _patientId.text.isEmpty
+                          ? 'Select patient'
+                          : 'Change patient',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _patientName,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Patient name',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    validator: (value) =>
+                        (value?.trim().isEmpty ?? true)
+                            ? 'Select a patient.'
+                            : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _patientId,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Patient ID',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                    validator: (value) =>
+                        (value?.trim().isEmpty ?? true)
+                            ? 'Select a patient.'
+                            : null,
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      } else {
-        // Afficher un message d'erreur si le médicament existe déjà
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${medicament.name} est déjà dans l\'ordonnance'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    });
+            const SizedBox(height: 14),
+            _SectionCard(
+              title: 'Clinical context',
+              icon: Icons.note_alt_outlined,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _diagnosis,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Diagnosis / indication',
+                      alignLabelWithHint: true,
+                    ),
+                    validator: (value) =>
+                        (value?.trim().length ?? 0) < 3
+                            ? 'Enter the clinical indication.'
+                            : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _instructions,
+                    minLines: 2,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'General instructions',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _clinic,
+                    decoration:
+                        const InputDecoration(labelText: 'Clinic (optional)'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _specialty,
+                    decoration:
+                        const InputDecoration(labelText: 'Specialty (optional)'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _SectionCard(
+              title: 'Medications',
+              icon: Icons.medication_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _search,
+                    onChanged: _searchMedications,
+                    decoration: InputDecoration(
+                      hintText: 'Search OpenFDA by brand or generic name',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _searching
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  if (results.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 260),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: results.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final item = results[index];
+                          return ListTile(
+                            title: Text(item.name),
+                            subtitle: Text(
+                              [
+                                if ((item.usage ?? '').isNotEmpty) item.usage!,
+                                if ((item.dosage ?? '').isNotEmpty) item.dosage!,
+                              ].join(' • '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.add_circle_outline),
+                            onTap: () => _addMedication(item),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  if (_medications.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    for (final medication in _medications)
+                      Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(medication.name),
+                          subtitle: Text(
+                            [
+                              if ((medication.dosage ?? '').isNotEmpty)
+                                medication.dosage!,
+                              if ((medication.posologie ?? '').isNotEmpty)
+                                medication.posologie!,
+                            ].join(' • '),
+                          ),
+                          onTap: () => _addMedication(medication),
+                          trailing: IconButton(
+                            tooltip: 'Remove medication',
+                            onPressed: () => setState(
+                              () => _medications.remove(medication),
+                            ),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _SectionCard(
+              title: 'Authorization',
+              icon: Icons.draw_outlined,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 620;
+                  final signature = Column(
+                    children: [
+                      const Text('Signature'),
+                      const SizedBox(height: 8),
+                      SignaturePad(
+                        onSigned: (data) =>
+                            setState(() => _signature = data),
+                      ),
+                    ],
+                  );
+                  final stamp = Column(
+                    children: [
+                      const Text('Professional stamp'),
+                      const SizedBox(height: 8),
+                      CachetMedecin(
+                        imageBytes: _stamp,
+                        onSelect: (bytes) =>
+                            setState(() => _stamp = bytes),
+                      ),
+                    ],
+                  );
+
+                  return wide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: signature),
+                            const SizedBox(width: 18),
+                            Expanded(child: stamp),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            signature,
+                            const SizedBox(height: 18),
+                            stamp,
+                          ],
+                        );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(16),
+        child: FilledButton.icon(
+          onPressed: _saving ? null : _save,
+          icon: _saving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check_rounded),
+          label: Text(_saving ? 'Creating prescription…' : 'Create prescription'),
+        ),
+      ),
+    );
+  }
+}
+
+class _MedicationEditorDialog extends StatefulWidget {
+  const _MedicationEditorDialog({required this.medication});
+
+  final Medicament medication;
+
+  @override
+  State<_MedicationEditorDialog> createState() =>
+      _MedicationEditorDialogState();
+}
+
+class _MedicationEditorDialogState extends State<_MedicationEditorDialog> {
+  late final TextEditingController _dosage;
+  late final TextEditingController _frequency;
+
+  @override
+  void initState() {
+    super.initState();
+    _dosage = TextEditingController(text: widget.medication.dosage ?? '');
+    _frequency =
+        TextEditingController(text: widget.medication.posologie ?? '');
+  }
+
+  @override
+  void dispose() {
+    _dosage.dispose();
+    _frequency.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.medication.name),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if ((widget.medication.usage ?? '').isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Text(widget.medication.usage!),
+              ),
+            TextField(
+              controller: _dosage,
+              decoration: const InputDecoration(
+                labelText: 'Dosage / strength',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _frequency,
+              minLines: 2,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Frequency and instructions',
+                alignLabelWithHint: true,
+              ),
+            ),
+            if ((widget.medication.warning ?? '').isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                widget.medication.warning!,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(
+              context,
+              Medicament(
+                name: widget.medication.name,
+                usage: widget.medication.usage,
+                dosage: _dosage.text.trim(),
+                posologie: _frequency.text.trim(),
+                laboratoire: widget.medication.laboratoire,
+                route: widget.medication.route,
+                warning: widget.medication.warning,
+              ),
+            );
+          },
+          child: const Text('Add medication'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppTheme.primary),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -85,6 +85,12 @@ class BaseConfig(BaseSettings):
     otel_disable_on_error: bool = Field(default=True, description="Disable OTEL on connection error")
     otel_python_log_correlation: bool = Field(default=True, description="Enable log correlation")
 
+    # Sentry settings (error tracking; PHI-scrubbed, PII off by default)
+    sentry_dsn: str = Field(default="", description="Sentry DSN (empty disables Sentry)")
+    sentry_traces_sample_rate: float = Field(
+        default=0.0, description="Sentry tracing sample rate (0 = errors only)"
+    )
+
     # Auth service settings
     auth_service_url: str = Field(default="http://auth-service:8086", description="Auth service URL")
     

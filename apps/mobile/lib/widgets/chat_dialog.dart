@@ -1,35 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+import '../models/chat_message.dart';
 import '../services/chat_viewmodel.dart';
 import '../theme/app_theme.dart';
-import '../utils/medical_prompts.dart';
-
-class ChatMessage {
-  final String id;
-  final String content;
-  final bool isBot;
-  final DateTime timestamp;
-  final String? imageUrl;
-
-  ChatMessage({
-    required this.id,
-    required this.content,
-    required this.isBot,
-    required this.timestamp,
-    this.imageUrl,
-  });
-}
 
 class ChatDialog extends StatefulWidget {
   const ChatDialog({super.key});
 
   @override
-  _ChatDialogState createState() => _ChatDialogState();
+  State<ChatDialog> createState() => _ChatDialogState();
 }
 
 class _ChatDialogState extends State<ChatDialog> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final _messageController = TextEditingController();
+  final _scrollController = ScrollController();
 
   @override
   void dispose() {
@@ -38,229 +24,224 @@ class _ChatDialogState extends State<ChatDialog> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  Future<void> _send() async {
+    final value = _messageController.text.trim();
+    if (value.isEmpty) return;
+
+    _messageController.clear();
+    await context.read<ChatViewModel>().sendMessage(value);
+    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
         );
       }
     });
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
-    return Align(
-      alignment: message.isBot ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        margin: EdgeInsets.only(
-          left: message.isBot ? 8 : 50,
-          right: message.isBot ? 50 : 8,
-          top: 8,
-          bottom: 8,
-        ),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: message.isBot ? Colors.white : AppTheme.turquoise,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
+  @override
+  Widget build(BuildContext context) {
+    final chat = context.watch<ChatViewModel>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Clinical assistant'),
+        actions: [
+          if (chat.messages.isNotEmpty)
+            IconButton(
+              tooltip: 'Clear conversation',
+              onPressed: chat.isLoading ? null : chat.clearMessages,
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline_rounded, color: AppTheme.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'For clinical documentation support only. Review every AI response before using it in patient care.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: chat.messages.isEmpty
+                  ? const _EmptyAssistant()
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+                      itemCount: chat.messages.length,
+                      itemBuilder: (_, index) =>
+                          _MessageBubble(message: chat.messages[index]),
+                    ),
+            ),
+            if (chat.error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    chat.error,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      minLines: 1,
+                      maxLines: 5,
+                      enabled: !chat.isLoading,
+                      decoration: const InputDecoration(
+                        hintText: 'Ask about documentation or report wording…',
+                        prefixIcon: Icon(Icons.auto_awesome_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton.filled(
+                    tooltip: 'Send',
+                    onPressed: chat.isLoading ? null : _send,
+                    icon: chat.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_rounded),
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyAssistant extends StatelessWidget {
+  const _EmptyAssistant();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppTheme.primary,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Clinical documentation assistant',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ask for help organizing findings, improving wording, or identifying missing context. Do not enter information that is not necessary for the task.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      height: 1.45,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  const _MessageBubble({required this.message});
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final assistant = message.isAssistant;
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: assistant ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 620),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: assistant ? scheme.surfaceContainerHighest : AppTheme.primary,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(assistant ? 4 : 18),
+            bottomRight: Radius.circular(assistant ? 18 : 4),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (message.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  message.imageUrl!,
-                  height: 150,
-                  width: 200,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            Text(
+            SelectableText(
               message.content,
               style: TextStyle(
-                color: message.isBot ? Colors.black87 : Colors.white,
-                fontSize: 16,
+                color: assistant ? scheme.onSurface : Colors.white,
+                height: 1.45,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 7),
             Text(
-              '${message.timestamp.hour}:${message.timestamp.minute.toString().padLeft(2, '0')}',
+              DateFormat.Hm().format(message.timestamp),
               style: TextStyle(
-                color: message.isBot ? Colors.grey : Colors.white70,
-                fontSize: 12,
+                fontSize: 11,
+                color: assistant ? scheme.onSurfaceVariant : Colors.white70,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMessageList() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.grey[50]!,
-            Colors.white,
-          ],
-        ),
-      ),
-      child: Consumer<ChatViewModel>(
-        builder: (context, chatVM, child) {
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: chatVM.messages.length,
-                  itemBuilder: (context, index) {
-                    return _buildMessageBubble(chatVM.messages[index]);
-                  },
-                ),
-              ),
-              if (chatVM.isLoading)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.turquoise,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'AI is thinking...',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, -2),
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: MedicalPrompts.getRandomSuggestion(),
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.all(16),
-              ),
-              onSubmitted: _sendMessage,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.turquoise,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () => _sendMessage(_messageController.text),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendMessage(String message) {
-    if (message.trim().isEmpty) return;
-
-    context.read<ChatViewModel>().sendMessage(message);
-    _messageController.clear();
-    _scrollToBottom();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: const Text(
-          'Medical AI Assistant',
-          style: TextStyle(color: AppTheme.turquoise),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: AppTheme.turquoise),
-          onPressed: () => Navigator.pop(context),
-        ),
-        iconTheme: const IconThemeData(color: AppTheme.turquoise),
-      ),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessageList()),
-          _buildMessageInput(),
-        ],
       ),
     );
   }

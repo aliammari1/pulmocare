@@ -7,11 +7,9 @@ Provides authentication and authorization via Keycloak.
 import uvicorn
 from fastapi import FastAPI
 
-from pulmocare_shared import setup_cors, setup_telemetry
-from pulmocare_shared.middleware import create_health_router
-
 from config import Config
 from models.auth import HealthCheckResponse
+from pulmocare_shared import setup_cors, setup_telemetry
 from routes.auth_routes import router as auth_router
 from routes.integration_routes import router as integration_router
 from services.keycloak_service import KeycloakService

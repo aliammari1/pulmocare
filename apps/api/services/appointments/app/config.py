@@ -7,6 +7,7 @@ Extends the shared BaseConfig with service-specific settings.
 from functools import lru_cache
 
 from pydantic import Field
+
 from pulmocare_shared import BaseConfig
 
 
@@ -27,15 +28,27 @@ class AppointmentsConfig(BaseConfig):
     medecins_service_port: int = Field(default=8081, description="Medecins service port")
     patients_service_host: str = Field(default="patients-service", description="Patients service host")
     patients_service_port: int = Field(default=8083, description="Patients service port")
+    ordonnances_service_host: str = Field(
+        default="ordonnances-service",
+        description="Ordonnances service host",
+    )
+    ordonnances_service_port: int = Field(default=8082, description="Ordonnances service port")
+    radiologues_service_host: str = Field(
+        default="radiologues-service",
+        description="Radiologues service host",
+    )
+    radiologues_service_port: int = Field(default=8084, description="Radiologues service port")
+
+    request_timeout: float = Field(default=10.0, description="HTTP request timeout in seconds")
 
     # Appointment-specific settings
     appointment_slot_duration: int = Field(default=30, description="Appointment slot duration in minutes")
     max_appointments_per_day: int = Field(default=20, description="Max appointments per doctor per day")
     advance_booking_days: int = Field(default=30, description="How many days in advance appointments can be booked")
-    
+
     # Notification settings
     reminder_hours_before: int = Field(default=24, description="Hours before appointment to send reminder")
-    
+
     # Rate limiting
     rate_limit_default: str = Field(default="100/minute", description="Default rate limit")
 

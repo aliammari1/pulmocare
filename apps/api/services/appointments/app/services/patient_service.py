@@ -9,12 +9,12 @@ class PatientService:
 
     def __init__(self, config):
         self.config = config
-        self.base_url = f"http://{config.PATIENTS_SERVICE_HOST}:{config.PATIENTS_SERVICE_PORT}/api"
-        self.timeout = config.REQUEST_TIMEOUT
+        self.base_url = f"http://{config.patients_service_host}:{config.patients_service_port}/api"
+        self.timeout = config.request_timeout
         # Initialize circuit breaker
         self.circuit_breaker = CircuitBreaker(
-            failure_threshold=config.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recovery_timeout=config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+            failure_threshold=config.circuit_breaker_failure_threshold,
+            recovery_timeout=config.circuit_breaker_recovery_timeout,
             name="patients-service",
         )
 
@@ -74,7 +74,9 @@ class PatientService:
             if response.status_code == 200:
                 return response.json()
             else:
-                logger_service.error(f"Error fetching patient medical history: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error fetching patient medical history: HTTP {response.status_code} - {response.text}"
+                )
                 return {}
 
     async def notify_patient_appointment(self, patient_id, appointment_data, auth_header=None):
@@ -106,5 +108,7 @@ class PatientService:
             if response.status_code in (200, 201, 204):
                 return True
             else:
-                logger_service.error(f"Error notifying patient of appointment: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error notifying patient of appointment: HTTP {response.status_code} - {response.text}"
+                )
                 return False
