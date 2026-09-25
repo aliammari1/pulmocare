@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -213,47 +213,6 @@ def is_healthcare_provider(roles):
     return any(role in roles for role in ["doctor", "radiologist", "admin"])
 
 
-@router.get(
-    "/{patient_id}",
-    responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
-)
-async def get_patient(patient_id: str, user_info: dict = Depends(get_current_patient)):
-    """Get patient information by ID"""
-    try:
-        current_user_id = user_info.get("user_id")
-        roles = user_info.get("roles", [])
-        token = user_info.get("token")
-
-        logger_service.info(f"Accessing patient {patient_id} by user {current_user_id} with roles {roles}")
-
-        # Only allow if the user is the patient themselves or a healthcare provider
-        if patient_id != current_user_id and not is_healthcare_provider(roles):
-            logger_service.error(
-                f"Access denied: user {current_user_id} with roles {roles} attempted to access patient {patient_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to access this patient information",
-            )
-
-        # Get patient data using existing function - passing the token
-        patient_data = await get_patient_by_id(patient_id, token)
-
-        if not patient_data:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-
-        return patient_data
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger_service.error(f"Error retrieving patient: {e!s}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {e!s}",
-        )
-
-
 @router.post(
     "/request-appointment",
     response_model=MessageResponse,
@@ -313,7 +272,7 @@ async def request_appointment(
             "doctor_id": doctor_id,
             "requested_time": requested_time,
             "reason": reason,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         # Log the appointment creation with role information
@@ -336,7 +295,7 @@ async def request_appointment(
 
         if message_published:
             # Generate a unique ID for the request confirmation
-            appointment_request_id = f"req_{patient_id}_{doctor_id}_{int(datetime.utcnow().timestamp())}"
+            appointment_request_id = f"req_{patient_id}_{doctor_id}_{int(datetime.now(UTC).timestamp())}"
 
             # Store the appointment request ID in user attributes for reference
             # Get current appointment_requests or initialize empty list
@@ -356,7 +315,7 @@ async def request_appointment(
                 "requested_time": requested_time,
                 "reason": reason,
                 "status": "requested",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             # Update attributes with new request
@@ -543,3 +502,44 @@ async def update_profile(update_data: PatientUpdate, user_info: dict = Depends(g
     except Exception as e:
         logger_service.error(f"Error updating patient profile: {e}")
         raise HTTPException(status_code=500, detail=f"Error updating profile: {e!s}")
+
+
+@router.get(
+    "/{patient_id}",
+    responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+async def get_patient(patient_id: str, user_info: dict = Depends(get_current_patient)):
+    """Get patient information by ID"""
+    try:
+        current_user_id = user_info.get("user_id")
+        roles = user_info.get("roles", [])
+        token = user_info.get("token")
+
+        logger_service.info(f"Accessing patient {patient_id} by user {current_user_id} with roles {roles}")
+
+        # Only allow if the user is the patient themselves or a healthcare provider
+        if patient_id != current_user_id and not is_healthcare_provider(roles):
+            logger_service.error(
+                f"Access denied: user {current_user_id} with roles {roles} attempted to access patient {patient_id}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to access this patient information",
+            )
+
+        # Get patient data using existing function - passing the token
+        patient_data = await get_patient_by_id(patient_id, token)
+
+        if not patient_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+
+        return patient_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger_service.error(f"Error retrieving patient: {e!s}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {e!s}",
+        )
