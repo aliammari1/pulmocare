@@ -12,7 +12,10 @@ ASSISTANT_DISCLAIMER = (
 )
 
 
-def generate_assistant_response(message: str, context: str | None = None) -> AssistantResponse:
+def generate_assistant_response(
+    message: str,
+    context: str | None = None,
+) -> AssistantResponse:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError("AI assistant is not configured")
@@ -51,7 +54,9 @@ def generate_assistant_response(message: str, context: str | None = None) -> Ass
             span["output_tokens"] = getattr(usage, "output_tokens", 0)
 
     text = "".join(
-        block.text for block in response.content if getattr(block, "type", None) == "text"
+        block.text
+        for block in response.content
+        if getattr(block, "type", None) == "text"
     ).strip()
     if not text:
         raise RuntimeError("AI provider returned an empty response")
