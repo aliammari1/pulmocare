@@ -9,12 +9,12 @@ class PatientService:
 
     def __init__(self, config):
         self.config = config
-        self.base_url = f"http://{config.PATIENTS_SERVICE_HOST}:{config.PATIENTS_SERVICE_PORT}/api"
-        self.timeout = config.REQUEST_TIMEOUT
+        self.base_url = f"http://{config.patients_service_host}:{config.patients_service_port}/api"
+        self.timeout = config.request_timeout
         # Initialize circuit breaker
         self.circuit_breaker = CircuitBreaker(
-            failure_threshold=config.CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-            recovery_timeout=config.CIRCUIT_BREAKER_RECOVERY_TIMEOUT,
+            failure_threshold=config.circuit_breaker_failure_threshold,
+            recovery_timeout=config.circuit_breaker_recovery_timeout,
             name="patients-service",
         )
 
