@@ -103,6 +103,8 @@ class LoggerService:
 
     def _setup_otel_logging(self) -> None:
         """Set up OpenTelemetry logging export."""
+        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+            return
         try:
             resource = Resource.create(
                 {

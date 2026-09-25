@@ -4,6 +4,7 @@ OpenTelemetry telemetry service for PulmoCare microservices.
 Provides centralized tracing, metrics, and logging instrumentation.
 """
 
+import os
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
@@ -55,10 +56,11 @@ class TelemetryService:
 
         self.config = config
         self.app = app
-        self.enabled = True
+        self.enabled = os.getenv("OTEL_SDK_DISABLED", "false").lower() != "true"
         self.tracer: Tracer = NoOpTracer()
 
-        self._setup_tracing()
+        if self.enabled:
+            self._setup_tracing()
         TelemetryService._initialized = True
 
     def _setup_tracing(self) -> None:
