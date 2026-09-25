@@ -514,7 +514,10 @@ async def update_profile(
 ):
     user_id = user_info.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
 
     update_data: dict[str, object] = {}
     if request.name is not None:
@@ -561,7 +564,10 @@ async def update_signature(
 
     user_id = user_info.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
 
     try:
         keycloak_service.update_user(user_id, {"signature": request.signature})
@@ -578,7 +584,10 @@ async def change_password(
     user_id = user_info.get("user_id")
     email = user_info.get("email") or user_info.get("preferred_username")
     if not user_id or not email:
-        raise HTTPException(status_code=401, detail="Authenticated user identity is incomplete")
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user identity is incomplete",
+        )
     if request.current_password == request.new_password:
         raise HTTPException(
             status_code=400,
@@ -614,7 +623,10 @@ async def submit_verification(
 
     user_id = user_info.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Authenticated user is missing an ID")
+        raise HTTPException(
+            status_code=401,
+            detail="Authenticated user is missing an ID",
+        )
 
     details = {
         "status": "pending",
@@ -667,4 +679,7 @@ async def decide_verification(
             )
         }
     except Exception:
-        raise HTTPException(status_code=500, detail="Failed to update verification status")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update verification status",
+        )
