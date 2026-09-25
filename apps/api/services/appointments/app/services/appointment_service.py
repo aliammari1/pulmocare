@@ -87,6 +87,7 @@ class AppointmentService:
                 appointment_type=appointment_data.appointment_type,
                 appointment_date=appointment_data.appointment_date,
                 duration_minutes=appointment_data.duration_minutes,
+                reason=appointment_data.reason,
                 notes=appointment_data.notes,
                 virtual=appointment_data.virtual,
                 meeting_link=appointment_data.meeting_link,
