@@ -30,7 +30,7 @@ class AppointmentService:
             config = Config()
 
         self.config = config
-        self.timeout = httpx.Timeout(config.REQUEST_TIMEOUT)
+        self.timeout = httpx.Timeout(config.request_timeout)
         self.client = httpx.AsyncClient(timeout=self.timeout)
 
         # Initialize services
@@ -61,8 +61,6 @@ class AppointmentService:
 
                 if auth_token:
                     auth_header = f"Bearer {auth_token}"
-                    # Log for debugging
-                    logger_service.info(f"Using auth token (first 10 chars): {auth_token[:10]}...")
                 else:
                     logger_service.warning(f"No auth token found in current_user: {current_user.keys()}")
 
