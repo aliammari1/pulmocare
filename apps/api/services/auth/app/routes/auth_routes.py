@@ -111,7 +111,7 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
                         break
 
             user_data["primary_role"] = primary_role
-                return user_data
+            return user_data
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -120,7 +120,10 @@ async def verify_token(request: TokenRequest, requested_role: Role | None = None
 
     except Exception as e:
         logger.exception("Unexpected token verification failure")
-        raise HTTPException(status_code=500, detail=f"Verification failed: {e!s}")
+        raise HTTPException(
+            status_code=500,
+            detail="Token verification failed",
+        ) from e
 
 
 @router.post(
