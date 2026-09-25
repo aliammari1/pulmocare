@@ -11,13 +11,21 @@ class AppointmentService {
   Future<List<Appointment>> listAppointments({
     String? patientId,
     String? providerId,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
+    final now = DateTime.now().toUtc();
+    final from = (startDate ?? now.subtract(const Duration(days: 180))).toUtc();
+    final to = (endDate ?? now.add(const Duration(days: 365))).toUtc();
+
     final response = await _dio.get<Map<String, dynamic>>(
       'appointments',
       queryParameters: {
         if (patientId != null && patientId.isNotEmpty) 'patient_id': patientId,
         if (providerId != null && providerId.isNotEmpty)
           'provider_id': providerId,
+        'start_date': from.toIso8601String(),
+        'end_date': to.toIso8601String(),
         'limit': 100,
       },
     );
@@ -33,6 +41,7 @@ class AppointmentService {
             item.map((key, value) => MapEntry(key.toString(), value)),
           ),
         )
+        .where((item) => item.id.isNotEmpty)
         .toList()
       ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
   }
