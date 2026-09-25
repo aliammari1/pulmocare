@@ -568,3 +568,33 @@ async def update_signature(
         return {"message": "Signature updated successfully"}
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to update signature")
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    request: ChangePasswordRequest,
+    user_info: dict = Depends(get_current_user),
+):
+    user_id = user_info.get("user_id")
+    email = user_info.get("email") or user_info.get("preferred_username")
+    if not user_id or not email:
+        raise HTTPException(status_code=401, detail="Authenticated user identity is incomplete")
+    if request.current_password == request.new_password:
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be different from the current password",
+        )
+
+    try:
+        keycloak_service.change_password(
+            user_id,
+            email,
+            request.current_password,
+            request.new_password,
+        )
+        return {"message": "Password updated successfully"}
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Current password is incorrect or the new password was rejected",
+        )
