@@ -129,6 +129,11 @@ class VerificationRequest(BaseModel):
     document_bucket: str = Field(default="patientdocuments", min_length=1, max_length=100)
 
 
+class VerificationDecisionRequest(BaseModel):
+    approved: bool
+    note: str | None = Field(default=None, max_length=500)
+
+
 class MessageResponse(BaseModel):
     message: str
 
