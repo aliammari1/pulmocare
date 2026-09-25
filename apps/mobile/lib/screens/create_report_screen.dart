@@ -531,7 +531,7 @@ class _CreateReportScreenState extends State<CreateReportScreen>
                               _isUrgent = value;
                             });
                           },
-                          activeColor: Colors.red,
+                          activeThumbColor: Colors.red,
                         ),
                       ],
                     ),

@@ -128,7 +128,7 @@ class _VisitCardScanDialogState extends State<VisitCardScanDialog> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: Color(0xFF35C5CF).withOpacity(0.1),
+          color: Color(0xFF35C5CF).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(

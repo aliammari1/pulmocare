@@ -128,7 +128,7 @@ CONCLUSION URGENTE :
   }) {
     return Card(
       elevation: 2,
-      shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: AppTheme.lightBlue, width: 1),
@@ -217,7 +217,7 @@ CONCLUSION URGENTE :
                   title: 'Type d\'Examen',
                   icon: Icons.medical_services,
                   content: DropdownButtonFormField<String>(
-                    value: _selectedExamType,
+                    initialValue: _selectedExamType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -264,7 +264,7 @@ CONCLUSION URGENTE :
                   title: 'Type de Rapport',
                   icon: Icons.description,
                   content: DropdownButtonFormField<String>(
-                    value: _selectedReportType,
+                    initialValue: _selectedReportType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -344,7 +344,7 @@ CONCLUSION URGENTE :
                     ),
                     minimumSize: Size(double.infinity, 54),
                     elevation: 3,
-                    shadowColor: AppTheme.primaryColor.withOpacity(0.5),
+                    shadowColor: AppTheme.primaryColor.withValues(alpha: 0.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

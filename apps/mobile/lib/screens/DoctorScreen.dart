@@ -123,7 +123,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -178,7 +178,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
             label: Text("Réessayer", style: TextStyle(color: primaryColor)),
             style: TextButton.styleFrom(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              backgroundColor: primaryColor.withOpacity(0.1),
+              backgroundColor: primaryColor.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -224,7 +224,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               ),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                backgroundColor: primaryColor.withOpacity(0.1),
+                backgroundColor: primaryColor.withValues(alpha: 0.1),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -250,7 +250,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
@@ -271,7 +271,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: doctor["profile_image"] != null
@@ -405,7 +405,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         return Container(
                           height: 100,
                           width: double.infinity,
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           child: Icon(
                             Icons.image_not_supported,
                             color: primaryColor,

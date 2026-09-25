@@ -540,7 +540,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedSpecialty,
+                    initialValue: _selectedSpecialty,
                     decoration: const InputDecoration(
                       labelText: 'Medical Specialty',
                       border: OutlineInputBorder(),
@@ -578,7 +578,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
             const SizedBox(height: 12),
             if (_localeNames.isNotEmpty)
               DropdownButtonFormField<String>(
-                value: _currentLocaleId.isEmpty
+                initialValue: _currentLocaleId.isEmpty
                     ? _localeNames.first.localeId
                     : _currentLocaleId,
                 decoration: const InputDecoration(

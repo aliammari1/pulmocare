@@ -13,7 +13,7 @@ class AppLogo extends StatelessWidget {
       width: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: StyleConstants.primaryColor.withOpacity(0.1),
+        color: StyleConstants.primaryColor.withValues(alpha: 0.1),
       ),
       child: Image.asset('assets/logo.png', fit: BoxFit.contain),
     );
