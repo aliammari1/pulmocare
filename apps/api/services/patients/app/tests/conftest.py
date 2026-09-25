@@ -1,9 +1,7 @@
-"""Pytest fixtures for the patients service smoke tests.
+"""Pytest fixtures for the patients service tests.
 
-Redis / RabbitMQ / the auth service are all mocked, so these tests exercise the
-FastAPI wiring and authorization gates without external infrastructure. Run:
-
-    uv run pytest
+Redis / RabbitMQ / the auth service are mocked so tests exercise FastAPI wiring,
+authorization and route behavior without external infrastructure.
 """
 
 from __future__ import annotations
@@ -27,7 +25,7 @@ if str(APP_DIR) not in sys.path:
 
 
 def _load_app_module() -> ModuleType:
-    """Load app.py by path (``app/`` is a package, shadowing ``import app``)."""
+    """Load app.py by path (the app/ directory can shadow normal imports)."""
     spec = importlib.util.spec_from_file_location("patients_app_module", APP_DIR / "app.py")
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -36,7 +34,7 @@ def _load_app_module() -> ModuleType:
 
 
 def _healthy_client() -> MagicMock:
-    """A backend client mock whose health check reports a valid 'UP' string."""
+    """Return a backend client mock whose health check reports UP."""
     client = MagicMock()
     client.check_health.return_value = "UP"
     return client
@@ -44,20 +42,24 @@ def _healthy_client() -> MagicMock:
 
 @pytest.fixture
 def _mock_backends(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Patch the shared Redis/RabbitMQ clients before app import."""
+    """Patch Redis/RabbitMQ clients before the FastAPI app is imported."""
     monkeypatch.setattr("pulmocare_shared.RedisClient", lambda *a, **k: _healthy_client())
     monkeypatch.setattr("pulmocare_shared.RabbitMQClient", lambda *a, **k: _healthy_client())
-    # patients_routes constructs its own RabbitMQ client at import time too.
     monkeypatch.setattr("services.rabbitmq_client.RabbitMQClient", lambda *a, **k: _healthy_client())
 
 
 @pytest.fixture
-async def client(_mock_backends):
+def app(_mock_backends):
+    """Return a fresh patients FastAPI app for each test."""
+    return _load_app_module().app
+
+
+@pytest.fixture
+async def client(app):
     from asgi_lifespan import LifespanManager
     from httpx import ASGITransport, AsyncClient
 
-    app_module = _load_app_module()
-    async with LifespanManager(app_module.app):
-        transport = ASGITransport(app=app_module.app)
+    async with LifespanManager(app):
+        transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
