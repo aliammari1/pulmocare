@@ -1,235 +1,243 @@
-import 'package:flutter/material.dart';
-import 'package:medapp/config.dart';
-import 'package:medapp/utils/DioClient.dart';
-import '../models/doctor.dart';
 import 'package:dio/dio.dart';
-import 'dart:convert';
-import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:medapp/models/doctor.dart';
+import 'package:medapp/services/token_storage.dart';
+import 'package:medapp/utils/DioClient.dart';
 
 class AuthViewModel extends ChangeNotifier {
+  final Dio _dio = DioHttpClient().dio;
+  final TokenStorage _tokens = TokenStorage.instance;
+
   Doctor? currentDoctor;
   bool isAuthenticated = false;
+  bool isBusy = false;
   String errorMessage = '';
-  String? authToken;
-  final Dio dio = DioHttpClient().dio;
-  static const String baseUrl = Config.apiBaseUrl;
-  Future<void> login(String email, String password) async {
-    try {
-      print('Attempting login with: $email'); // Add debug log
+  String? userRole;
+  String? userId;
+  String? userEmail;
+  String? displayName;
 
-      final response = await dio.post(
-        '$baseUrl/login', // Use baseUrl instead of ApiConfig
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: json.encode({
-          'email': email,
-          'password': password,
-        }),
+  String? get authToken => _tokens.accessToken;
+
+  Future<void> restoreSession() async {
+    final refreshToken = _tokens.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return;
+    }
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'auth/token/refresh',
+        data: {'refresh_token': refreshToken},
+        options: Options(extra: {'skipAuth': true}),
+      );
+      final data = response.data ?? const {};
+      final access = data['access_token']?.toString();
+      final refresh = data['refresh_token']?.toString();
+
+      if (access == null || refresh == null) {
+        throw const FormatException('Invalid refresh response');
+      }
+
+      await _tokens.saveSession(accessToken: access, refreshToken: refresh);
+      await _loadIdentity(access);
+      isAuthenticated = true;
+    } catch (_) {
+      await _clearSession();
+    }
+    notifyListeners();
+  }
+
+  Future<bool> login(
+    String email,
+    String password, {
+    String? expectedRole,
+  }) async {
+    _setBusy(true);
+    errorMessage = '';
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'auth/login',
+        data: {'email': email.trim(), 'password': password},
+        options: Options(extra: {'skipAuth': true}),
       );
 
-      print('Response status: ${response.statusCode}'); // Add debug log
-      print('Response body: ${response.data}'); // Add debug log
+      final data = response.data ?? const {};
+      final access = data['access_token']?.toString();
+      final refresh = data['refresh_token']?.toString();
 
-      if (response.statusCode == 200) {
-        final data = response.data;
-        authToken = data['token'];
-        currentDoctor = Doctor(
-          id: data['id'],
-          name: data['name'],
-          email: data['email'],
-          specialty: data['specialty'],
-          phoneNumber: data['phone_number'],
-          address: data['address'],
-          profileImage: data['profile_image'],
-          isVerified: data['is_verified'] ?? false,
-          verificationDetails: data['verification_details'],
-          signature: data['signature'], // Add this line
-        );
+      if (access == null || refresh == null) {
+        throw const FormatException('Authentication response is incomplete');
+      }
+
+      await _tokens.saveSession(accessToken: access, refreshToken: refresh);
+
+      userId = data['user_id']?.toString();
+      userEmail = data['email']?.toString() ?? email.trim();
+      displayName = data['name']?.toString();
+      userRole = data['role']?.toString();
+
+      if (userRole == null || userRole!.isEmpty) {
+        await _loadIdentity(access);
+      }
+
+      if (expectedRole != null &&
+          userRole != null &&
+          userRole!.isNotEmpty &&
+          userRole != expectedRole) {
+        await _clearSession();
+        errorMessage =
+            'This account is registered as ${_readableRole(userRole!)}. '
+            'Choose the matching sign-in option.';
+        return false;
+      }
+
+      _buildCompatibilityProfile(data);
+      isAuthenticated = true;
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(error, fallback: 'Unable to sign in.');
+      await _clearSession();
+      return false;
+    } catch (_) {
+      errorMessage = 'Unable to sign in. Please try again.';
+      await _clearSession();
+      return false;
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> signupPatient({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String? address,
+  }) async {
+    _setBusy(true);
+    errorMessage = '';
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        'auth/register',
+        data: {
+          'name': name.trim(),
+          'email': email.trim(),
+          'password': password,
+          'username': email.trim(),
+          'phone': phone?.trim(),
+          'address': address?.trim(),
+          'role': 'patient',
+        },
+        options: Options(extra: {'skipAuth': true}),
+      );
+
+      final data = response.data ?? const {};
+      final access = data['access_token']?.toString();
+      final refresh = data['refresh_token']?.toString();
+
+      if (access != null && refresh != null) {
+        await _tokens.saveSession(accessToken: access, refreshToken: refresh);
+        await _loadIdentity(access);
         isAuthenticated = true;
-        errorMessage = '';
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Login failed';
-        isAuthenticated = false;
-      }
-    } catch (e) {
-      print('Login error: $e'); // Add debug log
-      errorMessage = 'Network error: ${e.toString()}';
-      isAuthenticated = false;
-    }
-    notifyListeners();
-  }
-
-  Future<void> signup(String name, String email, String password,
-      String specialty, String phoneNumber, String address) async {
-    try {
-      final response = await dio
-          .post(
-        '$baseUrl/signup',
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: json.encode({
-          'name': name,
-          'email': email,
-          'password': password,
-          'specialty': specialty,
-          'phoneNumber': phoneNumber,
-          'address': address,
-        }),
-      );
-        
-
-      if (response.statusCode == 201) {
-        await login(email, password);
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Signup failed';
-        isAuthenticated = false;
-      }
-    } on TimeoutException catch (_) {
-      errorMessage = 'Connection timed out. Please try again.';
-      isAuthenticated = false;
-    } on SocketException catch (_) {
-      errorMessage = 'Network error. Please check your internet connection.';
-      isAuthenticated = false;
-    } catch (e) {
-      errorMessage = 'Network error: ${e.toString()}';
-      isAuthenticated = false;
-    }
-    notifyListeners();
-  }
-
-  Future<void> forgotPassword(String email) async {
-    errorMessage = '';
-    try {
-      final response = await dio.post(
-        '$baseUrl/forgot-password',
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: json.encode({'email': email}),
-      );
-      if (response.statusCode != 200) {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Failed to send OTP';
-      }
-    } catch (e) {
-      errorMessage =
-          'Connection failed. Please check your internet connection.';
-    }
-    notifyListeners();
-  }
-
-  Future<bool> verifyOTP(String email, String otp) async {
-    errorMessage = '';
-    try {
-      final response = await dio.post(
-        '$baseUrl/verify-otp',
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: json.encode({'email': email, 'otp': otp}),
-      );
-
-      if (response.statusCode == 200) {
         return true;
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Invalid OTP';
-        return false;
       }
-    } catch (e) {
+
+      return login(email, password, expectedRole: 'patient');
+    } on DioException catch (error) {
       errorMessage =
-          'Connection failed. Please check your internet connection.';
+          _messageFromDio(error, fallback: 'Unable to create the account.');
       return false;
     } finally {
-      notifyListeners();
+      _setBusy(false);
     }
   }
 
-  Future<bool> resetPassword(
-      String email, String otp, String newPassword) async {
+  Future<bool> forgotPassword(String email) async {
+    _setBusy(true);
     errorMessage = '';
-    try {
-      final response = await dio.post(
-        '$baseUrl/reset-password',
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: json.encode({
-          'email': email,
-          'otp': otp,
-          'newPassword': newPassword,
-        }),
-      );
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Failed to reset password';
-        return false;
-      }
-    } catch (e) {
-      errorMessage =
-          'Connection failed. Please check your internet connection.';
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        'auth/forgot-password',
+        data: {'email': email.trim()},
+        options: Options(extra: {'skipAuth': true}),
+      );
+      return true;
+    } on DioException catch (error) {
+      errorMessage = _messageFromDio(
+        error,
+        fallback: 'Unable to request a password reset.',
+      );
       return false;
     } finally {
-      notifyListeners();
+      _setBusy(false);
     }
   }
 
   Future<void> fetchProfile() async {
-    if (authToken == null) return;
+    if (!isAuthenticated) return;
 
     try {
-      final response = await dio.get(
-        '$baseUrl/profile',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-      );
+      final response =
+          await _dio.get<Map<String, dynamic>>('auth/profile');
+      final data = response.data ?? const {};
+      final attributes = _asMap(data['attributes']);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.data);
-        currentDoctor = Doctor(
-          id: data['id'],
-          name: data['name'],
-          email: data['email'],
-          specialty: data['specialty'],
-          phoneNumber: data['phone_number'],
-          address: data['address'],
-          profileImage: data['profile_image'],
-          isVerified: data['is_verified'] ?? false,
-          verificationDetails: data['verification_details'],
-          signature: data['signature'], // Add this line
-        );
+      userId = data['id']?.toString() ?? userId;
+      userEmail = data['email']?.toString() ?? userEmail;
+      displayName = _profileName(data);
+      userRole = data['role']?.toString() ?? userRole;
+
+      currentDoctor = Doctor(
+        id: userId ?? '',
+        name: displayName ?? userEmail ?? 'PulmoCare user',
+        email: userEmail ?? '',
+        specialty: attributes['specialty']?.toString() ?? '',
+        phoneNumber: attributes['phone']?.toString() ?? '',
+        address: attributes['address']?.toString() ?? '',
+        profileImage: attributes['profile_image']?.toString(),
+        isVerified: _asBool(attributes['is_verified']),
+        verificationDetails:
+            attributes['verification_details'] is Map<String, dynamic>
+                ? attributes['verification_details'] as Map<String, dynamic>
+                : null,
+        signature: attributes['signature']?.toString(),
+      );
+      notifyListeners();
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        await _clearSession();
         notifyListeners();
       }
-    } catch (e) {
-      errorMessage = 'Failed to fetch profile';
+    }
+  }
+
+  Future<void> logout() async {
+    final refresh = _tokens.refreshToken;
+    try {
+      if (refresh != null && refresh.isNotEmpty) {
+        await _dio.post<Map<String, dynamic>>(
+          'auth/logout',
+          data: {'refresh_token': refresh},
+        );
+      }
+    } catch (_) {
+      // Local logout must still succeed when the network is unavailable.
+    } finally {
+      await _clearSession();
       notifyListeners();
     }
   }
 
   Future<void> changePassword(
-      String currentPassword, String newPassword) async {
-    try {
-      final response = await dio.post(
-        '$baseUrl/change-password',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-        data: json.encode({
-          'current_password': currentPassword,
-          'new_password': newPassword,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Failed to change password';
-      } else {
-        errorMessage = '';
-      }
-    } catch (e) {
-      errorMessage = 'Network error: ${e.toString()}';
-    }
+    String currentPassword,
+    String newPassword,
+  ) async {
+    errorMessage =
+        'Password changes are handled by the identity provider reset flow.';
     notifyListeners();
   }
 
@@ -240,144 +248,123 @@ class AuthViewModel extends ChangeNotifier {
     required String address,
     String? base64Image,
   }) async {
-    try {
-      final response = await dio.put(
-        '$baseUrl/update-profile',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-        data: json.encode({
-          'name': name,
-          'specialty': specialty,
-          'phone_number': phoneNumber,
-          'address': address,
-          'profile_image': base64Image,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.data);
-        currentDoctor = Doctor(
-          id: data['id'],
-          name: data['name'],
-          email: data['email'],
-          specialty: data['specialty'],
-          phoneNumber: data['phone_number'],
-          address: data['address'],
-          profileImage: base64Image ?? currentDoctor?.profileImage,
-          isVerified: data['is_verified'] ??
-              currentDoctor?.isVerified ??
-              false, // Preserve verification status
-          verificationDetails: data['verification_details'] ??
-              currentDoctor?.verificationDetails,
-        );
-        errorMessage = '';
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Failed to update profile';
-      }
-    } catch (e) {
-      errorMessage = 'Network error: $e';
-    }
+    errorMessage =
+        'Profile editing is temporarily unavailable until the backend profile contract is finalized.';
     notifyListeners();
   }
 
-  Future<void> logout() async {
-    if (authToken == null) return;
-    try {
-      await dio.post(
-        '$baseUrl/logout',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-      );
-      authToken = null;
-      currentDoctor = null;
-      errorMessage = '';
-      isAuthenticated = false;
-      notifyListeners();
-    } catch (e) {
-      errorMessage = 'Network error: $e';
-      notifyListeners();
-    }
-  }
-
   Future<void> verifyDoctor(String base64Image) async {
-    try {
-      final response = await dio.post(
-        '$baseUrl/verify-doctor',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-        data: json.encode({
-          'image': base64Image,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.data);
-        if (currentDoctor != null) {
-          currentDoctor = Doctor(
-            id: currentDoctor!.id,
-            name: currentDoctor!.name,
-            email: currentDoctor!.email,
-            specialty: currentDoctor!.specialty,
-            phoneNumber: currentDoctor!.phoneNumber,
-            address: currentDoctor!.address,
-            profileImage: currentDoctor!.profileImage,
-            isVerified: true,
-          );
-        }
-        errorMessage = '';
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Verification failed';
-      }
-    } catch (e) {
-      errorMessage = 'Network error: $e';
-    }
+    errorMessage =
+        'Provider verification is managed by administrators, not from the mobile client.';
     notifyListeners();
   }
 
   Future<void> updateSignature(String signatureBase64) async {
-    try {
-      final response = await dio.post(
-        '$baseUrl/update-signature',
-        options: Options(headers: {
-          'Authorization': 'Bearer $authToken',
-          'Content-Type': 'application/json',
-        }),
-        data: json.encode({
-          'signature': signatureBase64,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        if (currentDoctor != null) {
-          currentDoctor = Doctor(
-            id: currentDoctor!.id,
-            name: currentDoctor!.name,
-            email: currentDoctor!.email,
-            specialty: currentDoctor!.specialty,
-            phoneNumber: currentDoctor!.phoneNumber,
-            address: currentDoctor!.address,
-            profileImage: currentDoctor!.profileImage,
-            isVerified: currentDoctor!.isVerified,
-            verificationDetails: currentDoctor!.verificationDetails,
-            signature: signatureBase64,
-          );
-        }
-        errorMessage = '';
-      } else {
-        final data = json.decode(response.data);
-        errorMessage = data['error'] ?? 'Failed to update signature';
-      }
-    } catch (e) {
-      errorMessage = 'Network error: $e';
-    }
+    errorMessage =
+        'Signature updates are unavailable until the authenticated profile endpoint supports them.';
     notifyListeners();
+  }
+
+  Future<void> _loadIdentity(String accessToken) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      'auth/token/verify',
+      data: {'token': accessToken},
+      options: Options(extra: {'skipAuth': true}),
+    );
+    final data = response.data ?? const {};
+    if (data['valid'] != true) {
+      throw const FormatException('Invalid access token');
+    }
+
+    userId = data['user_id']?.toString();
+    userEmail = data['email']?.toString();
+    displayName = data['name']?.toString() ?? userEmail;
+    userRole = data['primary_role']?.toString();
+
+    currentDoctor = Doctor(
+      id: userId ?? '',
+      name: displayName ?? 'PulmoCare user',
+      email: userEmail ?? '',
+      specialty: '',
+      phoneNumber: '',
+      address: '',
+    );
+  }
+
+  void _buildCompatibilityProfile(Map<String, dynamic> data) {
+    currentDoctor = Doctor(
+      id: userId ?? '',
+      name: displayName ?? userEmail ?? 'PulmoCare user',
+      email: userEmail ?? '',
+      specialty: '',
+      phoneNumber: '',
+      address: '',
+    );
+  }
+
+  Future<void> _clearSession() async {
+    await _tokens.clear();
+    isAuthenticated = false;
+    userRole = null;
+    userId = null;
+    userEmail = null;
+    displayName = null;
+    currentDoctor = null;
+  }
+
+  void _setBusy(bool value) {
+    isBusy = value;
+    notifyListeners();
+  }
+
+  static String _readableRole(String value) {
+    if (value.isEmpty) return value;
+    return '${value[0].toUpperCase()}${value.substring(1)}';
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, item) => MapEntry(key.toString(), item));
+    }
+    return const {};
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true';
+    return false;
+  }
+
+  static String? _profileName(Map<String, dynamic> data) {
+    final first = data['firstName']?.toString().trim() ?? '';
+    final last = data['lastName']?.toString().trim() ?? '';
+    final full = '$first $last'.trim();
+    return full.isNotEmpty
+        ? full
+        : data['username']?.toString() ?? data['email']?.toString();
+  }
+
+  static String _messageFromDio(
+    DioException error, {
+    required String fallback,
+  }) {
+    final data = error.response?.data;
+    if (data is Map) {
+      final detail = data['detail'] ?? data['error'] ?? data['message'];
+      if (detail is String && detail.trim().isNotEmpty) {
+        return detail;
+      }
+    }
+
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return 'The server took too long to respond.';
+    }
+    if (error.type == DioExceptionType.connectionError) {
+      return 'Cannot reach the PulmoCare server. Check your connection.';
+    }
+    return fallback;
   }
 }

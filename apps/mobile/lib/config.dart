@@ -1,26 +1,39 @@
+import 'package:flutter/foundation.dart';
+
 class Config {
-  // Updated to use Kong API Gateway
-  static const String apiBaseUrl = 'http://10.0.2.2:8000/api';
+  Config._();
 
-  // For Flutter web or emulator use
-  static const String localApiBaseUrl = 'http://localhost:8000/api';
+  static const String _apiOverride = String.fromEnvironment('API_BASE_URL');
 
-  // For production Docker environment
-  static const String dockerApiBaseUrl = 'http://kong:8000/api';
+  static String get apiBaseUrl {
+    final configured = _apiOverride.trim();
+    if (configured.isNotEmpty) {
+      return _withTrailingSlash(configured);
+    }
 
-  // Helper method to determine which URL to use based on environment
-  static String getApiBaseUrl() {
-    // This is a simple implementation. In a production app, you would want
-    // to determine this based on build flags or environment variables
-    const bool isProduction = bool.fromEnvironment('dart.vm.product');
+    if (kReleaseMode) {
+      throw StateError(
+        'API_BASE_URL is required for release builds. '
+        'Pass --dart-define=API_BASE_URL=https://your-gateway.example/api/',
+      );
+    }
 
-    if (isProduction) {
-      return apiBaseUrl;
-    } else {
-      // For development in docker, use the docker URL
-      // This would typically be set by an environment variable
-      const useDocker = bool.fromEnvironment('USE_DOCKER', defaultValue: false);
-      return useDocker ? dockerApiBaseUrl : localApiBaseUrl;
+    if (kIsWeb) {
+      return 'http://localhost:9080/api/';
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'http://10.0.2.2:9080/api/';
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+      case TargetPlatform.fuchsia:
+        return 'http://localhost:9080/api/';
     }
   }
+
+  static String _withTrailingSlash(String value) =>
+      value.endsWith('/') ? value : '$value/';
 }

@@ -1,32 +1,68 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:medapp/config.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:medapp/services/token_storage.dart';
 
 class DioHttpClient {
+  DioHttpClient._internal() {
+    dio = Dio(
+      BaseOptions(
+        baseUrl: Config.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: const {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      ),
+    );
+
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (options.extra['skipAuth'] != true) {
+            final token = TokenStorage.instance.accessToken;
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+
+          options.headers['X-Request-ID'] =
+              DateTime.now().microsecondsSinceEpoch.toString();
+
+          if (kDebugMode) {
+            debugPrint('[HTTP] ${options.method} ${options.uri}');
+          }
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          if (kDebugMode) {
+            debugPrint(
+              '[HTTP] ${response.statusCode} '
+              '${response.requestOptions.method} '
+              '${response.requestOptions.uri}',
+            );
+          }
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          if (kDebugMode) {
+            debugPrint(
+              '[HTTP] ${error.response?.statusCode ?? 'ERR'} '
+              '${error.requestOptions.method} '
+              '${error.requestOptions.uri}',
+            );
+          }
+          handler.next(error);
+        },
+      ),
+    );
+  }
+
   static final DioHttpClient _instance = DioHttpClient._internal();
-  
-  late final Dio dio;
 
   factory DioHttpClient() => _instance;
 
-  DioHttpClient._internal() {
-    dio = Dio(BaseOptions(
-      baseUrl: Config.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ));
-
-    dio.interceptors.add(PrettyDioLogger(
-      request: true,
-      requestHeader: true,
-      responseHeader: false,
-      responseBody: true,
-      error: true,
-      compact: false,
-    ));
-  }
+  late final Dio dio;
 }
