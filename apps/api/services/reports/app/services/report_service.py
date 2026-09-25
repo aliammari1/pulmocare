@@ -87,9 +87,7 @@ class ReportService:
                     if self.redis_client:
                         self.redis_client.invalidate_report(report_id)
                 except Exception:
-                    logger_service.exception(
-                        "Report updated but cache invalidation failed"
-                    )
+                    logger_service.exception("Report updated but cache invalidation failed")
 
                 try:
                     if self.rabbitmq_client:
@@ -115,9 +113,7 @@ class ReportService:
                     if self.redis_client:
                         self.redis_client.invalidate_report(report_id)
                 except Exception:
-                    logger_service.exception(
-                        "Report deleted but cache invalidation failed"
-                    )
+                    logger_service.exception("Report deleted but cache invalidation failed")
 
                 try:
                     if self.rabbitmq_client:

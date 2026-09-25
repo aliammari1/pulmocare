@@ -7,6 +7,8 @@ from keycloak import KeycloakAdmin, KeycloakOpenID, KeycloakOpenIDConnection
 from config import Config
 from models.auth import Role
 
+logger = logging.getLogger(__name__)
+
 
 class KeycloakService:
     def __init__(
@@ -428,9 +430,7 @@ class KeycloakService:
             )
             return token_info
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).error(f"Token verification error: {type(e).__name__}")
+            logger.error(f"Token verification error: {type(e).__name__}")
             raise
 
     def refresh_token(self, refresh_token):
@@ -459,9 +459,6 @@ class KeycloakService:
         Log out a user by invalidating their refresh token via admin API.
         Use logout() for standard OIDC logout.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
         try:
             config = self.keycloak_admin.connection.get_config()
             server_url = config["server_url"]
@@ -494,9 +491,6 @@ class KeycloakService:
         """
         Log out a user using their access token
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
         try:
             payload = self.verify_token(access_token)
             session_id = payload.get("sid")
@@ -547,9 +541,7 @@ class KeycloakService:
             self.keycloak_openid.logout(refresh_token)
             return True
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).error(f"Logout error: {type(e).__name__}")
+            logger.error(f"Logout error: {type(e).__name__}")
             raise
 
     def get_user_info_by_id(self, user_id):
