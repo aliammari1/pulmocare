@@ -13,17 +13,17 @@ class ReportService:
         self.rabbitmq_client = rabbitmq_client
         self.db = mongodb_client.db
 
-    def get_all_reports(self, search=None):
-        """Get all reports with optional filtering"""
+    def get_all_reports(self, search=None, patient_id=None):
+        """Get reports with optional search and patient scoping."""
         try:
             query = {}
+            if patient_id:
+                query["patient_id"] = patient_id
             if search:
-                query = {
-                    "$or": [
-                        {"title": {"$regex": search, "$options": "i"}},
-                        {"content": {"$regex": search, "$options": "i"}},
-                    ]
-                }
+                query["$or"] = [
+                    {"title": {"$regex": search, "$options": "i"}},
+                    {"content": {"$regex": search, "$options": "i"}},
+                ]
             return self.mongodb_client.find_reports(query)
         except Exception as e:
             logger_service.error(f"Error getting reports: {e!s}")
@@ -32,15 +32,13 @@ class ReportService:
     def get_report_by_id(self, report_id):
         """Get a specific report by ID with caching"""
         try:
-            # Try cache first
-            cached_report = self.redis_client.get_report(report_id)
-            if cached_report:
-                return cached_report
+            if self.redis_client:
+                cached_report = self.redis_client.get_report(report_id)
+                if cached_report:
+                    return cached_report
 
-            # Fetch from database if not in cache
             report = self.mongodb_client.find_report_by_id(report_id)
-            if report:
-                # Cache for next time
+            if report and self.redis_client:
                 self.redis_client.cache_report(report_id, report)
 
             return report
@@ -109,20 +107,16 @@ class ReportService:
     def queue_report_for_analysis(self, report_id: str) -> bool:
         """Queue a report for analysis"""
         try:
-            # Get the report
-            report = self.db.reports.find_one({"report_id": report_id})
+            report = self.mongodb_client.find_report_by_id(report_id)
             if not report:
                 logger_service.error(f"Report not found: {report_id}")
                 return False
 
-            # Mark as queued for analysis
-            self.db.reports.update_one(
-                {"report_id": report_id},
+            self.mongodb_client.update_report(
+                report_id,
                 {
-                    "$set": {
-                        "analysis_status": "queued",
-                        "queued_at": datetime.utcnow().isoformat(),
-                    }
+                    "analysis_status": "queued",
+                    "queued_at": datetime.utcnow().isoformat(),
                 },
             )
 

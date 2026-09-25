@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 from bson import ObjectId
 from pymongo import MongoClient
@@ -8,122 +8,101 @@ from services.logger_service import logger_service
 
 
 class MongoDBClient:
-    """MongoDB client service for database operations"""
+    """MongoDB client service for database operations."""
 
     def __init__(self, config):
         self.config = config
-
         self.client = None
         self.db = None
         self.reports_collection = None
         self.init_connection()
 
     def init_connection(self):
-        """Initialize MongoDB connection with schema validation"""
+        """Initialize MongoDB using the shared typed configuration."""
         max_retries = 5
         retry_delay = 1
 
         for attempt in range(max_retries):
             try:
-                self.client = MongoClient(f"mongodb://admin:admin@{self.config.MONGODB_HOST}:27017/")
-                self.db = self.client[self.config.MONGODB_DATABASE]
+                self.client = MongoClient(
+                    self.config.mongodb_uri,
+                    maxPoolSize=self.config.mongodb_pool_size,
+                    minPoolSize=self.config.mongodb_min_pool_size,
+                    maxIdleTimeMS=self.config.mongodb_max_idle_time_ms,
+                    connectTimeoutMS=self.config.mongodb_connect_timeout_ms,
+                    serverSelectionTimeoutMS=self.config.mongodb_server_selection_timeout_ms,
+                )
+                self.db = self.client[self.config.mongodb_database]
 
-                # Set up collection with schema validation
                 if "reports" not in self.db.list_collection_names():
                     self.db.create_collection("reports")
-                    # self.db.command(
-                    #     {
-                    #         "collMod": "reports",
-                    #         "validator": self.config.get_mongodb_validation_schema(),
-                    #     }
-                    # )
 
                 self.reports_collection = self.db["reports"]
+                self.db.command("ping")
                 logger_service.info("Connected to MongoDB successfully")
-                break
-            except Exception as e:
-                logger_service.error(f"MongoDB connection attempt {attempt + 1} failed: {e!s}")
+                return
+            except Exception as exc:
+                logger_service.error(
+                    f"MongoDB connection attempt {attempt + 1} failed: {exc!s}"
+                )
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     retry_delay *= 2
-                else:
-                    logger_service.error("Failed to connect to MongoDB after multiple attempts")
+
+        raise RuntimeError("Failed to connect to MongoDB after multiple attempts")
+
+    @staticmethod
+    def _report_query(report_id: str) -> dict:
+        try:
+            return {"_id": ObjectId(report_id)}
+        except Exception:
+            return {"report_id": report_id}
 
     def find_reports(self, query=None):
-        """Find reports by query"""
-        try:
-            query = query or {}
-            reports = list(self.reports_collection.find(query))
-            # Convert ObjectId to string
-            for report in reports:
-                report["_id"] = str(report["_id"])
-            return reports
-        except Exception as e:
-            logger_service.error(f"MongoDB find_reports error: {e!s}")
-            raise
+        reports = list(self.reports_collection.find(query or {}))
+        for report in reports:
+            report["_id"] = str(report["_id"])
+        return reports
 
     def find_report_by_id(self, report_id):
-        """Find a report by ID"""
-        try:
-            report = self.reports_collection.find_one({"_id": ObjectId(report_id)})
-            if report:
-                report["_id"] = str(report["_id"])
-            return report
-        except Exception as e:
-            logger_service.error(f"MongoDB find_report_by_id error: {e!s}")
-            return None
+        report = self.reports_collection.find_one(self._report_query(report_id))
+        if report:
+            report["_id"] = str(report["_id"])
+        return report
 
     def insert_report(self, report_data):
-        """Insert a new report"""
-        try:
-            report_data["created_at"] = datetime.utcnow()
-            report_data["updated_at"] = datetime.utcnow()
+        now = datetime.now(UTC)
+        report_data["created_at"] = now
+        report_data["updated_at"] = now
 
-            result = self.reports_collection.insert_one(report_data)
-            report_data["_id"] = str(result.inserted_id)
-            return report_data
-        except Exception as e:
-            logger_service.error(f"MongoDB insert_report error: {e!s}")
-            raise
+        result = self.reports_collection.insert_one(report_data)
+        report_data["_id"] = str(result.inserted_id)
+        return report_data
 
     def update_report(self, report_id, report_data):
-        """Update an existing report"""
-        try:
-            report_data["updated_at"] = datetime.utcnow()
+        report_data["updated_at"] = datetime.now(UTC)
+        result = self.reports_collection.update_one(
+            self._report_query(report_id),
+            {"$set": report_data},
+        )
+        if result.matched_count == 0:
+            return None
 
-            result = self.reports_collection.update_one({"_id": ObjectId(report_id)}, {"$set": report_data})
-
-            if result.matched_count == 0:
-                return None
-
-            report_data["_id"] = report_id
-            return report_data
-        except Exception as e:
-            logger_service.error(f"MongoDB update_report error: {e!s}")
-            raise
+        report = self.find_report_by_id(report_id)
+        return report or report_data
 
     def delete_report(self, report_id):
-        """Delete a report"""
-        try:
-            result = self.reports_collection.delete_one({"_id": ObjectId(report_id)})
-            return result.deleted_count > 0
-        except Exception as e:
-            logger_service.error(f"MongoDB delete_report error: {e!s}")
-            raise
+        result = self.reports_collection.delete_one(self._report_query(report_id))
+        return result.deleted_count > 0
 
     def close(self):
-        """Close MongoDB connection"""
-        try:
-            if self.client:
-                self.client.close()
-                logger_service.info("Closed MongoDB connection")
-        except Exception as e:
-            logger_service.error(f"Error closing MongoDB connection: {e!s}")
+        if self.client:
+            self.client.close()
+            logger_service.info("Closed MongoDB connection")
 
     def check_health(self):
-        """Check MongoDB health"""
         try:
             self.db.command("ping")
             return "UP"
-        except Exception as e:
-            return f"DOWN: {e!s}"
+        except Exception as exc:
+            return f"DOWN: {exc!s}"

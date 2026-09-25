@@ -6,8 +6,9 @@ banner (see models/radiology.py).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from auth.keycloak_auth import get_current_report_writer
 from models.radiology import RESEARCH_ONLY_DISCLAIMER, RadiologyReport, RadiologyReportRequest
 from services import radiology_service
 
@@ -25,7 +26,10 @@ async def disclaimer() -> dict[str, str | bool]:
     response_model=RadiologyReport,
     summary="Generate a structured chest X-ray report (RESEARCH ONLY)",
 )
-async def radiology_report(request: RadiologyReportRequest) -> RadiologyReport:
+async def radiology_report(
+    request: RadiologyReportRequest,
+    user_info: dict = Depends(get_current_report_writer),
+) -> RadiologyReport:
     """Generate a structured radiology report from a chest X-ray.
 
     Backed by the vendored MedRAX report-generation and VQA tools
@@ -33,6 +37,7 @@ async def radiology_report(request: RadiologyReportRequest) -> RadiologyReport:
     response always carries the RESEARCH-ONLY banner and is intended for
     clinician review/edit, never for clinical decision-making.
     """
+    del user_info
     if not request.image_path:
         raise HTTPException(status_code=400, detail="image_path is required")
 

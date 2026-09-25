@@ -1,16 +1,17 @@
 """
 Reports Service - FastAPI Application.
 
-Handles medical report generation with AI/ML capabilities.
+Handles authenticated medical report storage and export.
 """
 
 import threading
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 
+from auth.keycloak_auth import get_current_report_writer, get_current_user
 from config import get_config
 from pulmocare_shared import setup_cors, setup_observability, setup_telemetry
 from pulmocare_shared.middleware import health_router
@@ -22,13 +23,9 @@ from services.rabbitmq_client import RabbitMQClient
 from services.redis_client import RedisClient
 from services.report_service import ReportService
 
-# Get configuration
 config = get_config()
-
-# Initialize API router
 api = APIRouter()
 
-# Initialize FastAPI app
 app = FastAPI(
     title="Reports API",
     version=config.version,
@@ -36,20 +33,11 @@ app = FastAPI(
     redoc_url="/redoc" if config.is_development else None,
 )
 
-# Setup CORS using shared module
 setup_cors(app, config.cors_origins)
-
-# Setup OpenTelemetry using shared module
 setup_telemetry(app, config)
-
-# Sentry (PHI-scrubbed) + request correlation IDs. No-op without SENTRY_DSN /
-# the optional deps, so the service still boots in minimal environments.
 setup_observability(config, app)
-
-# Include health check router
 app.include_router(health_router)
 
-# Initialize services
 redis_client = RedisClient(config)
 mongodb_client = MongoDBClient(config)
 rabbitmq_client = RabbitMQClient(config)
@@ -58,53 +46,86 @@ report_generator = ReportGenerator()
 report_service = ReportService(mongodb_client, redis_client, rabbitmq_client)
 
 
-# API Routes
+def _roles(user_info: dict) -> set[str]:
+    return set(user_info.get("roles", []))
+
+
+def _is_staff(user_info: dict) -> bool:
+    return not _roles(user_info).isdisjoint({"doctor", "radiologist", "admin"})
+
+
+def _ensure_can_read(report: dict, user_info: dict) -> None:
+    if _is_staff(user_info):
+        return
+
+    if "patient" in _roles(user_info) and str(report.get("patient_id", "")) == str(
+        user_info.get("user_id", "")
+    ):
+        return
+
+    raise HTTPException(status_code=403, detail="You do not have access to this report")
+
+
 @api.get("/")
 async def get_reports(
     search: str | None = None,
-    request: Request = None,
+    user_info: dict = Depends(get_current_user),
 ):
-    """Get all reports with optional filtering"""
-    reports = report_service.get_all_reports(search)
-    return reports
+    """List reports visible to the authenticated user."""
+    roles = _roles(user_info)
+    if _is_staff(user_info):
+        return report_service.get_all_reports(search=search)
+
+    if "patient" in roles:
+        return report_service.get_all_reports(
+            search=search,
+            patient_id=str(user_info.get("user_id", "")),
+        )
+
+    raise HTTPException(status_code=403, detail="Clinical account role required")
 
 
 @api.get("/{report_id}")
 async def get_report(
     report_id: str,
-    request: Request = None,
+    user_info: dict = Depends(get_current_user),
 ):
-    """Get a specific report by ID"""
+    """Get a report when the caller is allowed to view it."""
     report = report_service.get_report_by_id(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    _ensure_can_read(report, user_info)
     return report
 
 
 @api.post("/", status_code=201)
 async def create_report(
     data: dict,
-    request: Request = None,
+    user_info: dict = Depends(get_current_report_writer),
 ):
-    """Create a new report"""
+    """Create a report as an authenticated clinician."""
     if not data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    report = report_service.create_report(data)
-    return report
+    payload = dict(data)
+    payload["created_by"] = user_info.get("user_id")
+    return report_service.create_report(payload)
 
 
 @api.put("/{report_id}")
 async def update_report(
     report_id: str,
     data: dict,
-    request: Request = None,
+    user_info: dict = Depends(get_current_report_writer),
 ):
-    """Update an existing report"""
+    """Update an existing report as an authenticated clinician."""
     if not data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    report = report_service.update_report(report_id, data)
+    payload = dict(data)
+    payload["updated_by"] = user_info.get("user_id")
+    report = report_service.update_report(report_id, payload)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
@@ -113,11 +134,11 @@ async def update_report(
 @api.delete("/{report_id}", status_code=204)
 async def delete_report(
     report_id: str,
-    request: Request = None,
+    user_info: dict = Depends(get_current_report_writer),
 ):
-    """Delete a report"""
-    success = report_service.delete_report(report_id)
-    if not success:
+    """Delete a report as an authenticated clinician."""
+    del user_info
+    if not report_service.delete_report(report_id):
         raise HTTPException(status_code=404, detail="Report not found")
     return Response(status_code=204)
 
@@ -125,17 +146,16 @@ async def delete_report(
 @api.get("/{report_id}/export")
 async def export_report(
     report_id: str,
-    request: Request = None,
+    user_info: dict = Depends(get_current_user),
 ):
-    """Generate and download PDF report"""
+    """Generate and download a report PDF when the caller can read it."""
     report = report_service.get_raw_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # Generate PDF
+    _ensure_can_read(report, user_info)
     output_path = report_generator.generate_pdf(report)
 
-    # Send file
     return FileResponse(
         path=output_path,
         media_type="application/pdf",
@@ -143,21 +163,16 @@ async def export_report(
     )
 
 
-# Register routes
 app.include_router(api, prefix="/api/reports")
 app.include_router(integration_router)
-# AI radiology-report endpoint (MedRAX, research-only)
 app.include_router(radiology_router)
 
-# Import the consumer module and threading
 from consumer import main as consumer_main
 
 if __name__ == "__main__":
-    # Start the consumer in a separate thread
     consumer_thread = threading.Thread(target=consumer_main, daemon=True)
     consumer_thread.start()
 
-    # Run the FastAPI app with uvicorn in the main thread
     uvicorn.run(
         "app:app",
         host=config.host,

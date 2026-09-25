@@ -1,10 +1,7 @@
-# Additional imports at the top of the file
-import uuid
-from datetime import datetime
-
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
+from auth.keycloak_auth import get_current_report_writer
 from config import Config
 from services.logger_service import logger_service
 from services.mongodb_client import MongoDBClient
@@ -13,7 +10,6 @@ from services.report_service import ReportService
 
 router = APIRouter(prefix="/api/integration", tags=["Integration"])
 
-# Initialize services
 mongodb_client = MongoDBClient(Config)
 rabbitmq_client = RabbitMQClient(Config)
 report_service = ReportService(mongodb_client, None, rabbitmq_client)
@@ -21,8 +17,7 @@ report_service = ReportService(mongodb_client, None, rabbitmq_client)
 
 class AnalysisSummaryRequest(BaseModel):
     report_ids: list[str]
-    summary_type: str | None = "general"
-    requester_id: str | None = None
+    summary_type: str = "general"
 
 
 @router.post(
@@ -31,94 +26,85 @@ class AnalysisSummaryRequest(BaseModel):
 )
 async def analyze_report(
     report_id: str = Query(..., description="ID of the report to analyze"),
-    request: Request = None,
+    user_info: dict = Depends(get_current_report_writer),
 ):
-    """Queue a report for analysis"""
+    """Queue an existing report for analysis."""
+    del user_info
     try:
-        # Get the report from the database
-        report = mongodb_client.db.reports.find_one({"report_id": report_id})
-        if not report:
-            # For testing purposes, create a dummy report if it doesn't exist
-            logger_service.info(f"Creating dummy report for testing: {report_id}")
-            dummy_report = {
-                "report_id": report_id,
-                "status": "pending",
-                "created_at": str(datetime.now()),
-                "data": {"test": True},
-            }
-            mongodb_client.db.reports.insert_one(dummy_report)
+        if not report_service.get_report_by_id(report_id):
+            raise HTTPException(status_code=404, detail="Report not found")
 
-        # Queue for analysis - modify this to avoid actual analysis for testing
-        result = True  # Assume success for testing
+        if not report_service.queue_report_for_analysis(report_id):
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to queue report analysis",
+            )
 
-        if result:
-            return {"message": "Report queued for analysis", "report_id": report_id}
-        else:
-            raise HTTPException(status_code=500, detail="Failed to queue report for analysis")
-
+        return {"message": "Report queued for analysis", "report_id": report_id}
     except HTTPException:
         raise
-    except Exception as e:
-        logger_service.error(f"Error queueing report for analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e!s}")
+    except Exception:
+        logger_service.exception("Error queueing report analysis")
+        raise HTTPException(status_code=500, detail="Unable to queue report analysis")
 
 
-@router.get(
-    "/report-analysis/{report_id}",
-)
-async def get_report_analysis(report_id: str, request: Request = None):
-    """Get the analysis results for a report"""
+@router.get("/report-analysis/{report_id}")
+async def get_report_analysis(
+    report_id: str,
+    user_info: dict = Depends(get_current_report_writer),
+):
+    """Return persisted analysis results for a report."""
+    del user_info
     try:
-        # Get the analysis from the database
-        analysis = mongodb_client.db.report_analyses.find_one({"report_id": report_id})
+        analysis = mongodb_client.db.report_analyses.find_one(
+            {"report_id": report_id}
+        )
         if not analysis:
-            # For testing, create a dummy analysis
-            logger_service.info(f"Creating dummy analysis for testing: {report_id}")
-            dummy_analysis = {
-                "report_id": report_id,
-                "status": "completed",
-                "findings": ["Test finding 1", "Test finding 2"],
-                "summary": "This is a test analysis summary",
-            }
-            return dummy_analysis
+            raise HTTPException(status_code=404, detail="Report analysis not found")
 
-        # Remove MongoDB ID
-        if "_id" in analysis:
-            analysis["_id"] = str(analysis["_id"])
-
+        analysis["_id"] = str(analysis["_id"])
         return analysis
-
     except HTTPException:
         raise
-    except Exception as e:
-        logger_service.error(f"Error retrieving report analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e!s}")
+    except Exception:
+        logger_service.exception("Error retrieving report analysis")
+        raise HTTPException(status_code=500, detail="Unable to retrieve report analysis")
 
 
 @router.post(
     "/create-analysis-summary",
     status_code=status.HTTP_202_ACCEPTED,
 )
-async def create_analysis_summary(data: AnalysisSummaryRequest, request: Request = None):
-    """Create a summary of analysis reports"""
+async def create_analysis_summary(
+    data: AnalysisSummaryRequest,
+    user_info: dict = Depends(get_current_report_writer),
+):
+    """Queue a summary job for existing report analyses."""
+    if not data.report_ids:
+        raise HTTPException(status_code=400, detail="Report IDs are required")
+
+    missing = [
+        report_id
+        for report_id in data.report_ids
+        if not report_service.get_report_by_id(report_id)
+    ]
+    if missing:
+        raise HTTPException(status_code=404, detail="One or more reports were not found")
+
     try:
-        if not data.report_ids:
-            raise HTTPException(status_code=400, detail="Report IDs are required")
-
-        # For testing, just return a mock job ID
-        job_id = "test-job-" + str(uuid.uuid4())[:8]
-
+        job_id = report_service.queue_summary_generation(
+            report_ids=data.report_ids,
+            summary_type=data.summary_type,
+            requester_id=user_info.get("user_id"),
+        )
+        if not job_id:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to queue summary generation",
+            )
         return {"message": "Summary generation queued", "job_id": job_id}
-
     except HTTPException:
         raise
-    except Exception as e:
-        logger_service.error(f"Error queueing summary generation: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e!s}")
-
-
-async def health_check():
-    @router.get("/health")
-    async def get_health_status():
-        """Health check endpoint for the reports service"""
-        return {"status": "healthy", "service": "reports-service"}
+    except Exception:
+        logger_service.exception("Error queueing summary generation")
+        raise HTTPException(status_code=500, detail="Unable to queue summary generation")
