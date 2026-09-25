@@ -33,13 +33,18 @@ class AuthViewModel extends ChangeNotifier {
       );
       final data = response.data ?? const {};
       final access = data['access_token']?.toString();
-      final refresh = data['refresh_token']?.toString();
+      final rotatedRefresh = data['refresh_token']?.toString();
 
-      if (access == null || refresh == null) {
+      if (access == null || access.isEmpty) {
         throw const FormatException('Invalid refresh response');
       }
 
-      await _tokens.saveSession(accessToken: access, refreshToken: refresh);
+      await _tokens.saveSession(
+        accessToken: access,
+        refreshToken: rotatedRefresh == null || rotatedRefresh.isEmpty
+            ? refreshToken
+            : rotatedRefresh,
+      );
       await _loadIdentity(access);
       isAuthenticated = true;
     } catch (_) {
@@ -230,39 +235,6 @@ class AuthViewModel extends ChangeNotifier {
       await _clearSession();
       notifyListeners();
     }
-  }
-
-  Future<void> changePassword(
-    String currentPassword,
-    String newPassword,
-  ) async {
-    errorMessage =
-        'Password changes are handled by the identity provider reset flow.';
-    notifyListeners();
-  }
-
-  Future<void> updateProfile({
-    required String name,
-    required String specialty,
-    required String phoneNumber,
-    required String address,
-    String? base64Image,
-  }) async {
-    errorMessage =
-        'Profile editing is temporarily unavailable until the backend profile contract is finalized.';
-    notifyListeners();
-  }
-
-  Future<void> verifyDoctor(String base64Image) async {
-    errorMessage =
-        'Provider verification is managed by administrators, not from the mobile client.';
-    notifyListeners();
-  }
-
-  Future<void> updateSignature(String signatureBase64) async {
-    errorMessage =
-        'Signature updates are unavailable until the authenticated profile endpoint supports them.';
-    notifyListeners();
   }
 
   Future<void> _loadIdentity(String accessToken) async {
