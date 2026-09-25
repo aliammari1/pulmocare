@@ -269,12 +269,9 @@ class KeycloakService:
                 },
             }
 
-            print(f"Creating user with payload: {user_payload}")
             user_id = self.keycloak_admin.create_user(user_payload)
-            print(f"User created with ID: {user_id}")
 
             # Set password
-            print(f"Setting password for user {user_id}")
             self.keycloak_admin.set_user_password(user_id=user_id, password=user_data.get("password"), temporary=False)
 
             # Check if the role exists and create it if it doesn't
@@ -715,8 +712,7 @@ class KeycloakService:
             # Find user by email
             users = self.keycloak_admin.get_users({"email": email})
             if not users:
-                print(f"Password reset requested for non-existent email: {email}")
-                return False
+                    return False
 
             user_id = users[0]["id"]
 
