@@ -76,10 +76,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
-              : _report == null
-                  ? const Center(child: Text('Report not found'))
-                  : _content(_report!),
+          ? Center(child: Text(_error!))
+          : _report == null
+          ? const Center(child: Text('Report not found'))
+          : _content(_report!),
     );
   }
 
@@ -94,7 +94,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           runSpacing: 6,
           children: [
             if (report.createdAt.millisecondsSinceEpoch > 0)
-              Text(DateFormat.yMMMd().add_jm().format(report.createdAt.toLocal())),
+              Text(
+                DateFormat.yMMMd().add_jm().format(report.createdAt.toLocal()),
+              ),
             if (report.patientId.isNotEmpty)
               Text('Patient: ${report.patientId}'),
             if (report.doctorId.isNotEmpty)
@@ -110,13 +112,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               report.content.isEmpty
                   ? 'This report does not contain narrative content.'
                   : report.content,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(height: 1.55),
             ),
           ),
         ),
         if (report.additionalData case final extra?) ...[
           const SizedBox(height: 18),
-          Text('Additional data', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Additional data',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           Card(
             margin: EdgeInsets.zero,
@@ -134,7 +141,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             flex: 2,
                             child: Text(
                               entry.key.replaceAll('_', ' '),
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -186,10 +195,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Report title',
                       ),
-                      validator: (value) =>
-                          (value?.trim().length ?? 0) < 3
-                              ? 'Enter a report title.'
-                              : null,
+                      validator: (value) => (value?.trim().length ?? 0) < 3
+                          ? 'Enter a report title.'
+                          : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -200,10 +208,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         labelText: 'Clinical report',
                         alignLabelWithHint: true,
                       ),
-                      validator: (value) =>
-                          (value?.trim().length ?? 0) < 3
-                              ? 'Enter report content.'
-                              : null,
+                      validator: (value) => (value?.trim().length ?? 0) < 3
+                          ? 'Enter report content.'
+                          : null,
                     ),
                     if (localError != null) ...[
                       const SizedBox(height: 12),
@@ -228,13 +235,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 try {
-                  await _api.updateReport(
-                    report.id,
-                    {
-                      'title': title.text.trim(),
-                      'content': content.text.trim(),
-                    },
-                  );
+                  await _api.updateReport(report.id, {
+                    'title': title.text.trim(),
+                    'content': content.text.trim(),
+                  });
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext, true);
                   }
@@ -260,9 +264,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     if (updated == true && mounted) {
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report updated.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Report updated.')));
       }
     }
   }

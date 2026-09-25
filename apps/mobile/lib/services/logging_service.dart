@@ -2,12 +2,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 
-enum LogLevel {
-  debug,
-  info,
-  warning,
-  error,
-}
+enum LogLevel { debug, info, warning, error }
 
 class LoggingService {
   static final LoggingService _instance = LoggingService._internal();
@@ -37,9 +32,11 @@ class LoggingService {
     String? userId,
   }) async {
     final timestamp = DateTime.now();
-    final formattedDate =
-        DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(timestamp);
-    final logMessage = '$formattedDate [${level.name.toUpperCase()}] $message'
+    final formattedDate = DateFormat(
+      'yyyy-MM-dd HH:mm:ss.SSS',
+    ).format(timestamp);
+    final logMessage =
+        '$formattedDate [${level.name.toUpperCase()}] $message'
         '${error != null ? '\nError: $error' : ''}'
         '${stackTrace != null ? '\nStack Trace:\n$stackTrace' : ''}'
         '${userId != null ? ' (User: $userId)' : ''}';
@@ -69,16 +66,19 @@ class LoggingService {
       final directory = Directory(logsDir);
       final files = await directory
           .list()
-          .where((entity) =>
-              entity is File &&
-              entity.path.contains(logFilePrefix) &&
-              entity.path.endsWith('.log'))
+          .where(
+            (entity) =>
+                entity is File &&
+                entity.path.contains(logFilePrefix) &&
+                entity.path.endsWith('.log'),
+          )
           .toList();
 
       if (files.length > maxLogFiles) {
         // Sort files by last modified timestamp
         files.sort(
-            (a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+          (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+        );
 
         // Delete oldest files
         for (var i = maxLogFiles; i < files.length; i++) {
@@ -112,7 +112,8 @@ class LoggingService {
     try {
       final logsDir = await _logsDirectory;
       final exportFile = File(
-          '$logsDir/logs_export_${DateTime.now().millisecondsSinceEpoch}.zip');
+        '$logsDir/logs_export_${DateTime.now().millisecondsSinceEpoch}.zip',
+      );
       // TODO: Implement log file compression and export
     } catch (e) {
       print('Failed to export logs: $e');

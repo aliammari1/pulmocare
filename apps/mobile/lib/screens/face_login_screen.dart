@@ -62,9 +62,7 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        scaffoldContext.showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        scaffoldContext.showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -101,8 +99,9 @@ class _FaceLoginScreenState extends State<FaceLoginScreen> {
                   right: 16,
                   child: ElevatedButton(
                     onPressed: _isProcessing ? null : _processImage,
-                    child:
-                        Text(_isProcessing ? 'Processing...' : 'Verify Face'),
+                    child: Text(
+                      _isProcessing ? 'Processing...' : 'Verify Face',
+                    ),
                   ),
                 ),
               ],

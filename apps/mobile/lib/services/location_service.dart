@@ -13,7 +13,8 @@ class LocationService {
       final prefs = await SharedPreferences.getInstance();
       final cachedCode = prefs.getString(_cachedCountryCodeKey);
       final lastUpdateTime = DateTime.fromMillisecondsSinceEpoch(
-          prefs.getInt(_lastUpdateTimeKey) ?? 0);
+        prefs.getInt(_lastUpdateTimeKey) ?? 0,
+      );
 
       // Return cached value if it's still valid
       if (cachedCode != null &&
@@ -39,7 +40,9 @@ class LocationService {
         if (countryCode != null) {
           await prefs.setString(_cachedCountryCodeKey, countryCode);
           await prefs.setInt(
-              _lastUpdateTimeKey, DateTime.now().millisecondsSinceEpoch);
+            _lastUpdateTimeKey,
+            DateTime.now().millisecondsSinceEpoch,
+          );
         }
         return countryCode;
       }

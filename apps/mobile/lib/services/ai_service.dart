@@ -2,7 +2,7 @@ import 'assistant_service.dart';
 
 class AiService {
   AiService({AssistantService? assistant})
-      : _assistant = assistant ?? AssistantService();
+    : _assistant = assistant ?? AssistantService();
 
   final AssistantService _assistant;
 
@@ -13,7 +13,7 @@ class AiService {
     final reply = await _assistant.send(
       message:
           'Improve the following clinical text for clarity, grammar, and concise professional wording. Do not add facts that are not present. Return only the revised text.\n\n' +
-              text,
+          text,
       context: context,
     );
     return {

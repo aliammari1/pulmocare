@@ -45,7 +45,9 @@ class _SignatureViewState extends State<SignatureView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                widget.existingSignature != null ? 'Update Signature' : 'Add Signature',
+                widget.existingSignature != null
+                    ? 'Update Signature'
+                    : 'Add Signature',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -117,7 +119,8 @@ class _SignatureViewState extends State<SignatureView> {
                                   .errorMessage
                                   .isEmpty) {
                             Navigator.pop(
-                                context); // Close dialog after successful save
+                              context,
+                            ); // Close dialog after successful save
                           }
                         },
                   style: ElevatedButton.styleFrom(
@@ -129,7 +132,9 @@ class _SignatureViewState extends State<SignatureView> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Icon(Icons.save),
                   label: Text(_isSaving ? 'Saving...' : 'Save Signature'),

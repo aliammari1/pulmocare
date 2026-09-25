@@ -182,8 +182,10 @@ class OrdonnanceViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> loadMedecinOrdonnances(String? medecinId,
-      {int retryCount = 1}) async {
+  Future<void> loadMedecinOrdonnances(
+    String? medecinId, {
+    int retryCount = 1,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
@@ -248,8 +250,9 @@ class OrdonnanceViewModel extends ChangeNotifier {
       notifyListeners();
 
       // Récupérer d'abord les données de l'ordonnance
-      final ordonnanceData =
-          await _apiService.getMedecinOrdonnance(ordonnanceId);
+      final ordonnanceData = await _apiService.getMedecinOrdonnance(
+        ordonnanceId,
+      );
       if (ordonnanceData == null) {
         throw Exception('Ordonnance non trouvée');
       }
@@ -272,8 +275,9 @@ class OrdonnanceViewModel extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> getSingleOrdonnance(String ordonnanceId) async {
     try {
-      final ordonnanceData =
-          await _apiService.getSingleOrdonnance(ordonnanceId);
+      final ordonnanceData = await _apiService.getSingleOrdonnance(
+        ordonnanceId,
+      );
       if (ordonnanceData == null) {
         throw Exception('Ordonnance introuvable');
       }
@@ -411,8 +415,10 @@ Votre médecin
         throw Exception('ID de l\'ordonnance non défini');
       }
 
-      final filename =
-          await _apiService.saveOrdonnancePdf(ordonnanceId, pdfBytes);
+      final filename = await _apiService.saveOrdonnancePdf(
+        ordonnanceId,
+        pdfBytes,
+      );
 
       _isLoading = false;
       _errorMessage = null;

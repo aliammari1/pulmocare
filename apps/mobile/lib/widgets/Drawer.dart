@@ -57,10 +57,7 @@ class AppDrawer extends StatelessWidget {
                     const SizedBox(height: 12),
                     const Text(
                       'Are you sure you want to logout?',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 25),
@@ -149,12 +146,18 @@ class AppDrawer extends StatelessWidget {
                         backgroundColor: Colors.white,
                         backgroundImage:
                             authViewModel.currentDoctor?.profileImage != null
-                                ? MemoryImage(base64Decode(
-                                    authViewModel.currentDoctor!.profileImage!))
-                                : null,
+                            ? MemoryImage(
+                                base64Decode(
+                                  authViewModel.currentDoctor!.profileImage!,
+                                ),
+                              )
+                            : null,
                         child: authViewModel.currentDoctor?.profileImage == null
-                            ? const Icon(Icons.person,
-                                size: 45, color: Colors.blue)
+                            ? const Icon(
+                                Icons.person,
+                                size: 45,
+                                color: Colors.blue,
+                              )
                             : null,
                       ),
                       const SizedBox(height: 15),
@@ -187,10 +190,7 @@ class AppDrawer extends StatelessWidget {
             leading: Icon(Icons.logout, color: AppTheme.kErrorRed),
             title: const Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             onTap: () async {
               if (await _showLogoutConfirmation(context)) {

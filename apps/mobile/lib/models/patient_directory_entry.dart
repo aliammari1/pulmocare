@@ -44,8 +44,8 @@ class PatientDirectoryEntry {
       name: combined.isNotEmpty
           ? combined
           : username.isNotEmpty
-              ? username
-              : email,
+          ? username
+          : email,
       email: email,
       phone: firstValue(attributes['phone']),
     );

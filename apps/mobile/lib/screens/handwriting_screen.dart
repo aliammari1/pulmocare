@@ -180,20 +180,22 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
 
       try {
         // Get the image from the canvas
-        final RenderRepaintBoundary boundary = _canvasKey.currentContext!
-            .findRenderObject() as RenderRepaintBoundary;
+        final RenderRepaintBoundary boundary =
+            _canvasKey.currentContext!.findRenderObject()
+                as RenderRepaintBoundary;
         final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-        final ByteData? byteData =
-            await image.toByteData(format: ui.ImageByteFormat.png);
+        final ByteData? byteData = await image.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
 
         if (result.isEmpty) {
           result = "[Handwritten note - Image captured]";
         }
       } catch (e) {
         // Handle error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving drawing: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving drawing: $e')));
       } finally {
         setState(() => _isDrawingLoading = false);
       }
@@ -233,15 +235,17 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
           _currentStroke = [];
           final RenderBox box = context.findRenderObject() as RenderBox;
           final point = box.globalToLocal(details.globalPosition);
-          _currentStroke!.add(DrawingPoint(
-            point,
-            Paint()
-              ..color = _currentColor
-              ..strokeWidth = _currentStrokeWidth
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round
-              ..style = PaintingStyle.stroke,
-          ));
+          _currentStroke!.add(
+            DrawingPoint(
+              point,
+              Paint()
+                ..color = _currentColor
+                ..strokeWidth = _currentStrokeWidth
+                ..strokeCap = StrokeCap.round
+                ..strokeJoin = StrokeJoin.round
+                ..style = PaintingStyle.stroke,
+            ),
+          );
           _strokes.add(_currentStroke!);
         });
       },
@@ -249,15 +253,17 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
         setState(() {
           final RenderBox box = context.findRenderObject() as RenderBox;
           final point = box.globalToLocal(details.globalPosition);
-          _currentStroke!.add(DrawingPoint(
-            point,
-            Paint()
-              ..color = _currentColor
-              ..strokeWidth = _currentStrokeWidth
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round
-              ..style = PaintingStyle.stroke,
-          ));
+          _currentStroke!.add(
+            DrawingPoint(
+              point,
+              Paint()
+                ..color = _currentColor
+                ..strokeWidth = _currentStrokeWidth
+                ..strokeCap = StrokeCap.round
+                ..strokeJoin = StrokeJoin.round
+                ..style = PaintingStyle.stroke,
+            ),
+          );
         });
       },
       onPanEnd: (_) {
@@ -427,14 +433,12 @@ class _HandwritingScreenState extends State<HandwritingScreen> {
             children: [
               const Text(
                 'Clear Everything?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               const Text(
-                  'This will clear all your handwriting and text. This action cannot be undone.'),
+                'This will clear all your handwriting and text. This action cannot be undone.',
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -480,12 +484,8 @@ class HandwritingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     for (final stroke in strokes) {
       for (int i = 0; i < stroke.length - 1; i++) {
-        canvas.drawLine(
-          stroke[i].point,
-          stroke[i + 1].point,
-          stroke[i].paint,
-        );
-            }
+        canvas.drawLine(stroke[i].point, stroke[i + 1].point, stroke[i].paint);
+      }
     }
   }
 

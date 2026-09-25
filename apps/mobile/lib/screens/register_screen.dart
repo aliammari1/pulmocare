@@ -32,19 +32,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           "password": passwordController.text,
           "name": nameController.text,
           "phone": phoneController.text,
-          "role": selectedRole
+          "role": selectedRole,
         }),
       );
       final data = response.data;
       if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Registration successful!")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Registration successful!")));
         Navigator.pushReplacementNamed(context, '/login');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data["error"])),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(data["error"])));
       }
     }
   }

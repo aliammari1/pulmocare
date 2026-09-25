@@ -32,11 +32,7 @@ class StyleConstants {
     color: cardColor,
     borderRadius: BorderRadius.circular(12),
     boxShadow: const [
-      BoxShadow(
-        color: shadowColor,
-        blurRadius: 10,
-        offset: Offset(0, 4),
-      ),
+      BoxShadow(color: shadowColor, blurRadius: 10, offset: Offset(0, 4)),
     ],
   );
 

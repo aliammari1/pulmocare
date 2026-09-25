@@ -107,8 +107,9 @@ class _LoginViewState extends State<LoginView> {
                               onFieldSubmitted: (_) => _submit(),
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon:
-                                    const Icon(Icons.lock_outline_rounded),
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                ),
                                 suffixIcon: IconButton(
                                   tooltip: _obscurePassword
                                       ? 'Show password'
@@ -136,11 +137,11 @@ class _LoginViewState extends State<LoginView> {
                                 onPressed: auth.isBusy
                                     ? null
                                     : () => Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                const ForgotPasswordView(),
-                                          ),
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ForgotPasswordView(),
                                         ),
+                                      ),
                                 child: const Text('Forgot password?'),
                               ),
                             ),
@@ -148,17 +149,17 @@ class _LoginViewState extends State<LoginView> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .errorContainer,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.errorContainer,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   auth.errorMessage,
                                   style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onErrorContainer,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
                                   ),
                                 ),
                               ),
@@ -186,11 +187,11 @@ class _LoginViewState extends State<LoginView> {
                                     onPressed: auth.isBusy
                                         ? null
                                         : () => Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const SignupView(),
-                                              ),
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const SignupView(),
                                             ),
+                                          ),
                                     child: const Text('Create account'),
                                   ),
                                 ],
@@ -214,10 +215,10 @@ class _LoginViewState extends State<LoginView> {
     if (!_formKey.currentState!.validate()) return;
 
     final ok = await context.read<AuthViewModel>().login(
-          _emailController.text,
-          _passwordController.text,
-          expectedRole: widget.userType,
-        );
+      _emailController.text,
+      _passwordController.text,
+      expectedRole: widget.userType,
+    );
 
     if (!mounted || !ok) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);

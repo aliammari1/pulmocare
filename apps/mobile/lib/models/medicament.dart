@@ -33,7 +33,7 @@ class Medicament {
     return Medicament(
       name: json['name'] ?? '',
       usage: json['usage'],
-      dosage: json['dosage']?? '',
+      dosage: json['dosage'] ?? '',
       posologie: json['posologie'],
       laboratoire: json['laboratoire'],
       route: json['route'],

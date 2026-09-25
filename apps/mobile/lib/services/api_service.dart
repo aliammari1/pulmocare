@@ -12,8 +12,7 @@ class ApiService {
     final response = await _dio.get<List<dynamic>>(
       'reports/',
       queryParameters: {
-        if (search != null && search.trim().isNotEmpty)
-          'search': search.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
 
@@ -41,10 +40,7 @@ class ApiService {
     return Report.fromJson(response.data ?? const {});
   }
 
-  Future<Report> updateReport(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
+  Future<Report> updateReport(String id, Map<String, dynamic> data) async {
     final response = await _dio.put<Map<String, dynamic>>(
       'reports/$id',
       data: data,

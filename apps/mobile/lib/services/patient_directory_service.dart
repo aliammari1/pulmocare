@@ -11,11 +11,7 @@ class PatientDirectoryService {
   Future<List<PatientDirectoryEntry>> listPatients() async {
     final response = await _dio.get<List<dynamic>>(
       'auth/users',
-      queryParameters: const {
-        'role': 'patient',
-        'first': 0,
-        'max': 100,
-      },
+      queryParameters: const {'role': 'patient', 'first': 0, 'max': 100},
     );
 
     return (response.data ?? const [])

@@ -29,16 +29,17 @@ class ReportService {
       bool matches = true;
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        matches = matches &&
-            (report.patientName
-                    .toLowerCase()
-                    .contains(searchQuery.toLowerCase()) ||
-                report.diagnosis
-                    .toLowerCase()
-                    .contains(searchQuery.toLowerCase()) ||
-                report.symptoms
-                    .toLowerCase()
-                    .contains(searchQuery.toLowerCase()) ||
+        matches =
+            matches &&
+            (report.patientName.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ||
+                report.diagnosis.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ||
+                report.symptoms.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ||
                 report.id.toLowerCase().contains(searchQuery.toLowerCase()));
       }
 

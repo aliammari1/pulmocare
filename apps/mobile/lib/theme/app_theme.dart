@@ -89,13 +89,15 @@ class AppTheme {
       brightness: brightness,
       colorScheme: scheme,
       fontFamily: 'Poppins',
-      scaffoldBackgroundColor:
-          dark ? const Color(0xFF0B1018) : const Color(0xFFF7F9FB),
+      scaffoldBackgroundColor: dark
+          ? const Color(0xFF0B1018)
+          : const Color(0xFFF7F9FB),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor:
-            dark ? const Color(0xFF0B1018) : const Color(0xFFF7F9FB),
+        backgroundColor: dark
+            ? const Color(0xFF0B1018)
+            : const Color(0xFFF7F9FB),
         foregroundColor: dark ? Colors.white : const Color(0xFF182230),
         centerTitle: false,
       ),
@@ -111,10 +113,11 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor:
-            dark ? const Color(0xFF182230) : const Color(0xFFFFFFFF),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        fillColor: dark ? const Color(0xFF182230) : const Color(0xFFFFFFFF),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
@@ -164,9 +167,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }

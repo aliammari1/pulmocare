@@ -33,8 +33,10 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
       List<Location> locations = await locationFromAddress(address);
       if (locations.isNotEmpty) {
         setState(() {
-          _selectedLocation =
-              LatLng(locations.first.latitude, locations.first.longitude);
+          _selectedLocation = LatLng(
+            locations.first.latitude,
+            locations.first.longitude,
+          );
         });
         _mapController?.animateCamera(
           CameraUpdate.newLatLngZoom(_selectedLocation!, 14),
@@ -45,8 +47,10 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
 
   Future<void> _updateAddressFromLatLng(LatLng latLng) async {
     try {
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        latLng.latitude,
+        latLng.longitude,
+      );
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
         setState(() {
@@ -76,8 +80,9 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
     setState(() {
       _selectedLocation = LatLng(position.latitude, position.longitude);
     });
-    _mapController
-        ?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation!, 16));
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(_selectedLocation!, 16),
+    );
     await _updateAddressFromLatLng(_selectedLocation!);
   }
 
@@ -110,8 +115,9 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                       ),
                       filled: true,
                       fillColor: Colors.grey[100],
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 20),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                      ),
                     ),
                     onSubmitted: (value) => _getLatLngFromAddress(value),
                   ),
@@ -120,7 +126,8 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(16)),
+                      bottom: Radius.circular(16),
+                    ),
                     child: GoogleMap(
                       onMapCreated: (controller) {
                         _mapController = controller;
@@ -151,7 +158,8 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                         ''');
                       },
                       initialCameraPosition: CameraPosition(
-                        target: _selectedLocation ??
+                        target:
+                            _selectedLocation ??
                             const LatLng(37.7749, -122.4194),
                         zoom: 12,
                       ),
@@ -159,7 +167,7 @@ class _MapSelectionDialogState extends State<MapSelectionDialog> {
                       trafficEnabled: _trafficEnabled,
                       myLocationEnabled: true,
                       myLocationButtonEnabled: false,
-                      zoomControlsEnabled: false, 
+                      zoomControlsEnabled: false,
                       mapToolbarEnabled: true,
                       buildingsEnabled: true,
                       onTap: (latLng) async {

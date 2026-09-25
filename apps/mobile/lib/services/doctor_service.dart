@@ -18,8 +18,10 @@ class DoctorService {
   /// 📌 **Méthode pour récupérer le profil d'un docteur**
   Future<Map<String, dynamic>> getDoctorProfile(String doctorId) async {
     try {
-      final response =
-          await _dio.get('/profile', queryParameters: {'id': doctorId});
+      final response = await _dio.get(
+        '/profile',
+        queryParameters: {'id': doctorId},
+      );
       return response.data;
     } catch (e) {
       print("❌ Erreur lors de la récupération du profil du docteur : $e");

@@ -63,19 +63,20 @@ class Report {
       doctorId: (json['doctor_id'] ?? json['provider_id'] ?? '').toString(),
       title: _nonEmpty(json['title']) ?? 'Medical report',
       content: content,
-      createdAt: _date(json['created_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          _date(json['created_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: _date(json['updated_at']),
       additionalData: extras.isEmpty ? null : extras,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'patient_id': patientId,
-        'doctor_id': doctorId,
-        'title': title,
-        'content': content,
-        if (additionalData != null) 'additional_data': additionalData,
-      };
+    'patient_id': patientId,
+    'doctor_id': doctorId,
+    'title': title,
+    'content': content,
+    if (additionalData != null) 'additional_data': additionalData,
+  };
 
   static DateTime? _date(dynamic value) =>
       DateTime.tryParse(value?.toString() ?? '');

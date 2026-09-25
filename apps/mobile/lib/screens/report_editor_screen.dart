@@ -93,8 +93,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Speech Recognition Unavailable'),
-          content:
-              const Text('Speech recognition is not available on this device.'),
+          content: const Text(
+            'Speech recognition is not available on this device.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -182,8 +183,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
   void _updateSoundLevel(double level) {
     setState(() {
       _soundLevels.removeAt(0);
-      _soundLevels
-          .add((level * 100) + (DateTime.now().millisecondsSinceEpoch % 10));
+      _soundLevels.add(
+        (level * 100) + (DateTime.now().millisecondsSinceEpoch % 10),
+      );
     });
   }
 
@@ -205,7 +207,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
       newText = text;
     }
 
-    _textController.text = currentText.substring(0, cursorPosition) +
+    _textController.text =
+        currentText.substring(0, cursorPosition) +
         newText +
         currentText.substring(cursorPosition);
 
@@ -219,37 +222,39 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
 
   void _processTextWithAI() {
     _textProcessingDebounce?.cancel();
-    _textProcessingDebounce =
-        Timer(const Duration(milliseconds: 800), () async {
-      if (_textController.text.isEmpty) return;
+    _textProcessingDebounce = Timer(
+      const Duration(milliseconds: 800),
+      () async {
+        if (_textController.text.isEmpty) return;
 
-      setState(() {
-        _isProcessing = true;
-      });
+        setState(() {
+          _isProcessing = true;
+        });
 
-      try {
-        final result = await _aiService.processText(_textController.text);
+        try {
+          final result = await _aiService.processText(_textController.text);
 
-        if (result.containsKey('suggestions') &&
-            result['suggestions'] is List) {
+          if (result.containsKey('suggestions') &&
+              result['suggestions'] is List) {
+            setState(() {
+              _suggestions = List<String>.from(result['suggestions'] as List);
+            });
+          }
+
+          if (result.containsKey('correctedText') &&
+              result['correctedText'] != _textController.text) {
+            // Highlight corrections but don't auto-replace text
+            // Instead, add suggestions
+          }
+        } catch (e) {
+          debugPrint('AI text processing error: $e');
+        } finally {
           setState(() {
-            _suggestions = List<String>.from(result['suggestions'] as List);
+            _isProcessing = false;
           });
         }
-
-        if (result.containsKey('correctedText') &&
-            result['correctedText'] != _textController.text) {
-          // Highlight corrections but don't auto-replace text
-          // Instead, add suggestions
-        }
-      } catch (e) {
-        debugPrint('AI text processing error: $e');
-      } finally {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
-    });
+      },
+    );
   }
 
   void _onFocusChange() {
@@ -363,8 +368,10 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
     });
 
     try {
-      final response =
-          await _aiService.getChatbotResponse(question, _textController.text);
+      final response = await _aiService.getChatbotResponse(
+        question,
+        _textController.text,
+      );
 
       setState(() {
         _assistantResponse =
@@ -403,7 +410,8 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
         actions: [
           IconButton(
             icon: Icon(
-                _showChatbot ? Icons.chat_bubble : Icons.chat_bubble_outline),
+              _showChatbot ? Icons.chat_bubble : Icons.chat_bubble_outline,
+            ),
             tooltip: 'AI Assistant',
             onPressed: _toggleChatbot,
           ),
@@ -467,9 +475,7 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                             },
                             child: CustomPaint(
                               painter: HandwritingPainter(_handwritingPoints),
-                              child: Container(
-                                color: Colors.white,
-                              ),
+                              child: Container(color: Colors.white),
                             ),
                           ),
                         ),
@@ -492,23 +498,30 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: _soundLevels
-                                      .map((level) => Container(
-                                            margin: const EdgeInsets.symmetric(
-                                                horizontal: 1),
-                                            width: 3,
-                                            height:
-                                                (level / 5).clamp(3.0, 50.0),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                                  .withAlpha(128 +
-                                                      (level ~/ 2)
-                                                          .clamp(0, 127)),
-                                              borderRadius:
-                                                  BorderRadius.circular(3),
+                                      .map(
+                                        (level) => Container(
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 1,
+                                          ),
+                                          width: 3,
+                                          height: (level / 5).clamp(3.0, 50.0),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withAlpha(
+                                                  128 +
+                                                      (level ~/ 2).clamp(
+                                                        0,
+                                                        127,
+                                                      ),
+                                                ),
+                                            borderRadius: BorderRadius.circular(
+                                              3,
                                             ),
-                                          ))
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                                 const SizedBox(height: 10),
@@ -536,7 +549,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                           right: 10,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.black.withAlpha(150),
                               borderRadius: BorderRadius.circular(15),
@@ -550,14 +565,17 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                      Colors.white,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: 8),
                                 Text(
                                   'Processing...',
                                   style: TextStyle(
-                                      color: Colors.white, fontSize: 12),
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),
@@ -584,13 +602,14 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                       itemBuilder: (context, index) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 8),
+                            horizontal: 4,
+                            vertical: 8,
+                          ),
                           child: ActionChip(
                             label: Text(_suggestions[index]),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withAlpha(25),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary.withAlpha(25),
                             onPressed: () =>
                                 _applySuggestion(_suggestions[index]),
                           ),
@@ -602,15 +621,18 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                 // Input controls bar
                 Container(
                   color: Colors.grey.shade100,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       // Voice input button
                       ElevatedButton.icon(
-                        onPressed:
-                            _isListening ? _stopListening : _startListening,
+                        onPressed: _isListening
+                            ? _stopListening
+                            : _startListening,
                         icon: Icon(_isListening ? Icons.mic_off : Icons.mic),
                         label: Text(_isListening ? 'Stop' : 'Voice'),
                         style: ElevatedButton.styleFrom(
@@ -647,13 +669,16 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                       // Toggle AI assistant button
                       ElevatedButton.icon(
                         onPressed: _toggleChatbot,
-                        icon: Icon(_showChatbot
-                            ? Icons.chat_bubble
-                            : Icons.chat_bubble_outline),
+                        icon: Icon(
+                          _showChatbot
+                              ? Icons.chat_bubble
+                              : Icons.chat_bubble_outline,
+                        ),
                         label: const Text('Assistant'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.tertiary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.tertiary,
                         ),
                       ),
                     ],
@@ -735,8 +760,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                               SizedBox(
                                 width: 16,
                                 height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                               SizedBox(width: 12),
                               Text('Thinking...'),
@@ -778,8 +804,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
                     ),
                     onSubmitted: (value) {
                       if (value.trim().isNotEmpty) {
@@ -811,8 +838,9 @@ class _ReportEditorScreenState extends State<ReportEditorScreen>
       label: Text(label),
       onPressed: () => _askAssistant(label),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      labelStyle:
-          TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      labelStyle: TextStyle(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }

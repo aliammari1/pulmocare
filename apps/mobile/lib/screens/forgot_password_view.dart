@@ -39,10 +39,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                 child: _sent
                     ? Column(
                         children: [
-                          const Icon(
-                            Icons.mark_email_read_outlined,
-                            size: 56,
-                          ),
+                          const Icon(Icons.mark_email_read_outlined, size: 56),
                           const SizedBox(height: 18),
                           Text(
                             'Check your email',
@@ -127,9 +124,9 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await context
-        .read<AuthViewModel>()
-        .forgotPassword(_emailController.text);
+    final ok = await context.read<AuthViewModel>().forgotPassword(
+      _emailController.text,
+    );
     if (!mounted || !ok) return;
     setState(() => _sent = true);
   }

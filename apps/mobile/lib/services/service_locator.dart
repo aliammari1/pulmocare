@@ -26,8 +26,5 @@ Future<void> setupServiceLocator() async {
   await getIt<PermissionService>().requestAllPermissions();
 
   // Start logging service
-  getIt<LoggingService>().log(
-    'Application started',
-    LogLevel.info,
-  );
+  getIt<LoggingService>().log('Application started', LogLevel.info);
 }

@@ -57,9 +57,8 @@ class _HomeViewState extends State<HomeView> {
                 padding: const EdgeInsets.only(right: 16),
                 child: Center(
                   child: Consumer<AuthViewModel>(
-                    builder: (context, auth, _) => _RoleBadge(
-                      role: auth.userRole ?? 'user',
-                    ),
+                    builder: (context, auth, _) =>
+                        _RoleBadge(role: auth.userRole ?? 'user'),
                   ),
                 ),
               ),
@@ -222,8 +221,8 @@ class _DashboardPage extends StatelessWidget {
                   Text(
                     'Clinical workspace',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -368,8 +367,8 @@ class _SessionCard extends StatelessWidget {
                   Text(
                     'Authenticated session',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -430,15 +429,15 @@ class _ActionCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            height: 1.4,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(height: 1.4),
                     ),
                   ],
                 ),
@@ -464,11 +463,7 @@ class _BrandMark extends StatelessWidget {
         color: AppTheme.primary.withValues(alpha: .10),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(
-        Icons.air_rounded,
-        color: AppTheme.primary,
-        size: 19,
-      ),
+      child: const Icon(Icons.air_rounded, color: AppTheme.primary, size: 19),
     );
   }
 }

@@ -40,10 +40,7 @@ class _NewsViewState extends State<NewsView> {
     return Stack(
       children: [
         WebViewWidget(controller: controller),
-        if (isLoading)
-          const Center(
-            child: CircularProgressIndicator(),
-          ),
+        if (isLoading) const Center(child: CircularProgressIndicator()),
       ],
     );
   }

@@ -80,8 +80,7 @@ class Ordonnance {
     return Ordonnance(
       id: (json['id'] ?? json['_id'])?.toString(),
       patientId: (json['patient_id'] ?? '').toString(),
-      medecinId:
-          (json['doctor_id'] ?? json['medecin_id'] ?? '').toString(),
+      medecinId: (json['doctor_id'] ?? json['medecin_id'] ?? '').toString(),
       patientName: (json['patient_name'] ?? '').toString(),
       doctorName: (json['doctor_name'] ?? '').toString(),
       diagnosis: (json['diagnosis'] ?? '').toString(),
@@ -89,25 +88,18 @@ class Ordonnance {
       clinique: (json['clinique'] ?? '').toString(),
       specialite: (json['specialite'] ?? '').toString(),
       date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
-      medicaments: rawMedications
-          .whereType<Map>()
-          .map(
-            (item) {
-              final data =
-                  item.map((key, value) => MapEntry(key.toString(), value));
-              return Medicament(
-                name: (data['name'] ?? '').toString(),
-                dosage: data['dosage']?.toString(),
-                posologie:
-                    (data['frequency'] ?? data['posologie'])?.toString(),
-                usage: data['usage']?.toString(),
-                laboratoire: data['laboratoire']?.toString(),
-                route: data['route']?.toString(),
-                warning: data['warning']?.toString(),
-              );
-            },
-          )
-          .toList(),
+      medicaments: rawMedications.whereType<Map>().map((item) {
+        final data = item.map((key, value) => MapEntry(key.toString(), value));
+        return Medicament(
+          name: (data['name'] ?? '').toString(),
+          dosage: data['dosage']?.toString(),
+          posologie: (data['frequency'] ?? data['posologie'])?.toString(),
+          usage: data['usage']?.toString(),
+          laboratoire: data['laboratoire']?.toString(),
+          route: data['route']?.toString(),
+          warning: data['warning']?.toString(),
+        );
+      }).toList(),
       signature: signatureBytes,
     );
   }
@@ -117,8 +109,9 @@ class Ordonnance {
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     // Ajout de la signature et du cachet s'ils existent
-    final signatureImage =
-        signature != null ? pw.MemoryImage(signature!) : null;
+    final signatureImage = signature != null
+        ? pw.MemoryImage(signature!)
+        : null;
     final cachetImage = cachet != null ? pw.MemoryImage(cachet!) : null;
 
     pdf.addPage(
@@ -133,9 +126,7 @@ class Ordonnance {
                 pw.Center(
                   child: pw.Text(
                     'ORDONNANCE MEDICALE',
-                    style: const pw.TextStyle(
-                      fontSize: 24,
-                    ),
+                    style: const pw.TextStyle(fontSize: 24),
                   ),
                 ),
                 pw.SizedBox(height: 20),
@@ -143,9 +134,7 @@ class Ordonnance {
                 // Info section
                 pw.Container(
                   padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(),
-                  ),
+                  decoration: pw.BoxDecoration(border: pw.Border.all()),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
@@ -204,8 +193,9 @@ class Ordonnance {
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(5),
-                            child:
-                                pw.Text((med.posologie ?? '-').toUpperCase()),
+                            child: pw.Text(
+                              (med.posologie ?? '-').toUpperCase(),
+                            ),
                           ),
                         ],
                       ),

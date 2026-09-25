@@ -43,7 +43,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
     'Oncology',
     'Gastroenterology',
     'Endocrinology',
-    'Psychiatry'
+    'Psychiatry',
   ];
   String _selectedSpecialty = 'General';
   bool _useKeywords = false;
@@ -57,13 +57,13 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
       'tachycardia',
       'arrhythmia',
       'hypertension',
-      'myocardial infarction'
+      'myocardial infarction',
     ],
     'neurology': ['seizure', 'migraine', 'neuropathy', 'encephalopathy'],
     'orthopedics': ['fracture', 'osteoarthritis', 'sprain', 'dislocation'],
     'pediatrics': ['otitis media', 'bronchiolitis', 'gastroenteritis'],
     'dermatology': ['dermatitis', 'psoriasis', 'eczema', 'melanoma'],
-    'general': ['fever', 'pain', 'inflammation', 'infection']
+    'general': ['fever', 'pain', 'inflammation', 'infection'],
   };
 
   // Section formatting
@@ -78,7 +78,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
     'history',
     'examination',
     'diagnosis',
-    'prescription'
+    'prescription',
   ];
 
   // Voice commands
@@ -87,7 +87,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
     'new section',
     'delete last',
     'clear all',
-    'end section'
+    'end section',
   ];
 
   // Add suggestions list
@@ -111,30 +111,30 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
 
       await _speechToText
           .initialize(
-        onError: (errorNotification) {
-          setState(() {
-            _status = 'Error: ${errorNotification.errorMsg}';
-            _isListening = false;
-          });
-        },
-        onStatus: (status) {
-          setState(() {
-            _status = status;
-          });
-        },
-        debugLogging: true,
-      )
+            onError: (errorNotification) {
+              setState(() {
+                _status = 'Error: ${errorNotification.errorMsg}';
+                _isListening = false;
+              });
+            },
+            onStatus: (status) {
+              setState(() {
+                _status = status;
+              });
+            },
+            debugLogging: true,
+          )
           .then((available) {
-        setState(() {
-          _isInitialized = available;
-          if (!available) {
-            _status = 'Speech recognition not available on this device';
-          } else {
-            // If speech is available, get the list of languages
-            _getAvailableLanguages();
-          }
-        });
-      });
+            setState(() {
+              _isInitialized = available;
+              if (!available) {
+                _status = 'Speech recognition not available on this device';
+              } else {
+                // If speech is available, get the list of languages
+                _getAvailableLanguages();
+              }
+            });
+          });
     } catch (e) {
       setState(() {
         _isInitialized = false;
@@ -150,8 +150,9 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
       if (_localeNames.isNotEmpty) {
         // Default to system language if available, otherwise English
         final systemLocale = _localeNames.firstWhere(
-          (locale) => locale.localeId
-              .startsWith(Localizations.localeOf(context).languageCode),
+          (locale) => locale.localeId.startsWith(
+            Localizations.localeOf(context).languageCode,
+          ),
           orElse: () => _localeNames.firstWhere(
             (locale) => locale.localeId.startsWith('en'),
             orElse: () => _localeNames.first,
@@ -248,8 +249,9 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
         }
 
         // Check for section keywords
-        if (_sectionKeywords.any((keyword) =>
-            newText.toLowerCase().contains(keyword.toLowerCase()))) {
+        if (_sectionKeywords.any(
+          (keyword) => newText.toLowerCase().contains(keyword.toLowerCase()),
+        )) {
           _startNewSection(newText);
           return;
         }
@@ -287,8 +289,8 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
             // Add medical terminology suggestions
             final specialtyTerms =
                 _medicalTerms[_selectedSpecialty.toLowerCase()] ??
-                    _medicalTerms['general'] ??
-                    [];
+                _medicalTerms['general'] ??
+                [];
 
             // Combine AI suggestions with local terms
             _suggestions = [...suggestions, ...specialtyTerms.take(3)];
@@ -316,8 +318,10 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
       setState(() {
         // Simulate sound level variation when listening
         if (_isListening) {
-          _updateSoundLevels(_currentSoundLevel * 100 +
-              (DateTime.now().millisecondsSinceEpoch % 30).toDouble());
+          _updateSoundLevels(
+            _currentSoundLevel * 100 +
+                (DateTime.now().millisecondsSinceEpoch % 30).toDouble(),
+          );
         }
       });
     });
@@ -335,17 +339,21 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
 
   String _formatText(String text) {
     // Capitalize first letter of sentences
-    text = text.split('. ').map((sentence) {
-      if (sentence.isEmpty) return sentence;
-      return sentence[0].toUpperCase() + sentence.substring(1);
-    }).join('. ');
+    text = text
+        .split('. ')
+        .map((sentence) {
+          if (sentence.isEmpty) return sentence;
+          return sentence[0].toUpperCase() + sentence.substring(1);
+        })
+        .join('. ');
 
     // Add proper spacing after punctuation
     text = text.replaceAll(RegExp(r'([.,!?])(?=\S)'), r'$1 ');
 
     // Format medical terms
     if (_useKeywords) {
-      final selectedTerms = _medicalTerms[_selectedSpecialty.toLowerCase()] ??
+      final selectedTerms =
+          _medicalTerms[_selectedSpecialty.toLowerCase()] ??
           _medicalTerms['general'] ??
           [];
 
@@ -424,9 +432,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
         children: [
           _buildSettingsCard(),
           _buildStatusIndicator(),
-          Expanded(
-            child: _buildDictationArea(),
-          ),
+          Expanded(child: _buildDictationArea()),
           // Display AI suggestions
           if (_suggestions.isNotEmpty)
             Container(
@@ -438,12 +444,15 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
                 itemCount: _suggestions.length,
                 itemBuilder: (context, index) {
                   return Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
                     child: ActionChip(
                       label: Text(_suggestions[index]),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
                       onPressed: () {
                         setState(() {
                           // Apply suggestion
@@ -468,8 +477,8 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
         backgroundColor: _isListening
             ? Colors.red
             : (_isInitialized
-                ? Theme.of(context).colorScheme.secondary
-                : Colors.grey),
+                  ? Theme.of(context).colorScheme.secondary
+                  : Colors.grey),
         child: Icon(_isListening ? Icons.mic_off : Icons.mic, size: 36),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -486,9 +495,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
               },
               icon: const Icon(Icons.delete_outline),
               label: const Text('Clear All'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
             ),
             ElevatedButton.icon(
               onPressed: () {
@@ -628,9 +635,7 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 1),
                         height: (entry.value / 5).clamp(1.0, 20.0),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
+                          color: Theme.of(context).colorScheme.primary
                               .withAlpha(77 + (entry.value * 0.77).toInt()),
                           borderRadius: BorderRadius.circular(3),
                         ),
@@ -638,18 +643,21 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
                     }).toList(),
                   )
                 : Center(
-                    child: Text(!_isInitialized
-                        ? 'Speech recognition not initialized'
-                        : !_hasSpeechPermission
-                            ? 'Need microphone permission'
-                            : 'Tap the microphone to start dictation'),
+                    child: Text(
+                      !_isInitialized
+                          ? 'Speech recognition not initialized'
+                          : !_hasSpeechPermission
+                          ? 'Need microphone permission'
+                          : 'Tap the microphone to start dictation',
+                    ),
                   ),
           ),
           if (_isSectionMode)
             Chip(
               label: Text('Section: $_currentSection'),
-              backgroundColor:
-                  Theme.of(context).colorScheme.secondary.withAlpha(50),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.secondary.withAlpha(50),
             ),
         ],
       ),
@@ -659,7 +667,11 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
   Widget _buildDictationArea() {
     return Card(
       margin: const EdgeInsets.fromLTRB(
-          12, 0, 12, 80), // Extra bottom margin for FAB
+        12,
+        0,
+        12,
+        80,
+      ), // Extra bottom margin for FAB
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -695,19 +707,17 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
                   )
                 else if (_isListening)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red[100],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Row(
                       children: [
-                        Icon(
-                          Icons.circle,
-                          color: Colors.red,
-                          size: 12,
-                        ),
+                        Icon(Icons.circle, color: Colors.red, size: 12),
                         SizedBox(width: 4),
                         Text(
                           'Recording',
@@ -733,8 +743,8 @@ class _VoiceDictationScreenState extends State<VoiceDictationScreen>
                   hintText: _isListening
                       ? 'Speak now...'
                       : (!_isInitialized || !_hasSpeechPermission)
-                          ? 'Speech recognition is not available or needs permission'
-                          : 'Your dictation will appear here',
+                      ? 'Speech recognition is not available or needs permission'
+                      : 'Your dictation will appear here',
                   border: InputBorder.none,
                 ),
                 onChanged: (value) {

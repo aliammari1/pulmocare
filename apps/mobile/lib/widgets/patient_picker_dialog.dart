@@ -59,12 +59,12 @@ class _PatientPickerDialogState extends State<PatientPickerDialog> {
     final visible = query.isEmpty
         ? _patients
         : _patients
-            .where(
-              (patient) =>
-                  patient.name.toLowerCase().contains(query) ||
-                  patient.email.toLowerCase().contains(query),
-            )
-            .toList();
+              .where(
+                (patient) =>
+                    patient.name.toLowerCase().contains(query) ||
+                    patient.email.toLowerCase().contains(query),
+              )
+              .toList();
 
     return AlertDialog(
       title: const Text('Select patient'),
@@ -74,71 +74,70 @@ class _PatientPickerDialogState extends State<PatientPickerDialog> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 14),
-                        OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _loading = true;
-                              _error = null;
-                            });
-                            _load();
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 14),
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _loading = true;
+                          _error = null;
+                        });
+                        _load();
+                      },
+                      child: const Text('Retry'),
                     ),
-                  )
-                : Column(
-                    children: [
-                      TextField(
-                        controller: _search,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Search by name or email',
-                          prefixIcon: Icon(Icons.search_rounded),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Expanded(
-                        child: visible.isEmpty
-                            ? const Center(
-                                child: Text('No matching patients.'),
-                              )
-                            : ListView.separated(
-                                itemCount: visible.length,
-                                separatorBuilder: (_, __) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (_, index) {
-                                  final patient = visible[index];
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: AppTheme.primary
-                                          .withValues(alpha: .10),
-                                      child: Text(
-                                        patient.initials,
-                                        style: const TextStyle(
-                                          color: AppTheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(patient.name),
-                                    subtitle: Text(patient.email),
-                                    trailing:
-                                        const Icon(Icons.chevron_right_rounded),
-                                    onTap: () =>
-                                        Navigator.pop(context, patient),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
+                  ],
+                ),
+              )
+            : Column(
+                children: [
+                  TextField(
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Search by name or email',
+                      prefixIcon: Icon(Icons.search_rounded),
+                    ),
                   ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: visible.isEmpty
+                        ? const Center(child: Text('No matching patients.'))
+                        : ListView.separated(
+                            itemCount: visible.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (_, index) {
+                              final patient = visible[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: AppTheme.primary.withValues(
+                                    alpha: .10,
+                                  ),
+                                  child: Text(
+                                    patient.initials,
+                                    style: const TextStyle(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(patient.name),
+                                subtitle: Text(patient.email),
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                ),
+                                onTap: () => Navigator.pop(context, patient),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
       ),
       actions: [
         TextButton(

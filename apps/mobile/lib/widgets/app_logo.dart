@@ -15,10 +15,7 @@ class AppLogo extends StatelessWidget {
         shape: BoxShape.circle,
         color: StyleConstants.primaryColor.withOpacity(0.1),
       ),
-      child: Image.asset(
-        'assets/logo.png',
-        fit: BoxFit.contain,
-      ),
+      child: Image.asset('assets/logo.png', fit: BoxFit.contain),
     );
   }
 }

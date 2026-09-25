@@ -137,9 +137,9 @@ class _VerificationCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     message,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          height: 1.4,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.4),
                   ),
                   if (action != null) ...[
                     const SizedBox(height: 12),

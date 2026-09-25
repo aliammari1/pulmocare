@@ -65,7 +65,10 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
   Widget build(BuildContext context) {
     final body = _buildBody();
     if (widget.embedded) return body;
-    return Scaffold(appBar: AppBar(title: const Text('Medical reports')), body: body);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Medical reports')),
+      body: body,
+    );
   }
 
   Widget _buildBody() {
@@ -101,9 +104,7 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
             FilledButton.icon(
               onPressed: () async {
                 await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CreateReportScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CreateReportScreen()),
                 );
                 if (mounted) await _loadReports();
               },
@@ -147,8 +148,10 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
               Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: const CircleAvatar(
                     backgroundColor: Color(0xFFE6F2F4),
                     child: Icon(
@@ -194,7 +197,8 @@ class _ReportsListScreenState extends State<ReportsListScreen> {
 
   static String _errorMessage(DioException error) {
     final data = error.response?.data;
-    if (data is Map && data['detail'] is String) return data['detail'] as String;
+    if (data is Map && data['detail'] is String)
+      return data['detail'] as String;
     return 'Unable to load reports from the server.';
   }
 }

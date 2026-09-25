@@ -78,10 +78,7 @@ class CachetMedecin extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.2),
@@ -95,8 +92,9 @@ class CachetMedecin extends StatelessWidget {
         child: InkWell(
           onTap: () => _pickImage(context),
           borderRadius: BorderRadius.circular(12),
-          child:
-              imageBytes != null ? _buildImagePreview() : _buildPlaceholder(),
+          child: imageBytes != null
+              ? _buildImagePreview()
+              : _buildPlaceholder(),
         ),
       ),
     );
@@ -125,18 +123,12 @@ class CachetMedecin extends StatelessWidget {
           bottom: 8,
           right: 8,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
               ],
             ),
             child: Row(
@@ -146,10 +138,7 @@ class CachetMedecin extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   'Modifier',
-                  style: TextStyle(
-                    color: Colors.blue.shade700,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.blue.shade700, fontSize: 12),
                 ),
               ],
             ),
@@ -171,10 +160,7 @@ class CachetMedecin extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Ajouter un cachet',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
         ),
         const SizedBox(height: 4),
         Text(

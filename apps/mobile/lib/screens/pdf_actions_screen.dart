@@ -27,9 +27,7 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
     if (prescription == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Prescription')),
-        body: const Center(
-          child: Text('No prescription is selected.'),
-        ),
+        body: const Center(child: Text('No prescription is selected.')),
       );
     }
 
@@ -45,9 +43,9 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
           const SizedBox(height: 22),
           Text(
             'Actions',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           _ActionCard(
@@ -68,8 +66,7 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
             _ActionCard(
               icon: Icons.mail_outline_rounded,
               title: 'Email to patient',
-              subtitle:
-                  'Prepare an email with the prescription PDF attached.',
+              subtitle: 'Prepare an email with the prescription PDF attached.',
               onTap: _busy ? null : () => _email(viewModel),
             ),
           ],
@@ -114,10 +111,7 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
       final bytes = await _loadPdf(viewModel);
       if (bytes == null) throw StateError('Prescription PDF unavailable');
       final id = viewModel.ordonnance?.id ?? 'draft';
-      await Printing.sharePdf(
-        bytes: bytes,
-        filename: 'prescription_$id.pdf',
-      );
+      await Printing.sharePdf(bytes: bytes, filename: 'prescription_$id.pdf');
     });
   }
 
@@ -126,8 +120,7 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
     if (prescription == null) return;
 
     await _run(() async {
-      final contact =
-          await viewModel.getPatientEmail(prescription.patientId);
+      final contact = await viewModel.getPatientEmail(prescription.patientId);
       final email = contact['email']?.trim() ?? '';
       if (email.isEmpty) {
         throw StateError('No email is available for this patient.');
@@ -157,7 +150,9 @@ class _PdfActionsScreenState extends State<PdfActionsScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))),
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Bad state: ', '')),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -185,18 +180,14 @@ class _PrescriptionSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.medication_outlined,
-            size: 34,
-            color: Colors.white,
-          ),
+          const Icon(Icons.medication_outlined, size: 34, color: Colors.white),
           const SizedBox(height: 14),
           Text(
             patient,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 6),
           Text(

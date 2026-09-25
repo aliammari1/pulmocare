@@ -12,12 +12,15 @@ class RapportService {
     required String content,
   }) async {
     try {
-      final response = await _dio.post('/rapport', data: {
-        "patientName": patientName,
-        "examType": examType,
-        "reportType": reportType,
-        "content": content,
-      });
+      final response = await _dio.post(
+        '/rapport',
+        data: {
+          "patientName": patientName,
+          "examType": examType,
+          "reportType": reportType,
+          "content": content,
+        },
+      );
 
       print("✅ Rapport ajouté : ${response.data}");
     } catch (e) {

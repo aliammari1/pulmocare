@@ -10,8 +10,9 @@ class CacheService {
   CacheService._internal();
 
   final _reportCache = _LRUCache<String, MedicalReport>(maxSize: 100);
-  final _patientReportsCache =
-      _LRUCache<String, List<MedicalReport>>(maxSize: 50);
+  final _patientReportsCache = _LRUCache<String, List<MedicalReport>>(
+    maxSize: 50,
+  );
 
   MedicalReport? getReport(String id) {
     return _reportCache.get(id);

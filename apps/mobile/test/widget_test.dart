@@ -4,11 +4,7 @@ import 'package:medapp/screens/entry_view.dart';
 
 void main() {
   testWidgets('shows PulmoCare role choices', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: EntryView(),
-      ),
-    );
+    await tester.pumpWidget(const MaterialApp(home: EntryView()));
 
     expect(find.text('PulmoCare'), findsOneWidget);
     expect(find.text('Doctor'), findsOneWidget);
