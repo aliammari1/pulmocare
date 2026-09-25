@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_view_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/verification_alert.dart';
+import 'signature_view.dart';
 
 class AccountView extends StatelessWidget {
   const AccountView({super.key, this.embedded = false});
@@ -11,167 +17,124 @@ class AccountView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Consumer<AuthViewModel>(
+    final body = Consumer<AuthViewModel>(
       builder: (context, auth, _) {
+        final doctor = auth.currentDoctor;
         final name = auth.displayName ?? auth.userEmail ?? 'PulmoCare user';
         final role = auth.userRole ?? 'user';
-        final profile = auth.currentDoctor;
+        final provider =
+            role == 'doctor' || role == 'radiologist' || role == 'admin';
+        final avatar = _decodeImage(doctor?.profileImage);
 
         return RefreshIndicator(
           onRefresh: auth.fetchProfile,
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 42,
-                                backgroundColor:
-                                    AppTheme.primary.withValues(alpha: 0.10),
-                                child: Text(
-                                  name.isEmpty ? '?' : name[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: AppTheme.primary,
-                                    fontSize: 34,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                name,
-                                textAlign: TextAlign.center,
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall,
-                              ),
-                              const SizedBox(height: 6),
-                              _RoleBadge(role: role),
-                              if (profile?.isVerified == true) ...[
-                                const SizedBox(height: 10),
-                                const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.verified_rounded,
-                                      size: 18,
-                                      color: AppTheme.secondary,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text('Verified clinical account'),
-                                  ],
-                                ),
-                              ],
-                            ],
+              _ProfileHeader(
+                name: name,
+                email: auth.userEmail ?? '',
+                role: role,
+                imageBytes: avatar,
+                verified: doctor?.isVerified ?? false,
+              ),
+              const SizedBox(height: 18),
+              if (provider && role != 'admin')
+                VerificationAlert(isVerified: doctor?.isVerified ?? false),
+              if (provider && role != 'admin') const SizedBox(height: 8),
+              Text(
+                'Profile',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 10),
+              _InfoCard(
+                children: [
+                  _InfoRow(
+                    icon: Icons.mail_outline_rounded,
+                    label: 'Email',
+                    value: auth.userEmail ?? 'Not available',
+                  ),
+                  if (provider)
+                    _InfoRow(
+                      icon: Icons.medical_services_outlined,
+                      label: 'Specialty',
+                      value: _valueOrFallback(
+                        doctor?.specialty,
+                        'Not specified',
+                      ),
+                    ),
+                  _InfoRow(
+                    icon: Icons.phone_outlined,
+                    label: 'Phone',
+                    value: _valueOrFallback(
+                      doctor?.phoneNumber,
+                      'Not specified',
+                    ),
+                  ),
+                  _InfoRow(
+                    icon: Icons.location_on_outlined,
+                    label: 'Address',
+                    value: _valueOrFallback(
+                      doctor?.address,
+                      'Not specified',
+                    ),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Text(
+                'Account & security',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 10),
+              _ActionTile(
+                icon: Icons.edit_outlined,
+                title: 'Edit profile',
+                subtitle: 'Update your name and contact information.',
+                onTap: () => _showEditProfile(context, auth),
+              ),
+              const SizedBox(height: 10),
+              _ActionTile(
+                icon: Icons.lock_outline_rounded,
+                title: 'Change password',
+                subtitle: 'Confirm your current password before replacing it.',
+                onTap: () => _showChangePassword(context, auth),
+              ),
+              if (provider) ...[
+                const SizedBox(height: 10),
+                _ActionTile(
+                  icon: Icons.draw_outlined,
+                  title: doctor?.signature?.isNotEmpty == true
+                      ? 'Update signature'
+                      : 'Add signature',
+                  subtitle:
+                      'Manage the signature used in your clinical reporting workflow.',
+                  onTap: () async {
+                    await showDialog<void>(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 620),
+                          child: SignatureView(
+                            existingSignature: doctor?.signature,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Account details',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 10),
-                      _InfoTile(
-                        icon: Icons.mail_outline_rounded,
-                        label: 'Email',
-                        value: auth.userEmail ?? 'Not available',
-                      ),
-                      if ((profile?.specialty ?? '').isNotEmpty)
-                        _InfoTile(
-                          icon: Icons.medical_services_outlined,
-                          label: 'Specialty',
-                          value: profile!.specialty,
-                        ),
-                      if ((profile?.phoneNumber ?? '').isNotEmpty)
-                        _InfoTile(
-                          icon: Icons.phone_outlined,
-                          label: 'Phone',
-                          value: profile!.phoneNumber,
-                        ),
-                      if ((profile?.address ?? '').isNotEmpty)
-                        _InfoTile(
-                          icon: Icons.location_on_outlined,
-                          label: 'Address',
-                          value: profile!.address,
-                        ),
-                      _InfoTile(
-                        icon: Icons.badge_outlined,
-                        label: 'Account ID',
-                        value: auth.userId ?? 'Not available',
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Security & profile',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 10),
-                      Card(
-                        margin: EdgeInsets.zero,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(
-                                Icons.edit_outlined,
-                                color: AppTheme.primary,
-                              ),
-                              title: const Text('Edit profile'),
-                              subtitle: const Text(
-                                'Update your name and contact information.',
-                              ),
-                              trailing:
-                                  const Icon(Icons.chevron_right_rounded),
-                              onTap: auth.isBusy
-                                  ? null
-                                  : () => _editProfile(context, auth),
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: const Icon(
-                                Icons.password_outlined,
-                                color: AppTheme.primary,
-                              ),
-                              title: const Text('Change password'),
-                              subtitle: const Text(
-                                'Update the password managed by PulmoCare identity.',
-                              ),
-                              trailing:
-                                  const Icon(Icons.chevron_right_rounded),
-                              onTap: auth.isBusy
-                                  ? null
-                                  : () => _changePassword(context, auth),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (auth.errorMessage.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        _ErrorBanner(message: auth.errorMessage),
-                      ],
-                      const SizedBox(height: 18),
-                      OutlinedButton.icon(
-                        onPressed:
-                            auth.isBusy ? null : () => _confirmLogout(context, auth),
-                        icon: const Icon(Icons.logout_rounded),
-                        label: const Text('Sign out'),
-                      ),
-                    ],
-                  ),
+                    );
+                    if (context.mounted) {
+                      await auth.fetchProfile();
+                    }
+                  },
                 ),
+              ],
+              const SizedBox(height: 10),
+              _ActionTile(
+                icon: Icons.logout_rounded,
+                title: 'Sign out',
+                subtitle: 'End this session on this device.',
+                destructive: true,
+                onTap: () => _confirmLogout(context, auth),
               ),
             ],
           ),
@@ -179,220 +142,292 @@ class AccountView extends StatelessWidget {
       },
     );
 
-    if (embedded) return content;
-    return Scaffold(appBar: AppBar(title: const Text('Account')), body: content);
+    if (embedded) return body;
+    return Scaffold(appBar: AppBar(title: const Text('Account')), body: body);
   }
 
-  Future<void> _editProfile(
+  static Uint8List? _decodeImage(String? encoded) {
+    if (encoded == null || encoded.trim().isEmpty) return null;
+    try {
+      final payload = encoded.contains(',')
+          ? encoded.substring(encoded.indexOf(',') + 1)
+          : encoded;
+      return base64Decode(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _valueOrFallback(String? value, String fallback) {
+    final text = value?.trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  Future<void> _showEditProfile(
     BuildContext context,
     AuthViewModel auth,
   ) async {
     final profile = auth.currentDoctor;
-    final nameController = TextEditingController(
-      text: auth.displayName ?? profile?.name ?? '',
-    );
-    final phoneController =
-        TextEditingController(text: profile?.phoneNumber ?? '');
-    final addressController =
-        TextEditingController(text: profile?.address ?? '');
-    final specialtyController =
-        TextEditingController(text: profile?.specialty ?? '');
-    final isClinical = auth.userRole == 'doctor' ||
+    final provider = auth.userRole == 'doctor' ||
         auth.userRole == 'radiologist' ||
         auth.userRole == 'admin';
+    final formKey = GlobalKey<FormState>();
+    final name = TextEditingController(
+      text: profile?.name ?? auth.displayName ?? '',
+    );
+    final specialty = TextEditingController(text: profile?.specialty ?? '');
+    final phone = TextEditingController(text: profile?.phoneNumber ?? '');
+    final address = TextEditingController(text: profile?.address ?? '');
+    XFile? selectedImage;
+    String? localError;
 
-    final save = await showDialog<bool>(
+    await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit profile'),
-        content: SizedBox(
-          width: 460,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full name',
-                    prefixIcon: Icon(Icons.person_outline_rounded),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: addressController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Address',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                  ),
-                ),
-                if (isClinical) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: specialtyController,
-                    decoration: const InputDecoration(
-                      labelText: 'Specialty',
-                      prefixIcon: Icon(Icons.medical_services_outlined),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit profile'),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: name,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                      validator: (value) =>
+                          (value?.trim().length ?? 0) < 2
+                              ? 'Enter your full name'
+                              : null,
                     ),
-                  ),
-                ],
-              ],
+                    if (provider) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: specialty,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Specialty',
+                          prefixIcon:
+                              Icon(Icons.medical_services_outlined),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: phone,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: address,
+                      minLines: 1,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Address',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      onPressed: auth.isBusy
+                          ? null
+                          : () async {
+                              final image = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                imageQuality: 82,
+                                maxWidth: 1200,
+                              );
+                              if (image != null) {
+                                setState(() => selectedImage = image);
+                              }
+                            },
+                      icon: const Icon(Icons.photo_outlined),
+                      label: Text(
+                        selectedImage == null
+                            ? 'Choose profile photo'
+                            : 'Photo selected',
+                      ),
+                    ),
+                    if (localError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        localError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed:
+                  auth.isBusy ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: auth.isBusy
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      String? image;
+                      if (selectedImage != null) {
+                        image =
+                            base64Encode(await selectedImage!.readAsBytes());
+                      }
+                      final ok = await auth.updateProfile(
+                        name: name.text,
+                        specialty: specialty.text,
+                        phoneNumber: phone.text,
+                        address: address.text,
+                        base64Image: image,
+                      );
+                      if (!dialogContext.mounted) return;
+                      if (ok) {
+                        Navigator.pop(dialogContext);
+                      } else {
+                        setState(() => localError = auth.errorMessage);
+                      }
+                    },
+              child: const Text('Save changes'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
 
-    if (save != true || !context.mounted) {
-      nameController.dispose();
-      phoneController.dispose();
-      addressController.dispose();
-      specialtyController.dispose();
-      return;
+    name.dispose();
+    specialty.dispose();
+    phone.dispose();
+    address.dispose();
+
+    if (context.mounted && auth.errorMessage.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated.')),
+      );
     }
-
-    final name = nameController.text.trim();
-    final phone = phoneController.text.trim();
-    final address = addressController.text.trim();
-    final specialty = specialtyController.text.trim();
-
-    nameController.dispose();
-    phoneController.dispose();
-    addressController.dispose();
-    specialtyController.dispose();
-
-    if (name.length < 2) {
-      _showMessage(context, 'Enter a valid full name.');
-      return;
-    }
-
-    final ok = await auth.updateProfile(
-      name: name,
-      phoneNumber: phone,
-      address: address,
-      specialty: isClinical ? specialty : null,
-    );
-    if (!context.mounted) return;
-    _showMessage(
-      context,
-      ok ? 'Profile updated.' : auth.errorMessage,
-      error: !ok,
-    );
   }
 
-  Future<void> _changePassword(
+  Future<void> _showChangePassword(
     BuildContext context,
     AuthViewModel auth,
   ) async {
-    final currentController = TextEditingController();
-    final newController = TextEditingController();
-    final confirmController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final current = TextEditingController();
+    final next = TextEditingController();
+    final confirm = TextEditingController();
+    String? localError;
 
-    final submit = await showDialog<bool>(
+    await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Change password'),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentController,
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                decoration: const InputDecoration(
-                  labelText: 'Current password',
-                  prefixIcon: Icon(Icons.lock_outline_rounded),
-                ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Change password'),
+          content: SizedBox(
+            width: 480,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: current,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.password],
+                    decoration:
+                        const InputDecoration(labelText: 'Current password'),
+                    validator: (value) => (value?.length ?? 0) < 8
+                        ? 'Enter your current password'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: next,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.newPassword],
+                    decoration:
+                        const InputDecoration(labelText: 'New password'),
+                    validator: (value) => (value?.length ?? 0) < 8
+                        ? 'Use at least 8 characters'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: confirm,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.newPassword],
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm new password',
+                    ),
+                    validator: (value) => value != next.text
+                        ? 'Passwords do not match'
+                        : null,
+                  ),
+                  if (localError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      localError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: newController,
-                obscureText: true,
-                autofillHints: const [AutofillHints.newPassword],
-                decoration: const InputDecoration(
-                  labelText: 'New password',
-                  prefixIcon: Icon(Icons.password_outlined),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm new password',
-                  prefixIcon: Icon(Icons.password_outlined),
-                ),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed:
+                  auth.isBusy ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: auth.isBusy
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final ok = await auth.changePassword(
+                        current.text,
+                        next.text,
+                      );
+                      if (!dialogContext.mounted) return;
+                      if (ok) {
+                        Navigator.pop(dialogContext);
+                      } else {
+                        setState(() => localError = auth.errorMessage);
+                      }
+                    },
+              child: const Text('Update password'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Update password'),
-          ),
-        ],
       ),
     );
 
-    if (submit != true || !context.mounted) {
-      currentController.dispose();
-      newController.dispose();
-      confirmController.dispose();
-      return;
+    current.dispose();
+    next.dispose();
+    confirm.dispose();
+
+    if (context.mounted && auth.errorMessage.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password updated.')),
+      );
     }
-
-    final current = currentController.text;
-    final next = newController.text;
-    final confirm = confirmController.text;
-
-    currentController.dispose();
-    newController.dispose();
-    confirmController.dispose();
-
-    if (current.length < 8 || next.length < 8) {
-      _showMessage(context, 'Passwords must contain at least 8 characters.');
-      return;
-    }
-    if (next != confirm) {
-      _showMessage(context, 'The new passwords do not match.');
-      return;
-    }
-
-    final ok = await auth.changePassword(current, next);
-    if (!context.mounted) return;
-    _showMessage(
-      context,
-      ok ? 'Password updated.' : auth.errorMessage,
-      error: !ok,
-    );
   }
 
   Future<void> _confirmLogout(
@@ -404,7 +439,7 @@ class AccountView extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-          'You will need to sign in again to access clinical data.',
+          'You will need to sign in again to access your PulmoCare workspace.',
         ),
         actions: [
           TextButton(
@@ -419,99 +454,232 @@ class AccountView extends StatelessWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true) {
       await auth.logout();
       if (context.mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     }
   }
-
-  void _showMessage(
-    BuildContext context,
-    String message, {
-    bool error = false,
-  }) {
-    if (message.trim().isEmpty) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: error ? Theme.of(context).colorScheme.error : null,
-      ),
-    );
-  }
 }
 
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.imageBytes,
+    required this.verified,
   });
 
-  final IconData icon;
-  final String label;
-  final String value;
+  final String name;
+  final String email;
+  final String role;
+  final Uint8List? imageBytes;
+  final bool verified;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Icon(icon, color: AppTheme.primary),
-        title: Text(label),
-        subtitle: Text(value),
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: AppTheme.brandGradient,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 34,
+            backgroundColor: Colors.white,
+            backgroundImage:
+                imageBytes == null ? null : MemoryImage(imageBytes!),
+            child: imageBytes == null
+                ? Text(
+                    name.isEmpty ? '?' : name[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                if (email.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    email,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _HeaderChip(label: role.toUpperCase()),
+                    if (verified)
+                      const _HeaderChip(
+                        label: 'VERIFIED',
+                        icon: Icons.verified_rounded,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.role});
+class _HeaderChip extends StatelessWidget {
+  const _HeaderChip({required this.label, this.icon});
 
-  final String role;
+  final String label;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: .10),
+        color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          role.toUpperCase(),
-          style: const TextStyle(
-            color: AppTheme.primary,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: .7,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: Colors.white),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.children});
 
-  final String message;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(14),
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: children),
       ),
-      child: Text(
-        message,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onErrorContainer,
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: AppTheme.primary, size: 21),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: Theme.of(context).textTheme.labelMedium),
+                    const SizedBox(height: 3),
+                    Text(value),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+        if (showDivider) const Divider(height: 1),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive
+        ? Theme.of(context).colorScheme.error
+        : AppTheme.primary;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .10),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: Icon(Icons.chevron_right_rounded, color: color),
+        onTap: onTap,
       ),
     );
   }
