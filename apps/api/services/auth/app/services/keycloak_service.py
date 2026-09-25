@@ -616,24 +616,26 @@ class KeycloakService:
 
             # Handle attributes separately
             attributes = existing_user.get("attributes", {})
-            if user_data.get("phone"):
-                attributes["phone"] = [user_data["phone"]]
-            if user_data.get("address"):
-                attributes["address"] = [user_data["address"]]
-            if user_data.get("specialty"):
-                attributes["specialty"] = [user_data["specialty"]]
+            if "phone" in user_data:
+                attributes["phone"] = [user_data["phone"] or ""]
+            if "address" in user_data:
+                attributes["address"] = [user_data["address"] or ""]
+            if "specialty" in user_data:
+                attributes["specialty"] = [user_data["specialty"] or ""]
+            if "profile_image" in user_data:
+                attributes["profile_image"] = [user_data["profile_image"] or ""]
 
             # Handle doctor fields
-            if user_data.get("bio"):
-                attributes["bio"] = [user_data["bio"]]
-            if user_data.get("license_number"):
-                attributes["license_number"] = [user_data["license_number"]]
-            if user_data.get("hospital"):
-                attributes["hospital"] = [user_data["hospital"]]
-            if user_data.get("education"):
-                attributes["education"] = [user_data["education"]]
-            if user_data.get("experience"):
-                attributes["experience"] = [user_data["experience"]]
+            if "bio" in user_data:
+                attributes["bio"] = [user_data["bio"] or ""]
+            if "license_number" in user_data:
+                attributes["license_number"] = [user_data["license_number"] or ""]
+            if "hospital" in user_data:
+                attributes["hospital"] = [user_data["hospital"] or ""]
+            if "education" in user_data:
+                attributes["education"] = [user_data["education"] or ""]
+            if "experience" in user_data:
+                attributes["experience"] = [user_data["experience"] or ""]
 
             # Handle radiologist fields
             if "signature" in user_data:
@@ -685,6 +687,19 @@ class KeycloakService:
         except Exception as e:
             print(f"Update user error: {e!s}")
             raise
+
+    def change_password(self, user_id, email, current_password, new_password):
+        """Verify the current password, then replace it in Keycloak."""
+        # Re-authenticate before using the privileged service account to change
+        # credentials. This prevents a stolen access token from being enough to
+        # silently replace the account password.
+        self.login(email, current_password)
+        self.keycloak_admin.set_user_password(
+            user_id=user_id,
+            password=new_password,
+            temporary=False,
+        )
+        return True
 
     def request_password_reset(self, email):
         """
