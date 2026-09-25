@@ -166,6 +166,7 @@ async def export_report(
 
 app.include_router(api, prefix="/api/reports")
 app.include_router(integration_router)
+app.include_router(assistant_router)
 app.include_router(radiology_router)
 
 from consumer import main as consumer_main
