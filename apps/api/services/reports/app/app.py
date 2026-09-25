@@ -59,12 +59,16 @@ def _ensure_can_read(report: dict, user_info: dict) -> None:
     if _is_staff(user_info):
         return
 
-    if "patient" in _roles(user_info) and str(report.get("patient_id", "")) == str(
-        user_info.get("user_id", "")
+    if (
+        "patient" in _roles(user_info)
+        and str(report.get("patient_id", "")) == str(user_info.get("user_id", ""))
     ):
         return
 
-    raise HTTPException(status_code=403, detail="You do not have access to this report")
+    raise HTTPException(
+        status_code=403,
+        detail="You do not have access to this report",
+    )
 
 
 @api.get("/")
