@@ -12,6 +12,7 @@ class MedecinService:
         # Log the URLs to help debug
         logger_service.info(f"Medecins service host: {config.medecins_service_host}, port: {config.medecins_service_port}")
         self.base_url = f"http://{config.medecins_service_host}:{config.medecins_service_port}/api"
+        self.identity_base_url = config.auth_service_url.rstrip("/")
         self.timeout = config.request_timeout
         # Initialize circuit breaker
         self.circuit_breaker = CircuitBreaker(
@@ -38,23 +39,21 @@ class MedecinService:
         else:
             logger_service.warning("No auth header provided for doctor lookup!")
 
-        url = f"{self.base_url}/doctors/{doctor_id}"
-        logger_service.info(f"Fetching doctor from URL: {url}")
+        url = f"{self.identity_base_url}/api/auth/providers/{doctor_id}"
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, headers=headers)
 
-                logger_service.info(f"Doctor lookup response status: {response.status_code}")
                 if response.status_code == 200:
-                    data = response.json()
-                    logger_service.info(f"Doctor found: {doctor_id}")
-                    return data
-                else:
-                    logger_service.error(
-                        f"Error fetching doctor: HTTP {response.status_code}"
-                    )
+                    return response.json()
+                if response.status_code == 404:
                     return None
+
+                logger_service.error(
+                    f"Provider identity lookup failed: HTTP {response.status_code}"
+                )
+                return None
         except Exception as e:
             logger_service.error(f"Exception in doctor lookup: {e!s}")
             return None
