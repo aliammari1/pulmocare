@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class TelemetryService:
     """
     Centralized OpenTelemetry service for distributed tracing and observability.
-    
+
     Provides automatic instrumentation for:
     - FastAPI applications
     - HTTP clients (requests, httpx)
@@ -50,13 +50,14 @@ class TelemetryService:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config
         self.app = app
         self.enabled = True
         self.tracer: Tracer = NoOpTracer()
-        
+
         self._setup_tracing()
         TelemetryService._initialized = True
 
@@ -64,11 +65,13 @@ class TelemetryService:
         """Set up OpenTelemetry tracing infrastructure."""
         try:
             # Create resource identifying this service
-            resource = Resource.create({
-                "service.name": self.config.effective_otel_service_name,
-                "service.version": self.config.version,
-                "deployment.environment": self.config.env,
-            })
+            resource = Resource.create(
+                {
+                    "service.name": self.config.effective_otel_service_name,
+                    "service.version": self.config.version,
+                    "deployment.environment": self.config.env,
+                }
+            )
 
             # Create tracer provider
             tracer_provider = TracerProvider(resource=resource)
@@ -85,7 +88,7 @@ class TelemetryService:
                     timeout=timeout,
                 )
                 tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-                
+
             except Exception as export_error:
                 print(f"Warning: Failed to configure OTLP exporter: {export_error}")
 
@@ -172,19 +175,19 @@ def setup_telemetry(
 ) -> TelemetryService:
     """
     Set up telemetry for a microservice.
-    
+
     Args:
         config: Service configuration
         app: Optional FastAPI application to instrument
-        
+
     Returns:
         TelemetryService instance
     """
     telemetry = TelemetryService(config, app)
-    
+
     if app is not None:
         telemetry.instrument_app(app)
-    
+
     return telemetry
 
 

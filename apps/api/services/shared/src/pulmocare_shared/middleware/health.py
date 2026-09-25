@@ -27,6 +27,7 @@ class HealthCheckRouter:
     def __init__(self, config: "BaseConfig | None" = None):
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -81,9 +82,9 @@ class HealthCheckRouter:
         async def readiness_check() -> dict[str, Any]:
             """Kubernetes readiness probe endpoint."""
             dependencies = self._check_dependencies() if self.dependency_checks else {}
-            
+
             all_up = all(status == "UP" for status in dependencies.values()) if dependencies else True
-            
+
             return {
                 "status": "ready" if all_up else "not_ready",
                 "checks": dependencies,

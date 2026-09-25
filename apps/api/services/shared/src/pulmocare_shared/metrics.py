@@ -4,8 +4,8 @@ Metrics service for Prometheus metrics collection.
 
 from typing import TYPE_CHECKING
 
-from prometheus_client import Counter, Gauge, Histogram, Info, generate_latest
 from fastapi import APIRouter, Response
+from prometheus_client import Counter, Gauge, Histogram, Info, generate_latest
 
 if TYPE_CHECKING:
     from pulmocare_shared.config import BaseConfig
@@ -47,6 +47,7 @@ class MetricsService:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config
@@ -82,11 +83,13 @@ class MetricsService:
             "service_info",
             "Service information",
         )
-        self.service_info.info({
-            "service_name": service_name,
-            "version": self.config.version,
-            "environment": self.config.env,
-        })
+        self.service_info.info(
+            {
+                "service_name": service_name,
+                "version": self.config.version,
+                "environment": self.config.env,
+            }
+        )
 
         # Cache metrics
         self.cache_hits_total = Counter(

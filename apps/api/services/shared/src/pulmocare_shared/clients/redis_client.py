@@ -3,7 +3,7 @@ Redis client for caching and session management.
 """
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import redis
 
@@ -28,6 +28,7 @@ class RedisClient:
 
         if config is None:
             from pulmocare_shared.config import get_config
+
             config = get_config()
 
         self.config = config

@@ -10,8 +10,8 @@ from pulmocare_shared.middleware.health import HealthCheckRouter, create_health_
 health_router = create_health_router()
 
 __all__ = [
-    "setup_cors",
     "HealthCheckRouter",
     "create_health_router",
     "health_router",
+    "setup_cors",
 ]
