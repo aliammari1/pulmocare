@@ -77,30 +77,30 @@ class LoggerService:
         if cls._instance is None:
             cls._instance = super(LoggerService, cls).__new__(cls)
             cls._instance.logger = logging.getLogger("medfiles-service")
-            cls._instance.logger.setLevel(Config.LOG_LEVEL)
+            cls._instance.logger.setLevel(Config.log_level)
             cls._instance.logger.propagate = False
 
             # Clear any existing handlers to avoid duplication
             cls._instance.logger.handlers = []
 
             # Setup formatter based on configuration
-            if Config.LOG_FORMAT.lower() == "json":
+            if Config.log_format.lower() == "json":
                 formatter = JsonFormatter()
             else:
                 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
             try:
                 # Create log directory if it doesn't exist
-                Path(Config.LOG_DIR).mkdir(parents=True, exist_ok=True)
+                Path(Config.log_dir).mkdir(parents=True, exist_ok=True)
 
                 # File Handler with rotation
                 file_handler = RotatingFileHandler(
-                    Config.LOG_FILE,
-                    maxBytes=Config.LOG_MAX_SIZE,
-                    backupCount=Config.LOG_BACKUP_COUNT,
+                    Config.log_file,
+                    maxBytes=Config.log_max_size,
+                    backupCount=Config.log_backup_count,
                 )
                 file_handler.setFormatter(formatter)
-                file_handler.setLevel(Config.LOG_LEVEL)
+                file_handler.setLevel(Config.log_level)
                 cls._instance.logger.addHandler(file_handler)
 
             except Exception as e:
@@ -109,7 +109,7 @@ class LoggerService:
             # Console Handler
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
-            console_handler.setLevel(Config.LOG_LEVEL)
+            console_handler.setLevel(Config.log_level)
 
             # Add handlers to logger
             cls._instance.logger.addHandler(console_handler)
@@ -128,7 +128,7 @@ class LoggerService:
 
             LoggingInstrumentor().instrument(
                 set_logging_format=True,
-                log_level=Config.LOG_LEVEL,
+                log_level=Config.log_level,
             )
         except ImportError:
             self.logger.warning("OpenTelemetry logging instrumentation not available")

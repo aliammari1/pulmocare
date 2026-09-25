@@ -23,11 +23,11 @@ class MinioService:
 
     def __init__(self):
         self.client = Minio(
-            f"{Config.MINIO_HOST}:{Config.MINIO_PORT}",
-            access_key=Config.MINIO_ACCESS_KEY,
-            secret_key=Config.MINIO_SECRET_KEY,
-            region=Config.MINIO_REGION,
-            secure=Config.MINIO_SECURE.lower() == "true",
+            f"{Config.minio_host}:{Config.minio_port}",
+            access_key=Config.minio_access_key,
+            secret_key=Config.minio_secret_key,
+            region=Config.minio_region,
+            secure=Config.minio_secure,
         )
 
         self.executor = ThreadPoolExecutor(max_workers=4)
@@ -401,10 +401,7 @@ class MinioService:
                 self.executor,
                 lambda: self.client.get_presigned_url("GET", bucket_name, object_name, expires=expires_delta),
             )
-            print(
-                f"Presigned URL: {self.client.get_presigned_url('GET', bucket_name, object_name, expires=expires_delta)}"
-            )
-            logger.info(f"Generated presigned URL for {bucket_name}/{object_name} " + f"with expiry {expires} seconds")
+            logger.info("Generated presigned URL with expiry %s seconds", expires)
 
             return url
         except S3Error as e:

@@ -24,7 +24,7 @@ async def get_authenticated_user_from_auth_service(token: str) -> dict:
     """
     try:
         # Call auth service directly to verify token and get user info
-        auth_url = f"{Config.AUTH_SERVICE_URL}/api/auth/token/verify"
+        auth_url = f"{Config.auth_service_url}/api/auth/token/verify"
         headers = {"Authorization": f"Bearer {token}"}
         # Include the token in the request body as required by the auth service
         body = {"token": token}
