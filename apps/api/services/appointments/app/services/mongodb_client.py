@@ -26,25 +26,25 @@ class MongoDBClient:
         for attempt in range(max_retries):
             try:
                 # Use mongodb as the hostname - this is the service name in Docker network
-                mongodb_host = self.config.MONGODB_HOST or "mongodb"
-                mongodb_port = self.config.MONGODB_PORT or 27017
+                mongodb_host = self.config.mongodb_host or "mongodb"
+                mongodb_port = self.config.mongodb_port or 27017
 
                 # Create the connection string
-                connection_string = f"mongodb://{self.config.MONGODB_USERNAME}:{self.config.MONGODB_PASSWORD}@{mongodb_host}:{mongodb_port}/"
+                connection_string = f"mongodb://{self.config.mongodb_username}:{self.config.mongodb_password}@{mongodb_host}:{mongodb_port}/"
 
                 logger_service.info(f"Connecting to MongoDB at {mongodb_host}:{mongodb_port}")
                 self.client = MongoClient(
                     connection_string,
-                    serverSelectionTimeoutMS=self.config.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
-                    connectTimeoutMS=self.config.MONGODB_CONNECT_TIMEOUT_MS,
-                    maxPoolSize=self.config.MONGODB_POOL_SIZE,
-                    minPoolSize=self.config.MONGODB_MIN_POOL_SIZE,
+                    serverSelectionTimeoutMS=self.config.mongodb_server_selection_timeout_ms,
+                    connectTimeoutMS=self.config.mongodb_connect_timeout_ms,
+                    maxPoolSize=self.config.mongodb_pool_size,
+                    minPoolSize=self.config.mongodb_min_pool_size,
                 )
 
                 # Test the connection
                 self.client.admin.command("ping")
 
-                self.db = self.client[self.config.MONGODB_DATABASE]
+                self.db = self.client[self.config.mongodb_database]
 
                 # Set up collection with schema validation
                 if "appointments" not in self.db.list_collection_names():
