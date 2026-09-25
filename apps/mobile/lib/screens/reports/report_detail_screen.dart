@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/report.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_view_model.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   const ReportDetailScreen({super.key, required this.reportId});
@@ -57,12 +59,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       appBar: AppBar(
         title: const Text('Report'),
         actions: [
-          if (_report != null)
+          if (_report != null && _canManage(context)) ...[
+            IconButton(
+              tooltip: 'Edit report',
+              onPressed: _edit,
+              icon: const Icon(Icons.edit_outlined),
+            ),
             IconButton(
               tooltip: 'Delete report',
               onPressed: _delete,
               icon: const Icon(Icons.delete_outline_rounded),
             ),
+          ],
         ],
       ),
       body: _loading
@@ -144,6 +152,119 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ],
       ],
     );
+  }
+
+  bool _canManage(BuildContext context) {
+    final role = context.read<AuthViewModel>().userRole;
+    return role == 'doctor' || role == 'radiologist' || role == 'admin';
+  }
+
+  Future<void> _edit() async {
+    final report = _report;
+    if (report == null) return;
+
+    final formKey = GlobalKey<FormState>();
+    final title = TextEditingController(text: report.title);
+    final content = TextEditingController(text: report.content);
+    String? localError;
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit report'),
+          content: SizedBox(
+            width: 620,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: title,
+                      decoration: const InputDecoration(
+                        labelText: 'Report title',
+                      ),
+                      validator: (value) =>
+                          (value?.trim().length ?? 0) < 3
+                              ? 'Enter a report title.'
+                              : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: content,
+                      minLines: 8,
+                      maxLines: 18,
+                      decoration: const InputDecoration(
+                        labelText: 'Clinical report',
+                        alignLabelWithHint: true,
+                      ),
+                      validator: (value) =>
+                          (value?.trim().length ?? 0) < 3
+                              ? 'Enter report content.'
+                              : null,
+                    ),
+                    if (localError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        localError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
+                try {
+                  await _api.updateReport(
+                    report.id,
+                    {
+                      'title': title.text.trim(),
+                      'content': content.text.trim(),
+                    },
+                  );
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext, true);
+                  }
+                } on DioException catch (error) {
+                  final data = error.response?.data;
+                  setState(() {
+                    localError = data is Map && data['detail'] is String
+                        ? data['detail'] as String
+                        : 'Unable to update the report.';
+                  });
+                }
+              },
+              child: const Text('Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    title.dispose();
+    content.dispose();
+
+    if (updated == true && mounted) {
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report updated.')),
+        );
+      }
+    }
   }
 
   Future<void> _delete() async {
