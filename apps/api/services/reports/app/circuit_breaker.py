@@ -4,6 +4,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any
 
+from services.logger_service import logger_service
 from services.metrics import (
     track_circuit_breaker_failure,
     track_circuit_breaker_rejection,

@@ -34,8 +34,8 @@ app = FastAPI(
     redoc_url="/redoc" if config.is_development else None,
 )
 
-setup_cors(app, config.cors_origins)
-setup_telemetry(app, config)
+setup_cors(app, config)
+setup_telemetry(config, app)
 setup_observability(config, app)
 app.include_router(health_router)
 

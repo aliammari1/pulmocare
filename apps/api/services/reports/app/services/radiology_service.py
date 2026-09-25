@@ -26,7 +26,7 @@ from pulmocare_shared import genai_tool_span
 # MedRAX is vendored at apps/api/services/medagent. It is not a dependency of
 # the reports service's pyproject (it carries heavy ML deps + its own license);
 # the tools are imported lazily and only when weights are actually present.
-NARRATIVE_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+NARRATIVE_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
 
 _report_tool = None
 _vqa_tool = None

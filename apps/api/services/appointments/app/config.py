@@ -7,6 +7,7 @@ Extends the shared BaseConfig with service-specific settings.
 from functools import lru_cache
 
 from pydantic import Field
+
 from pulmocare_shared import BaseConfig
 
 
@@ -44,10 +45,10 @@ class AppointmentsConfig(BaseConfig):
     appointment_slot_duration: int = Field(default=30, description="Appointment slot duration in minutes")
     max_appointments_per_day: int = Field(default=20, description="Max appointments per doctor per day")
     advance_booking_days: int = Field(default=30, description="How many days in advance appointments can be booked")
-    
+
     # Notification settings
     reminder_hours_before: int = Field(default=24, description="Hours before appointment to send reminder")
-    
+
     # Rate limiting
     rate_limit_default: str = Field(default="100/minute", description="Default rate limit")
 

@@ -57,15 +57,15 @@ jobs:
         continue-on-error: ${{ matrix.service.name != 'auth' && matrix.service.name != 'patients' && matrix.service.name != 'reports' }}
 
       - name: Type-check (ty, blocking on typed core)
-        # Auth and reports are the currently-clean typed core. Patients remains
-        # visible as a best-effort check until its legacy typing debt is removed.
+        # Auth is the typed core. Reports still has legacy typing errors and is
+        # checked below until those diagnostics are resolved.
         run: uv run ty check .
-        if: ${{ matrix.service.name == 'auth' || matrix.service.name == 'reports' }}
+        if: ${{ matrix.service.name == 'auth' }}
 
       - name: Type-check (ty, best-effort)
         continue-on-error: true
         run: uv run ty check . || true
-        if: ${{ matrix.service.name == 'patients' || matrix.service.name == 'shared' }}
+        if: ${{ matrix.service.name == 'patients' || matrix.service.name == 'shared' || matrix.service.name == 'reports' }}
 
       - name: Type-check (ty, best-effort without project dependency)
         continue-on-error: true

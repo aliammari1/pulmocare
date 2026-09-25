@@ -19,7 +19,7 @@ class KeycloakService:
         client_id=None,
         client_secret=None,
     ):
-        self.config = config or Config()
+        self.config = config or Config
         self.keycloak_url = keycloak_url or os.getenv("KEYCLOAK_URL", "http://localhost:8090")
 
         # Strip trailing '/auth' if present as newer Keycloak versions don't use this path
@@ -209,7 +209,7 @@ class KeycloakService:
                     self.keycloak_connection.token = response.json()
 
                 # Test the token with a basic operation
-                test_token = self.keycloak_admin.connection.token.get("access_token")
+                test_token = (self.keycloak_admin.connection.token or {}).get("access_token")
                 test_response = requests.get(
                     f"{self.keycloak_url}/admin/realms/{self.realm}/roles",
                     headers={"Authorization": f"Bearer {test_token}"},
@@ -460,8 +460,7 @@ class KeycloakService:
         Use logout() for standard OIDC logout.
         """
         try:
-            config = self.keycloak_admin.connection.get_config()
-            server_url = config["server_url"]
+            server_url = self.keycloak_url
             client_id = self.client_id
             client_secret = self.client_secret
             realm_name = self.realm
@@ -488,46 +487,23 @@ class KeycloakService:
             raise
 
     def logout_from_access_token(self, access_token):
-        """
-        Log out a user using their access token
-        """
+        """Log out all Keycloak sessions for the authenticated user."""
         try:
             payload = self.verify_token(access_token)
-            session_id = payload.get("sid")
             user_id = payload.get("sub")
 
-            if not session_id or not user_id:
-                logger.warning("No session ID or user ID in the token, can't logout")
+            if not user_id:
+                logger.warning("No user ID in access token")
                 return False
 
-            try:
-                self.keycloak_admin.logout_all_sessions(user_id)
-                logger.info(f"Successfully logged out all sessions for user {user_id}")
-                return True
-            except Exception as e:
-                logger.warning(f"Error logging out all sessions: {type(e).__name__}")
-
-                try:
-                    admin_url = self.keycloak_admin.connection.get_base_url()
-                    admin_headers = self.keycloak_admin.connection.get_headers()
-                    session_logout_url = f"{admin_url}/users/{user_id}/sessions"
-
-                    sessions_response = requests.get(session_logout_url, headers=admin_headers, timeout=10)
-                    if sessions_response.status_code == 200:
-                        sessions = sessions_response.json()
-                        for session in sessions:
-                            if session.get("id") == session_id:
-                                logout_session_url = f"{admin_url}/sessions/{session_id}"
-                                delete_response = requests.delete(logout_session_url, headers=admin_headers, timeout=10)
-                                if delete_response.status_code in (204, 200):
-                                    logger.info(f"Successfully logged out session {session_id}")
-                                    return True
-                except Exception as inner_e:
-                    logger.error(f"Error in specific session logout: {type(inner_e).__name__}")
-
-            return False
-        except Exception as e:
-            logger.error(f"Error during logout with access token: {type(e).__name__}")
+            self.keycloak_admin.user_logout(user_id)
+            logger.info("Successfully logged out Keycloak user")
+            return True
+        except Exception as exc:
+            logger.error(
+                "Error during logout with access token: %s",
+                type(exc).__name__,
+            )
             return False
 
     def logout(self, refresh_token):

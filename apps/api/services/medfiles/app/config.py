@@ -8,6 +8,7 @@ Handles medical file storage with MinIO integration.
 from functools import lru_cache
 
 from pydantic import Field
+
 from pulmocare_shared import BaseConfig
 
 
@@ -24,7 +25,7 @@ class MedFilesConfig(BaseConfig):
     minio_secret_key: str = Field(default="minioadmin", description="MinIO secret key")
     minio_region: str = Field(default="us-east-1", description="MinIO region")
     minio_secure: bool = Field(default=False, description="Use HTTPS for MinIO")
-    
+
     # Storage bucket configuration
     minio_bucket_dicom: str = Field(default="dicom-files", description="DICOM files bucket")
     minio_bucket_documents: str = Field(default="medical-documents", description="Medical documents bucket")
@@ -36,11 +37,11 @@ class MedFilesConfig(BaseConfig):
         default=["dcm", "dicom", "pdf", "jpg", "jpeg", "png", "doc", "docx"],
         description="Allowed file extensions"
     )
-    
+
     # DICOM processing settings
     dicom_anonymize: bool = Field(default=False, description="Anonymize DICOM files on upload")
     dicom_thumbnail_size: tuple = Field(default=(256, 256), description="DICOM thumbnail size")
-    
+
     # Temporary storage
     temp_dir: str = Field(default="/tmp/medfiles", description="Temporary file directory")
 

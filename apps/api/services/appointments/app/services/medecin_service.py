@@ -10,7 +10,9 @@ class MedecinService:
     def __init__(self, config):
         self.config = config
         # Log the URLs to help debug
-        logger_service.info(f"Medecins service host: {config.medecins_service_host}, port: {config.medecins_service_port}")
+        logger_service.info(
+            f"Medecins service host: {config.medecins_service_host}, port: {config.medecins_service_port}"
+        )
         self.base_url = f"http://{config.medecins_service_host}:{config.medecins_service_port}/api"
         self.identity_base_url = config.auth_service_url.rstrip("/")
         self.timeout = config.request_timeout
@@ -50,9 +52,7 @@ class MedecinService:
                 if response.status_code == 404:
                     return None
 
-                logger_service.error(
-                    f"Provider identity lookup failed: HTTP {response.status_code}"
-                )
+                logger_service.error(f"Provider identity lookup failed: HTTP {response.status_code}")
                 return None
         except Exception as e:
             logger_service.error(f"Exception in doctor lookup: {e!s}")
@@ -114,7 +114,9 @@ class MedecinService:
                 data = response.json()
                 return data.get("available", False)
             else:
-                logger_service.error(f"Error checking doctor availability: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error checking doctor availability: HTTP {response.status_code} - {response.text}"
+                )
                 return False
 
     async def notify_doctor_appointment(self, doctor_id, appointment_data, auth_header=None):
@@ -146,5 +148,7 @@ class MedecinService:
             if response.status_code in (200, 201, 204):
                 return True
             else:
-                logger_service.error(f"Error notifying doctor of appointment: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error notifying doctor of appointment: HTTP {response.status_code} - {response.text}"
+                )
                 return False

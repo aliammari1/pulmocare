@@ -43,7 +43,7 @@ class KeycloakMiddleware:
 
         # Cache for public key to avoid repeated requests
         self._public_key = None
-        self._jwks = None
+        self._jwks: dict[str, Any] | None = None
 
         # Well-known endpoints
         self.well_known_url = f"{self.keycloak_url}/realms/{self.realm}/.well-known/openid-configuration"
@@ -69,7 +69,8 @@ class KeycloakMiddleware:
         if not self._jwks:
             self._fetch_jwks()
 
-        keys = self._jwks.get("keys", [])
+        jwks = self._jwks or {}
+        keys = jwks.get("keys", [])
         if kid:
             for key in keys:
                 if key.get("kid") == kid:
@@ -77,7 +78,8 @@ class KeycloakMiddleware:
 
             # Keycloak may have rotated keys since the cache was populated.
             self._fetch_jwks()
-            for key in self._jwks.get("keys", []):
+            refreshed_jwks = self._jwks or {}
+            for key in refreshed_jwks.get("keys", []):
                 if key.get("kid") == kid:
                     return RSAAlgorithm.from_jwk(json.dumps(key))
             raise jwt.InvalidTokenError("Token signing key is not trusted")
@@ -109,24 +111,20 @@ class KeycloakMiddleware:
             public_key = self.get_public_key(kid)
 
             # Verify the token
-            options = {
-                "verify_signature": True,
-                "verify_exp": True,
-                "verify_nbf": True,
-                "verify_iat": True,
-                "verify_aud": False,  # Skip audience verification
-                "verify_iss": True,
-                "require_exp": True,
-                "require_iat": True,
-                "require_nbf": False,
-            }
-
             payload = jwt.decode(
                 token,
                 public_key,
                 algorithms=["RS256"],
                 issuer=f"{self.keycloak_url}/realms/{self.realm}",
-                options=options,
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_nbf": True,
+                    "verify_iat": True,
+                    "verify_aud": False,
+                    "verify_iss": True,
+                    "require": ["exp", "iat"],
+                },
             )
 
             return payload
@@ -175,7 +173,7 @@ class KeycloakMiddleware:
     async def get_current_user(
         self,
         credentials: HTTPAuthorizationCredentials = Depends(security),
-        required_roles: list[Role] = None,
+        required_roles: list[Role] | None = None,
     ) -> dict[str, Any]:
         """
         FastAPI dependency to get the current authenticated user.

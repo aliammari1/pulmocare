@@ -270,7 +270,9 @@ class AppointmentConsumer:
                 return
 
             # Cancel the appointment
-            result = await self.appointment_service.cancel_appointment(appointment_id=appointment_id, cancellation_reason=reason)
+            result = await self.appointment_service.cancel_appointment(
+                appointment_id=appointment_id, cancellation_reason=reason
+            )
 
             if result:
                 logger_service.info(f"Cancelled appointment {appointment_id}")

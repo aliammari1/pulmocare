@@ -132,7 +132,9 @@ class MongoDBClient:
         try:
             appointment_data["updated_at"] = datetime.utcnow()
 
-            result = self.appointments_collection.update_one({"_id": ObjectId(appointment_id)}, {"$set": appointment_data})
+            result = self.appointments_collection.update_one(
+                {"_id": ObjectId(appointment_id)}, {"$set": appointment_data}
+            )
 
             if result.matched_count == 0:
                 return None

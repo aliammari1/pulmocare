@@ -6,10 +6,10 @@ Handles medical prescriptions (ordonnances) management.
 
 import uvicorn
 from fastapi import FastAPI
-from pulmocare_shared import setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
+from pulmocare_shared import setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from routes.ordonnance_routes import ordonnance_router
 
 # Get configuration

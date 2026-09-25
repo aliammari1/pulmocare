@@ -74,7 +74,9 @@ class PatientService:
             if response.status_code == 200:
                 return response.json()
             else:
-                logger_service.error(f"Error fetching patient medical history: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error fetching patient medical history: HTTP {response.status_code} - {response.text}"
+                )
                 return {}
 
     async def notify_patient_appointment(self, patient_id, appointment_data, auth_header=None):
@@ -106,5 +108,7 @@ class PatientService:
             if response.status_code in (200, 201, 204):
                 return True
             else:
-                logger_service.error(f"Error notifying patient of appointment: HTTP {response.status_code} - {response.text}")
+                logger_service.error(
+                    f"Error notifying patient of appointment: HTTP {response.status_code} - {response.text}"
+                )
                 return False

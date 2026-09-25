@@ -12,11 +12,11 @@ import os
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import RedirectResponse, StreamingResponse
-from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
-from pulmocare_shared.middleware import health_router
 
 from config import get_config
 from models.file_models import FileListResponse, FileMetadata, FileResponse
+from pulmocare_shared import LoggerService, setup_cors, setup_telemetry
+from pulmocare_shared.middleware import health_router
 from services.auth_service import get_current_user
 from services.minio_service import MinioService
 
