@@ -33,12 +33,7 @@ def generate_assistant_response(
     user_content = message.strip()
     if context and context.strip():
         user_content = (
-            "<clinical_context>\n"
-            f"{context.strip()}\n"
-            "</clinical_context>\n\n"
-            "<request>\n"
-            f"{message.strip()}\n"
-            "</request>"
+            f"<clinical_context>\n{context.strip()}\n</clinical_context>\n\n<request>\n{message.strip()}\n</request>"
         )
 
     with genai_tool_span("clinical_assistant", operation="chat", model=model) as span:
@@ -53,11 +48,7 @@ def generate_assistant_response(
             span["input_tokens"] = getattr(usage, "input_tokens", 0)
             span["output_tokens"] = getattr(usage, "output_tokens", 0)
 
-    text = "".join(
-        block.text
-        for block in response.content
-        if getattr(block, "type", None) == "text"
-    ).strip()
+    text = "".join(block.text for block in response.content if getattr(block, "type", None) == "text").strip()
     if not text:
         raise RuntimeError("AI provider returned an empty response")
 

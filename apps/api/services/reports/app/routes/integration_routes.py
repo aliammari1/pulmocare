@@ -59,9 +59,7 @@ async def get_report_analysis(
     """Return persisted analysis results for a report."""
     del user_info
     try:
-        analysis = mongodb_client.db.report_analyses.find_one(
-            {"report_id": report_id}
-        )
+        analysis = mongodb_client.db.report_analyses.find_one({"report_id": report_id})
         if not analysis:
             raise HTTPException(
                 status_code=404,
@@ -92,11 +90,7 @@ async def create_analysis_summary(
     if not data.report_ids:
         raise HTTPException(status_code=400, detail="Report IDs are required")
 
-    missing = [
-        report_id
-        for report_id in data.report_ids
-        if not report_service.get_report_by_id(report_id)
-    ]
+    missing = [report_id for report_id in data.report_ids if not report_service.get_report_by_id(report_id)]
     if missing:
         raise HTTPException(
             status_code=404,

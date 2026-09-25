@@ -30,9 +30,7 @@ class MongoDBClient:
                     minPoolSize=self.config.mongodb_min_pool_size,
                     maxIdleTimeMS=self.config.mongodb_max_idle_time_ms,
                     connectTimeoutMS=self.config.mongodb_connect_timeout_ms,
-                    serverSelectionTimeoutMS=(
-                        self.config.mongodb_server_selection_timeout_ms
-                    ),
+                    serverSelectionTimeoutMS=(self.config.mongodb_server_selection_timeout_ms),
                 )
                 self.db = self.client[self.config.mongodb_database]
 
@@ -44,9 +42,7 @@ class MongoDBClient:
                 logger_service.info("Connected to MongoDB successfully")
                 return
             except Exception as exc:
-                logger_service.error(
-                    f"MongoDB connection attempt {attempt + 1} failed: {exc!s}"
-                )
+                logger_service.error(f"MongoDB connection attempt {attempt + 1} failed: {exc!s}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
                     retry_delay *= 2
